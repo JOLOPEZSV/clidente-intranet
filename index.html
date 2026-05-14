@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal TDG – CLIDENTE | MBA ISEADE FEPADE</title>
+  <meta name="description" content="Portal interno del Trabajo de Graduación MBA ISEADE FEPADE – Proyecto CLIDENTE.">
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ══ WELCOME MODAL ══════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="welcomeBackdrop">
+    <div class="welcome-modal">
+        <div class="wm-logos">
+        <img src="LOGO CLIDENTE.jpeg" alt="CLIDENTE" class="wm-logo-clidente">
+        <img src="Nuevo Logo ISEADE-04.png" alt="ISEADE FEPADE" class="wm-logo-iseade">
+      </div>
+      <h2>¡Bienvenido al Portal TDG!</h2>
+      <p>Aquí encontrarás toda la documentación del Trabajo de Graduación MBA en <strong>ISEADE FEPADE</strong>. Transcripciones, actas con el tutor, borradores y más.</p>
+      <button class="btn-enter" id="btnEnter">Ingresar al Portal</button>
+    </div>
+  </div>
+
+  <!-- ══ SIDEBAR ════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <img src="LOGO CLIDENTE.jpeg" alt="CLIDENTE" class="sidebar-logo-clidente">
+      <img src="Nuevo Logo ISEADE-04.png" alt="ISEADE" class="sidebar-logo-iseade">
+    </div>
+    <p class="sidebar-panel-label">Panel de Control</p>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-section="cartelera">
+        <span class="nav-number">1</span>
+        <span class="nav-label">CARTELERA</span>
+      </button>
+      <button class="nav-item" data-section="sobre-proyecto">
+        <span class="nav-number">2</span>
+        <span class="nav-label">SOBRE EL PROYECTO</span>
+      </button>
+      <button class="nav-item" data-section="visitas">
+        <span class="nav-number">3</span>
+        <span class="nav-label">VISITAS A CLIDENTE</span>
+      </button>
+      <button class="nav-item" data-section="reuniones">
+        <span class="nav-number">4</span>
+        <span class="nav-label">REUNIONES CON TUTOR</span>
+      </button>
+      <button class="nav-item" data-section="diagnostico">
+        <span class="nav-number">5</span>
+        <span class="nav-label">DIAGNÓSTICO</span>
+      </button>
+      <button class="nav-item" data-section="marco-teorico">
+        <span class="nav-number">6</span>
+        <span class="nav-label">MARCO TEÓRICO</span>
+      </button>
+      <button class="nav-item" data-section="metodologia">
+        <span class="nav-number">7</span>
+        <span class="nav-label">METODOLOGÍA</span>
+      </button>
+      <button class="nav-item" data-section="equipo">
+        <span class="nav-number">8</span>
+        <span class="nav-label">EQUIPO</span>
+      </button>
+      <button class="nav-item" data-section="cronograma">
+        <span class="nav-number">9</span>
+        <span class="nav-label">CRONOGRAMA</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-user">
+      <i class="fas fa-user-circle"></i>
+      Equipo de Investigación
+    </div>
+  </aside>
+
+  <!-- ══ MAIN WRAPPER ═══════════════════════════════════════════ -->
+  <div class="main-wrapper">
+
+    <!-- HEADER -->
+    <header class="top-header">
+      <div class="header-left">
+        <img src="LOGO CLIDENTE.jpeg" alt="CLIDENTE" class="header-logo-clidente">
+        <div class="header-title">Portal TDG &ndash; CLIDENTE &middot; MBA ISEADE FEPADE</div>
+      </div>
+      <img src="Nuevo Logo ISEADE-04.png" alt="ISEADE FEPADE" class="header-logo-iseade">
+      <div class="breadcrumb" id="breadcrumb">Portal &rsaquo; Cartelera</div>
+    </header>
+
+    <!-- CONTENT AREA -->
+    <main class="content-area" id="contentArea">
+      <!-- Sections injected by JS -->
+    </main>
+
+  </div><!-- /main-wrapper -->
+
+  <script src="app.js"></script>
+</body>
+</html>

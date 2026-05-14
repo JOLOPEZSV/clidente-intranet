@@ -1,2 +1,2 @@
-# clidente-intranet
-Intranet del proyecto de Graduacion
+# Clidente INTRANET
+Trabajo de graducacion MBA en ISEADE FEPADE
