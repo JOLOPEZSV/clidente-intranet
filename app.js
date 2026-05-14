@@ -91,7 +91,7 @@ function renderSobreProyecto() {
     <div class="info-box">
       <div class="info-box-icon gold"><i class="fas fa-user-tie" style="color:#854d0e"></i></div>
       <h4>Tutor Académico</h4>
-      <p>Dr./Dra. [Nombre del Tutor] – ISEADE FEPADE.<br><em>Actualiza este campo en app.js</em></p>
+      <p>Lic. Roberto Arturo Castro Castañeda – ISEADE FEPADE.</p>
     </div>
   </div>
   <div class="card">
@@ -162,7 +162,7 @@ function renderReuniones() {
     {
       n: 1, title: 'Sesión de Arranque',
       date: '5 de febrero de 2025',
-      tutor: '[Nombre del Tutor]',
+      tutor: 'Lic. Roberto Arturo Castro Castañeda',
       topics: ['Definición del tema y empresa objeto de estudio', 'Alcance y delimitación del TDG', 'Metodología general recomendada', 'Cronograma de entregas y evaluaciones'],
       resources: [
         { label: 'Acta de Reunión', icon: 'fa-file-lines', href: 'docs/acta-reunion-01.pdf' },
@@ -172,7 +172,7 @@ function renderReuniones() {
     {
       n: 2, title: 'Revisión Marco Teórico',
       date: '20 de marzo de 2025',
-      tutor: '[Nombre del Tutor]',
+      tutor: 'Lic. Roberto Arturo Castro Castañeda',
       topics: ['Retroalimentación sobre fuentes bibliográficas', 'Ajuste al planteamiento del problema', 'Observaciones al marco referencial', 'Próximos pasos: recolección de datos'],
       resources: [
         { label: 'Acta de Reunión', icon: 'fa-file-lines', href: 'docs/acta-reunion-02.pdf' },
@@ -308,15 +308,15 @@ function renderMetodologia() {
 
 function renderEquipo() {
   const team = [
-    { name: 'Integrante 1', initials: 'I1', role: 'Coordinador del Equipo', color: '#1a56a4' },
-    { name: 'Integrante 2', initials: 'I2', role: 'Investigación de Campo', color: '#0e7490' },
-    { name: 'Integrante 3', initials: 'I3', role: 'Análisis de Datos', color: '#7c3aed' },
-    { name: 'Integrante 4', initials: 'I4', role: 'Redacción y Documentación', color: '#b45309' },
+    { name: 'Cecilia Beatriz Chicas de Escalante', initials: 'CC', role: 'Ing. Industrial · Walmart', color: '#1a56a4' },
+    { name: 'Ricardo Alberto Palacios Valladares', initials: 'RP', role: 'Arq. de Interiores · Alcaldía de San Salvador', color: '#0e7490' },
+    { name: 'Elías José Núñez Menjívar', initials: 'EN', role: 'Ing. Industrial · Corte Suprema de Justicia', color: '#7c3aed' },
+    { name: 'Jaime Omar López Monge', initials: 'JL', role: 'Adm. de Empresas · StarDent', color: '#b45309' },
   ];
   return `
   <h1 class="section-title">Equipo de Investigación</h1>
   <p style="color:var(--text-muted);margin-bottom:1.5rem;font-size:.9rem">
-    Actualiza los nombres en el arreglo <code>team</code> dentro de <strong>app.js</strong>.
+    Equipo Consultor MAE LVIII – ISEADE FEPADE
   </p>
   <div class="team-grid">
     ${team.map(m => `
@@ -328,8 +328,7 @@ function renderEquipo() {
   </div>
   <div class="card" style="margin-top:1.5rem">
     <div class="card-title"><i class="fas fa-user-graduate" style="margin-right:.5rem"></i>Tutor Académico</div>
-    <p style="font-size:.9rem;color:var(--text-muted)">Dr./Dra. [Nombre del Tutor] – ISEADE FEPADE<br>
-    <em>Actualiza este campo en app.js</em></p>
+    <p style="font-size:.9rem;color:var(--text-muted)">Lic. Roberto Arturo Castro Castañeda – ISEADE FEPADE</p>
   </div>`;
 }
 
