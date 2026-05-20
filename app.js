@@ -257,8 +257,7 @@ function renderVisitas() {
       summary: 'Pareja B (Organización y Área Comercial). Objetivos: validar organigrama vigente e identificar vacante de Dirección Clínica; entrevistar a Tatiana/Diego (Mercadeo) sobre redes sociales; diagnosticar sistema CRM/base de pacientes; verificar escala salarial y comisiones; obtener descriptores de puesto del manual (carpeta negra). Solicitar copia digital del organigrama a Henry.',
       estado: 'done',
       resources: [
-        { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
-        { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
+        { label: 'Resumen Ejecutivo', icon: 'fa-file-alt', href: 'https://drive.google.com/file/d/1k7Q4h0QR7ytd2-GOpYy__qIDZkVMBKK9/view?usp=sharing' },
       ]
     },
     {
