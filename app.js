@@ -239,7 +239,7 @@ function renderVisitas() {
     {
       n: 1,
       title: 'Presentación inicial y firma de confidencialidad',
-      date: '30 de abril de 2026', duration: '90 minutos',
+      date: '6 de mayo de 2026', duration: '90 minutos',
       attendees: 'Dra. Olga Vigil, Tec. Henry Corcio (Gte. Adm.), Jaime López, Cecilia Chicas',
       summary: 'Primera visita oficial a Clínica Dental Clidente. Presentación del equipo a la propietaria Dra. Vigil y firma de cartas de confidencialidad. Reconocimiento de instalaciones (4 locales integrados, 8 sillas de atención). Entrega del cuestionario de diagnóstico ambiental (escala 0–4) para que la Dra. lo complete. Hora de llegada: 5:15 PM · 2ª Calle Pte. y 2ª Av. Sur, Local 21, 2° Nivel, Santa Tecla.',
       estado: 'done',
@@ -252,12 +252,12 @@ function renderVisitas() {
     {
       n: 2,
       title: 'Organización y Área Comercial',
-      date: '16–17 de mayo de 2026 (Pareja B)', duration: '4 horas',
+      date: '16 de mayo de 2026 (Pareja B)', duration: '4 horas',
       attendees: 'Jaime Omar López + Cecilia Beatriz Chicas · Contacto: Henry Corcio',
       summary: 'Pareja B (Organización y Área Comercial). Objetivos: validar organigrama vigente e identificar vacante de Dirección Clínica; entrevistar a Tatiana/Diego (Mercadeo) sobre redes sociales; diagnosticar sistema CRM/base de pacientes; verificar escala salarial y comisiones; obtener descriptores de puesto del manual (carpeta negra). Solicitar copia digital del organigrama a Henry.',
       estado: 'done',
       resources: [
-        { label: 'Resumen Ejecutivo', icon: 'fa-file-alt', href: 'https://drive.google.com/file/d/1k7Q4h0QR7ytd2-GOpYy__qIDZkVMBKK9/view?usp=sharing' },
+        { label: 'Resumen Ejecutivo', icon: 'fa-file-alt', href: 'https://drive.google.com/file/d/1WCOQYWOum-Bed_satcTWYhUrBK2joPLq/view?usp=sharing' },
       ]
     },
     {
@@ -268,8 +268,8 @@ function renderVisitas() {
       summary: 'Pareja A (Finanzas e Inventarios). Objetivos: levantar inventario físico de insumos (codificación y sistema de requisición); mapear journey del paciente desde ingreso hasta cobro; evaluar protocolos de inocuidad y esterilización; recopilar KPIs de contabilidad y estado de P&G por unidad de negocio (clínica, depósito, bodegas); aplicar encuesta de Diagnóstico de Desempeño Ambiental.',
       estado: 'done',
       resources: [
-        { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
-        { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
+        { label: 'Resumen Ejecutivo', icon: 'fa-file-alt',  href: 'https://drive.google.com/file/d/1k7Q4h0QR7ytd2-GOpYy__qIDZkVMBKK9/view?usp=sharing' },
+        { label: 'Plan de Visitas',   icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
       ]
     },
     {
