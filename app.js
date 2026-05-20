@@ -592,8 +592,6 @@ const SECTIONS = {
   'visitas':        { label: 'Visitas a CLIDENTE',   render: renderVisitas },
   'reuniones':      { label: 'Reuniones con Tutor',  render: renderReuniones },
   'diagnostico':    { label: 'Diagnóstico',          render: renderDiagnostico },
-  'marco-teorico':  { label: 'Marco Teórico',        render: renderMarcoTeorico },
-  'metodologia':    { label: 'Metodología',          render: renderMetodologia },
   'cronograma':     { label: 'Cronograma',           render: renderCronograma },
 };
 
