@@ -247,7 +247,6 @@ function renderVisitas() {
         { label: 'Agenda Visita #1',  icon: 'fa-calendar-day', href: 'https://drive.google.com/file/d/1z3L2xGB8PeOP5bsfk_8WNV7tRRPO4LEz/view?usp=sharing' },
         { label: 'Resumen Ejecutivo', icon: 'fa-file-alt',     href: 'https://drive.google.com/file/d/1Bxv_TgA_ZtLPcue5Bo4yK4-CIvYiX2kD/view?usp=sharing' },
         { label: 'Plan de Visitas',   icon: 'fa-file-lines',   href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
-        { label: 'Roles del Equipo',  icon: 'fa-users',        href: 'Roles_Equipo_Consultor_Clidente.pdf' },
       ]
     },
     {
