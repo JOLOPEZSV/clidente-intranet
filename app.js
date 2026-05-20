@@ -405,10 +405,10 @@ function renderMetodologia() {
 
 function renderEquipo() {
   const team = [
-    { name: 'Cecilia Beatriz Chicas de Escalante', initials: 'CC', role: 'Ing. Industrial · Walmart', color: '#1a56a4' },
-    { name: 'Ricardo Alberto Palacios Valladares', initials: 'RP', role: 'Arq. de Interiores · Alcaldía de San Salvador', color: '#0e7490' },
-    { name: 'Elías José Núñez Menjívar', initials: 'EN', role: 'Ing. Industrial · Corte Suprema de Justicia', color: '#7c3aed' },
-    { name: 'Jaime Omar López Monge', initials: 'JL', role: 'Adm. de Empresas · StarDent', color: '#b45309' },
+    { name: 'Cecilia Beatriz Chicas de Escalante', initials: 'CC', role: 'Ing. Industrial · Walmart',                    color: '#1a56a4', email: 'cecilia_cbcg@hotmail.com', tel: '6031-0312' },
+    { name: 'Ricardo Alberto Palacios Valladares', initials: 'RP', role: 'Arq. de Interiores · Alcaldía de San Salvador', color: '#0e7490', email: 'ricardoa7@hotmail.com',      tel: '7922-7891' },
+    { name: 'Elías José Núñez Menjívar',           initials: 'EN', role: 'Ing. Industrial · Corte Suprema de Justicia',   color: '#7c3aed', email: 'jm.josemenjivar@gmail.com', tel: '7740-3029' },
+    { name: 'Jaime Omar López Monge',              initials: 'JL', role: 'Adm. de Empresas · StarDent',                   color: '#b45309', email: 'jolopezsalsv@gmail.com',    tel: '7627-3314' },
   ];
   return `
   <h1 class="section-title">Equipo de Investigación</h1>
@@ -421,11 +421,33 @@ function renderEquipo() {
       <div class="team-avatar" style="background:${m.color}">${m.initials}</div>
       <div class="team-name">${m.name}</div>
       <div class="team-role">${m.role}</div>
+      <div style="margin-top:.75rem;display:flex;flex-direction:column;gap:.35rem">
+        <a href="tel:${m.tel.replace('-','')}" style="display:flex;align-items:center;justify-content:center;gap:.4rem;font-size:.82rem;color:var(--blue);text-decoration:none">
+          <i class="fas fa-phone" style="font-size:.75rem"></i>${m.tel}
+        </a>
+        <a href="mailto:${m.email}" style="display:flex;align-items:center;justify-content:center;gap:.4rem;font-size:.82rem;color:var(--blue);text-decoration:none;word-break:break-all">
+          <i class="fas fa-envelope" style="font-size:.75rem;flex-shrink:0"></i>${m.email}
+        </a>
+      </div>
     </div>`).join('')}
   </div>
   <div class="card" style="margin-top:1.5rem">
     <div class="card-title"><i class="fas fa-user-graduate" style="margin-right:.5rem"></i>Tutor Académico</div>
-    <p style="font-size:.9rem;color:var(--text-muted)">Lic. Roberto Arturo Castro Castañeda – ISEADE FEPADE</p>
+    <div style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;margin-top:.5rem">
+      <div style="width:48px;height:48px;border-radius:50%;background:#166534;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:1rem;flex-shrink:0">RC</div>
+      <div>
+        <div style="font-size:.95rem;font-weight:600;color:var(--text)">Lic. Roberto Arturo Castro Castañeda</div>
+        <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:.4rem">ISEADE FEPADE</div>
+        <div style="display:flex;gap:1.25rem;flex-wrap:wrap">
+          <a href="tel:+13464906451" style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;color:var(--blue);text-decoration:none">
+            <i class="fas fa-phone" style="font-size:.75rem"></i>+1 (346) 490-6451
+          </a>
+          <a href="mailto:roca2608@gmail.com" style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;color:var(--blue);text-decoration:none">
+            <i class="fas fa-envelope" style="font-size:.75rem"></i>roca2608@gmail.com
+          </a>
+        </div>
+      </div>
+    </div>
   </div>`;
 }
 
