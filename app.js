@@ -723,6 +723,7 @@ function renderCronograma() {
   return `
   <h1 class="section-title">Cronograma de la Consultoría</h1>
   <div class="card" style="padding:0;overflow:hidden">
+    <div class="cronograma-scroll">
     <table class="cronograma-table">
       <thead>
         <tr>
@@ -740,6 +741,7 @@ function renderCronograma() {
         </tr>`).join('')}
       </tbody>
     </table>
+    </div>
   </div>`;
 }
 
@@ -759,6 +761,7 @@ const SECTIONS = {
 function navigate(sectionId) {
   const section = SECTIONS[sectionId];
   if (!section) return;
+  closeSidebar();
 
   // Render content
   const area = document.getElementById('contentArea');
@@ -807,8 +810,41 @@ function initTabs() {
   });
 }
 
+function closeSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const toggle = document.getElementById('menuToggle');
+  if (!sidebar || !backdrop || !toggle) return;
+
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('open');
+  toggle.setAttribute('aria-expanded', 'false');
+}
+
+function initMobileSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+  const toggle = document.getElementById('menuToggle');
+  if (!sidebar || !backdrop || !toggle) return;
+
+  toggle.addEventListener('click', () => {
+    const isOpen = sidebar.classList.toggle('open');
+    backdrop.classList.toggle('open', isOpen);
+    toggle.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  backdrop.addEventListener('click', closeSidebar);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeSidebar();
+  });
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) closeSidebar();
+  });
+}
+
 /* ── INIT ──────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  initMobileSidebar();
 
   // Welcome modal
   const backdrop = document.getElementById('welcomeBackdrop');
