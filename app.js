@@ -135,8 +135,8 @@ function renderVisitas() {
       summary: 'Pareja B (Organización y Área Comercial). Objetivos: validar organigrama vigente e identificar vacante de Dirección Clínica; entrevistar a Tatiana/Diego (Mercadeo) sobre redes sociales; diagnosticar sistema CRM/base de pacientes; verificar escala salarial y comisiones; obtener descriptores de puesto del manual (carpeta negra). Solicitar copia digital del organigrama a Henry.',
       estado: 'done',
       resources: [
-        { label: 'Plan de Visitas', icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
-        { label: 'Roles del Equipo', icon: 'fa-users', href: 'Roles_Equipo_Consultor_Clidente.pdf' },
+        { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
+        { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
       ]
     },
     {
@@ -147,7 +147,8 @@ function renderVisitas() {
       summary: 'Pareja A (Finanzas e Inventarios). Objetivos: levantar inventario físico de insumos (codificación y sistema de requisición); mapear journey del paciente desde ingreso hasta cobro; evaluar protocolos de inocuidad y esterilización; recopilar KPIs de contabilidad y estado de P&G por unidad de negocio (clínica, depósito, bodegas); aplicar encuesta de Diagnóstico de Desempeño Ambiental.',
       estado: 'done',
       resources: [
-        { label: 'Plan de Visitas', icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
+        { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
+        { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
       ]
     },
     {
@@ -157,7 +158,10 @@ function renderVisitas() {
       attendees: 'Cecilia Chicas + Ricardo Palacios',
       summary: 'Visita sin previo aviso, conforme al acuerdo con la propietaria, para observar la operación en condiciones reales. Objetivo: conteo real de pacientes y ticket promedio por procedimiento, análisis de métricas de redes sociales, y cierre de brechas de información pendiente.',
       estado: 'pending',
-      resources: []
+      resources: [
+        { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
+        { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
+      ]
     },
     {
       n: 5,
@@ -166,7 +170,10 @@ function renderVisitas() {
       attendees: 'Por definir',
       summary: 'Visita de campo pendiente de programación. Actualiza los detalles conforme se coordine con la empresa.',
       estado: 'pending',
-      resources: []
+      resources: [
+        { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
+        { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
+      ]
     },
   ];
 
