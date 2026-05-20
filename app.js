@@ -112,53 +112,87 @@ function renderSobreProyecto() {
 }
 
 function renderVisitas() {
-  const visitas = [
+  const visitasCampo = [
     {
-      n: 1, title: 'Visita 01 – Presentación inicial y firma de confidencialidad',
+      n: 1,
+      title: 'Presentación inicial y firma de confidencialidad',
       date: '30 de abril de 2026', duration: '90 minutos',
       attendees: 'Dra. Olga Vigil, Tec. Henry Corcio (Gte. Adm.), Jaime López, Cecilia Chicas',
       summary: 'Primera visita oficial a Clínica Dental Clidente. Presentación del equipo a la propietaria Dra. Vigil y firma de cartas de confidencialidad. Reconocimiento de instalaciones (4 locales integrados, 8 sillas de atención). Entrega del cuestionario de diagnóstico ambiental (escala 0–4) para que la Dra. lo complete. Hora de llegada: 5:15 PM · 2ª Calle Pte. y 2ª Av. Sur, Local 21, 2° Nivel, Santa Tecla.',
+      estado: 'done',
       resources: [
         { label: 'Agenda Visita #1',  icon: 'fa-calendar-day', href: 'https://drive.google.com/file/d/1z3L2xGB8PeOP5bsfk_8WNV7tRRPO4LEz/view?usp=sharing' },
         { label: 'Resumen Ejecutivo', icon: 'fa-file-alt',     href: 'https://drive.google.com/file/d/1Bxv_TgA_ZtLPcue5Bo4yK4-CIvYiX2kD/view?usp=sharing' },
       ]
     },
     {
-      n: 2, title: 'Visita 02 – Organización y Área Comercial',
+      n: 2,
+      title: 'Organización y Área Comercial',
       date: '16–17 de mayo de 2026 (Pareja B)', duration: '4 horas',
       attendees: 'Jaime Omar López + Cecilia Beatriz Chicas · Contacto: Henry Corcio',
       summary: 'Pareja B (Organización y Área Comercial). Objetivos: validar organigrama vigente e identificar vacante de Dirección Clínica; entrevistar a Tatiana/Diego (Mercadeo) sobre redes sociales; diagnosticar sistema CRM/base de pacientes; verificar escala salarial y comisiones; obtener descriptores de puesto del manual (carpeta negra). Solicitar copia digital del organigrama a Henry.',
+      estado: 'done',
       resources: [
         { label: 'Plan de Visitas', icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
         { label: 'Roles del Equipo', icon: 'fa-users', href: 'Roles_Equipo_Consultor_Clidente.pdf' },
       ]
     },
     {
-      n: 3, title: 'Visita 03 – Operaciones y Finanzas',
+      n: 3,
+      title: 'Operaciones y Finanzas',
       date: '19–23 de mayo de 2026 (Pareja A)', duration: '4 horas',
       attendees: 'Ricardo Palacios + Elías Núñez · Contacto: Henry Corcio',
       summary: 'Pareja A (Finanzas e Inventarios). Objetivos: levantar inventario físico de insumos (codificación y sistema de requisición); mapear journey del paciente desde ingreso hasta cobro; evaluar protocolos de inocuidad y esterilización; recopilar KPIs de contabilidad y estado de P&G por unidad de negocio (clínica, depósito, bodegas); aplicar encuesta de Diagnóstico de Desempeño Ambiental.',
+      estado: 'done',
       resources: [
         { label: 'Plan de Visitas', icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
       ]
     },
     {
-      n: 4, title: 'Visita 04 – Observación sin previo aviso (Operación Real)',
+      n: 4,
+      title: 'Observación sin previo aviso (Operación Real)',
       date: 'Semana del 26–30 de mayo de 2026', duration: '2–3 horas',
       attendees: 'Cecilia Chicas + Ricardo Palacios',
       summary: 'Visita sin previo aviso, conforme al acuerdo con la propietaria, para observar la operación en condiciones reales. Objetivo: conteo real de pacientes y ticket promedio por procedimiento, análisis de métricas de redes sociales, y cierre de brechas de información pendiente.',
+      estado: 'pending',
+      resources: []
+    },
+    {
+      n: 5,
+      title: 'Por programar',
+      date: 'Por definir', duration: 'Por definir',
+      attendees: 'Por definir',
+      summary: 'Visita de campo pendiente de programación. Actualiza los detalles conforme se coordine con la empresa.',
+      estado: 'pending',
       resources: []
     },
   ];
 
+  const estadoColor = { done: '#166534', wip: '#1a56a4', pending: '#6b7280' };
+  const estadoBg   = { done: '#dcfce7',  wip: '#dbeafe',  pending: '#f3f4f6' };
+  const estadoLabel= { done: 'Realizada', wip: 'En Progreso', pending: 'Pendiente' };
+
   return `
   <h1 class="section-title">Visitas a CLIDENTE</h1>
+
+  <!-- SUBSECCIÓN: VISITAS DE CAMPO -->
+  <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;margin-top:.5rem">
+    <div style="width:36px;height:36px;border-radius:50%;background:#1a56a4;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <i class="fas fa-map-marker-alt" style="color:white;font-size:.9rem"></i>
+    </div>
+    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text);margin:0">Visitas de Campo</h2>
+    <span style="background:#dbeafe;color:#1a56a4;font-size:.75rem;font-weight:600;padding:.2rem .7rem;border-radius:50px">${visitasCampo.length} visitas</span>
+  </div>
+
   <div class="timeline">
-    ${visitas.map(v => `
+    ${visitasCampo.map(v => `
     <div class="tl-item">
       <div class="tl-header">
-        <span class="tl-title">Visita #${v.n} – ${v.title.split('–')[1].trim()}</span>
-        <span class="tl-date">${v.date}</span>
+        <span class="tl-title">Visita de Campo #${v.n} – ${v.title}</span>
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:flex-end">
+          <span style="background:${estadoBg[v.estado]};color:${estadoColor[v.estado]};font-size:.75rem;font-weight:600;padding:.2rem .65rem;border-radius:50px;white-space:nowrap">${estadoLabel[v.estado]}</span>
+          <span class="tl-date">${v.date}</span>
+        </div>
       </div>
       <p class="tl-summary">${v.summary}</p>
       <p class="tl-meta">
@@ -167,15 +201,11 @@ function renderVisitas() {
       </p>
       <div class="resource-buttons">
         ${v.resources.map(r => `
-        <a href="${r.href}" target="_blank" class="btn-resource ${r.cls||''}">
+        <a href="${r.href}" target="_blank" class="btn-resource">
           <i class="fas ${r.icon}"></i> ${r.label}
         </a>`).join('')}
       </div>
     </div>`).join('')}
-  </div>
-  <div class="card" style="border:2px dashed var(--border); box-shadow:none; text-align:center; color:var(--text-muted); font-size:.9rem; padding:2rem;">
-    <i class="fas fa-plus-circle" style="font-size:1.5rem; color:var(--blue); margin-bottom:.5rem; display:block;"></i>
-    Agrega nuevas visitas editando el arreglo <code>visitas</code> en <strong>app.js</strong>
   </div>`;
 }
 
