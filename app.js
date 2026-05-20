@@ -777,9 +777,12 @@ function renderCronograma() {
     ['Post-correcciones','Entrega informe final ajustado y empastado (2 semanas tras envío de correcciones)',          'pending'],
   ];
   const labels = { done:'Completado', wip:'En Progreso', pending:'Pendiente' };
+  const icons = { done:'fa-check-circle', wip:'fa-spinner', pending:'fa-clock' };
   return `
   <h1 class="section-title">Cronograma de la Consultoría</h1>
-  <div class="card" style="padding:0;overflow:hidden">
+  <p class="cronograma-intro">Vista general de los hitos principales de la consultoria, desde el inicio formal hasta la entrega final ajustada.</p>
+
+  <div class="cronograma-table-card">
     <div class="cronograma-scroll">
     <table class="cronograma-table">
       <thead>
@@ -799,6 +802,23 @@ function renderCronograma() {
       </tbody>
     </table>
     </div>
+  </div>
+
+  <div class="cronograma-mobile-list">
+    ${rows.map(([period, activity, status], index) => `
+      <article class="cronograma-mobile-card status-${status}">
+        <div class="cronograma-mobile-marker">
+          <span>${index + 1}</span>
+          <i class="fas ${icons[status]}"></i>
+        </div>
+        <div class="cronograma-mobile-body">
+          <div class="cronograma-mobile-top">
+            <span class="cronograma-period">${period}</span>
+            <span class="status-badge status-${status}">${labels[status]}</span>
+          </div>
+          <p>${activity}</p>
+        </div>
+      </article>`).join('')}
   </div>`;
 }
 
