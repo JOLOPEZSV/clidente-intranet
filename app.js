@@ -703,6 +703,60 @@ function renderFases() {
   </div>`;
 }
 
+function renderAmbiental() {
+  const ambientalUrl = 'https://jolopezsv.github.io/clidente-ambiental/';
+
+  return `
+  <h1 class="section-title">Diagnóstico Ambiental</h1>
+  <div class="ambiental-hero">
+    <div>
+      <div class="ambiental-kicker">Herramienta de evaluación ambiental</div>
+      <h2>Resultados del Diagnóstico de Desempeño Ambiental 2025</h2>
+      <p>Vista integrada del reporte ambiental de CLIDENTE. Desde aquí se puede consultar la evaluación, generar el reporte y abrir la herramienta completa cuando se necesite trabajar con más espacio.</p>
+    </div>
+    <a href="${ambientalUrl}" target="_blank" rel="noopener" class="btn-resource ambiental-open">
+      <i class="fas fa-up-right-from-square"></i> Abrir herramienta completa
+    </a>
+  </div>
+
+  <div class="ambiental-summary">
+    <div class="ambiental-stat">
+      <span class="ambiental-stat-icon"><i class="fas fa-leaf"></i></span>
+      <div>
+        <div class="ambiental-stat-value">4 áreas</div>
+        <div class="ambiental-stat-label">Planificación, requisitos, recursos y residuos</div>
+      </div>
+    </div>
+    <div class="ambiental-stat">
+      <span class="ambiental-stat-icon amber"><i class="fas fa-list-check"></i></span>
+      <div>
+        <div class="ambiental-stat-value">28 preguntas</div>
+        <div class="ambiental-stat-label">Escala de cumplimiento de 0% a 100%</div>
+      </div>
+    </div>
+    <div class="ambiental-stat">
+      <span class="ambiental-stat-icon blue"><i class="fas fa-chart-radar"></i></span>
+      <div>
+        <div class="ambiental-stat-value">Reporte</div>
+        <div class="ambiental-stat-label">Promedio global, brechas y detalle por área</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ambiental-frame-card">
+    <div class="ambiental-frame-toolbar">
+      <div>
+        <div class="card-title">Reporte Ambiental CLIDENTE</div>
+        <p class="card-subtitle">Contenido cargado desde clidente-ambiental.</p>
+      </div>
+      <a href="${ambientalUrl}" target="_blank" rel="noopener" class="btn-resource">
+        <i class="fas fa-external-link-alt"></i> Ver en pestaña nueva
+      </a>
+    </div>
+    <iframe class="ambiental-frame" src="${ambientalUrl}" title="Diagnóstico de Desempeño Ambiental CLIDENTE" loading="lazy"></iframe>
+  </div>`;
+}
+
 function renderCronograma() {
   const rows = [
     ['22–24 abr 2026',  'Comunicación oficial a empresa y tutor – inicio formal MAE LVIII',                           'done'],
@@ -750,6 +804,7 @@ const SECTIONS = {
   'cartelera':      { label: 'Cartelera',            render: renderCartelera },
   'equipo':         { label: 'Equipo',               render: renderEquipo },
   'fases':          { label: 'Fases del Proyecto',   render: renderFases },
+  'ambiental':      { label: 'Diagnóstico Ambiental', render: renderAmbiental },
   'sobre-proyecto': { label: 'Sobre el Proyecto',    render: renderSobreProyecto },
   'visitas':        { label: 'Visitas a CLIDENTE',   render: renderVisitas },
   'reuniones':      { label: 'Reuniones con Tutor',  render: renderReuniones },
