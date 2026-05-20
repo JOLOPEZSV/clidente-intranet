@@ -380,6 +380,97 @@ function renderEquipo() {
   </div>`;
 }
 
+function renderFases() {
+  const fases = [
+    {
+      n: 1,
+      titulo: 'Diagnóstico',
+      icon: 'fa-search',
+      color: '#1a56a4',
+      descripcion: 'Levantamiento de información y análisis de la situación actual de CLIDENTE. Incluye visitas de campo, entrevistas, análisis FODA, Fuerzas de Porter y diagnóstico organizacional integral.',
+      entregables: ['Informe de Diagnóstico V1', 'Análisis FODA', 'Análisis 5 Fuerzas de Porter', 'Diagnóstico de Desempeño Ambiental'],
+      estado: 'wip'
+    },
+    {
+      n: 2,
+      titulo: 'Desarrollo del Plan de Trabajo',
+      icon: 'fa-tasks',
+      color: '#0e7490',
+      descripcion: 'Diseño de la propuesta de mejora basada en los hallazgos del diagnóstico. Definición de objetivos, estrategias y plan de acción por área de intervención.',
+      entregables: ['Plan de Trabajo Estratégico', 'Propuesta de mejora por área', 'Matriz de priorización de acciones'],
+      estado: 'pending'
+    },
+    {
+      n: 3,
+      titulo: 'Elaboración del Informe',
+      icon: 'fa-file-alt',
+      color: '#7c3aed',
+      descripcion: 'Redacción del informe final de consultoría con todos los hallazgos, análisis y recomendaciones. Documento físico anillado y versión digital para entrega a ISEADE FEPADE.',
+      entregables: ['Informe Final de Consultoría', 'Documento anillado para ISEADE', 'Versión digital (vbeltran@iseade.edu.sv)'],
+      estado: 'pending'
+    },
+    {
+      n: 4,
+      titulo: 'Presentación y Evaluación',
+      icon: 'fa-chalkboard-teacher',
+      color: '#b45309',
+      descripcion: 'Presentación de los resultados ante el tutor académico y evaluación final del Trabajo de Graduación. Cada consultor expone 2–3 diapositivas con hallazgos de su área.',
+      entregables: ['Presentación al tutor (26 may 2026)', 'Entrega final ISEADE (1 jun 2026)', 'Carta de Aprobación del tutor'],
+      estado: 'pending'
+    },
+  ];
+
+  const estadoLabel = { done: 'Completada', wip: 'En Progreso', pending: 'Pendiente' };
+  const estadoColor = { done: '#166534', wip: '#1a56a4', pending: '#6b7280' };
+  const estadoBg    = { done: '#dcfce7',  wip: '#dbeafe',  pending: '#f3f4f6' };
+
+  return `
+  <h1 class="section-title">Fases del Proyecto</h1>
+  <p style="color:var(--text-muted);margin-bottom:2rem;font-size:.9rem">
+    Consultoría empresarial MAE LVIII – ISEADE FEPADE · Empresa: Clínica Dental CLIDENTE
+  </p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-bottom:2rem">
+    ${fases.map(f => `
+    <div style="background:white;border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;flex-direction:column">
+      <div style="background:${f.color};padding:1.5rem;color:white;display:flex;align-items:center;gap:1rem">
+        <div style="width:48px;height:48px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="fas ${f.icon}" style="font-size:1.3rem"></i>
+        </div>
+        <div>
+          <div style="font-size:.75rem;opacity:.8;text-transform:uppercase;letter-spacing:.05em">Fase ${f.n}</div>
+          <div style="font-size:1.05rem;font-weight:700;line-height:1.3">${f.titulo}</div>
+        </div>
+      </div>
+      <div style="padding:1.25rem;flex:1;display:flex;flex-direction:column;gap:1rem">
+        <span style="display:inline-block;padding:.25rem .75rem;border-radius:50px;font-size:.75rem;font-weight:600;background:${estadoBg[f.estado]};color:${estadoColor[f.estado]}">
+          ${estadoLabel[f.estado]}
+        </span>
+        <p style="font-size:.85rem;color:var(--text-muted);line-height:1.6;margin:0">${f.descripcion}</p>
+        <div>
+          <div style="font-size:.75rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem">Entregables</div>
+          <ul style="padding-left:1.1rem;margin:0">
+            ${f.entregables.map(e => `<li style="font-size:.82rem;color:var(--text-muted);padding:.2rem 0">${e}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+    </div>`).join('')}
+  </div>
+
+  <div class="card">
+    <div class="card-title"><i class="fas fa-map-signs" style="margin-right:.5rem"></i>Resumen del Proceso</div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;padding:.5rem 0">
+      ${fases.map((f, i) => `
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <div style="background:${f.color};color:white;padding:.4rem 1rem;border-radius:50px;font-size:.82rem;font-weight:600;white-space:nowrap">
+            ${f.n}. ${f.titulo}
+          </div>
+          ${i < fases.length - 1 ? '<i class="fas fa-arrow-right" style="color:var(--text-muted);font-size:.8rem"></i>' : ''}
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
 function renderCronograma() {
   const rows = [
     ['Abril 2026',     'Asignación ISEADE – inicio oficial de la consultoría (25 abr)',  'done'],
@@ -418,13 +509,14 @@ function renderCronograma() {
 /* ── SECTION MAP ───────────────────────────────────────────── */
 const SECTIONS = {
   'cartelera':      { label: 'Cartelera',            render: renderCartelera },
+  'equipo':         { label: 'Equipo',               render: renderEquipo },
+  'fases':          { label: 'Fases del Proyecto',   render: renderFases },
   'sobre-proyecto': { label: 'Sobre el Proyecto',    render: renderSobreProyecto },
   'visitas':        { label: 'Visitas a CLIDENTE',   render: renderVisitas },
   'reuniones':      { label: 'Reuniones con Tutor',  render: renderReuniones },
   'diagnostico':    { label: 'Diagnóstico',          render: renderDiagnostico },
   'marco-teorico':  { label: 'Marco Teórico',        render: renderMarcoTeorico },
   'metodologia':    { label: 'Metodología',          render: renderMetodologia },
-  'equipo':         { label: 'Equipo',               render: renderEquipo },
   'cronograma':     { label: 'Cronograma',           render: renderCronograma },
 };
 
