@@ -5,10 +5,16 @@
 /* ── SECTION RENDERERS ─────────────────────────────────────── */
 
 function renderCartelera() {
+  const days   = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const now    = new Date();
+  const dateStr = `${days[now.getDay()]} ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
+
   return `
   <h1 class="section-title">Cartelera</h1>
-  <div class="cartelera-grid">
 
+  <!-- Avisos rápidos -->
+  <div class="cartelera-grid" style="margin-bottom:1.5rem">
     <div class="bulletin-card">
       <div class="bulletin-card-header"><i class="fas fa-bullhorn"></i> Aviso del Equipo</div>
       <div class="bulletin-card-body">
@@ -17,7 +23,6 @@ function renderCartelera() {
         Cada consultor preparará 2–3 diapositivas con hallazgos por área.</p>
       </div>
     </div>
-
     <div class="bulletin-card">
       <div class="bulletin-card-header"><i class="fas fa-calendar-check"></i> Próximas Actividades</div>
       <div class="bulletin-card-body">
@@ -27,39 +32,157 @@ function renderCartelera() {
         📅 <strong>Entrega ISEADE</strong> – 1 de junio de 2026.</p>
       </div>
     </div>
+  </div>
 
-    <div class="bulletin-card">
-      <div class="bulletin-card-header"><i class="fas fa-chart-line"></i> Avance del Diagnóstico</div>
-      <div class="bulletin-card-body">
-        <ul class="progress-list">
+  <!-- ══ MAPA ACTUAL DEL PROYECTO ════════════════════════════ -->
+  <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem">
+    <div style="width:36px;height:36px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <i class="fas fa-map" style="color:white;font-size:.9rem"></i>
+    </div>
+    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text);margin:0">Mapa Actual del Proyecto</h2>
+    <span style="margin-left:auto;font-size:11px;color:var(--text-muted);background:white;border:1px solid var(--border);padding:4px 10px;border-radius:20px">${dateStr}</span>
+  </div>
+
+  <!-- Alertas -->
+  <div class="mp-alert">
+    <span style="font-size:16px;flex-shrink:0">⚠️</span>
+    <div><strong>3 pendientes críticos sin comenzar:</strong> Diagnóstico Ambiental (4 secciones) · Referencias APA 7 · Anexo Metodológico de IA con URLs de prompts. Estos pueden bloquear la aprobación de ISEADE.</div>
+  </div>
+  <div class="mp-info">
+    <span style="font-size:16px;flex-shrink:0">💡</span>
+    <div><strong>Nuevo esta semana:</strong> Henry entregó estados financieros formales (CPA + Auditor Externo). Clidente tiene activos por $1,000,307. Ricardo ya puede redactar §VI.1 Finanzas.</div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="mp-kpi-row">
+    <div class="mp-kpi green"><div class="mp-kpi-label">Avance global</div><div class="mp-kpi-value">57%</div><div class="mp-kpi-sub">+15 pts esta semana</div></div>
+    <div class="mp-kpi red"><div class="mp-kpi-label">Días a entrega ISEADE</div><div class="mp-kpi-value">12</div><div class="mp-kpi-sub">Lun 1 junio · anillado</div></div>
+    <div class="mp-kpi amber"><div class="mp-kpi-label">Días al tutor Roberto</div><div class="mp-kpi-value">6</div><div class="mp-kpi-sub">Mar 26 mayo · online</div></div>
+    <div class="mp-kpi blue"><div class="mp-kpi-label">Visitas realizadas</div><div class="mp-kpi-value">2/5</div><div class="mp-kpi-sub">Próxima: sáb 23 sin aviso</div></div>
+  </div>
+
+  <!-- Fila 1: Progreso + Cronograma -->
+  <div class="mp-grid2">
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center">
+        <div class="card-title"><i class="fas fa-chart-bar" style="margin-right:.5rem"></i>Avance por Sección del Diagnóstico</div>
+        <span class="mp-chip mp-chip-warn" style="margin-left:auto;flex-shrink:0">En proceso</span>
+      </div>
+      <div style="padding:1rem 1.1rem">
+        ${[
+          ['Portada + Índice',         92,'green'],
+          ['§I Antecedentes',          90,'green'],
+          ['§II Filosofía corp.',      85,'green'],
+          ['§III Estructura org.',     82,'green'],
+          ['§IV Funcionamiento',       58,'amber'],
+          ['§V Mapa procesos',         45,'amber'],
+          ['§VI.1 Finanzas',           55,'amber'],
+          ['§VI.1 Mercadeo',           65,'amber'],
+          ['§VI.1 Operaciones',        78,'green'],
+          ['§VI.2-4 FODA/Porter/FCE',  90,'green'],
+          ['§VII Orientación',         55,'amber'],
+          ['§VIII Conclusiones',       75,'amber'],
+          ['§IX Referencias APA 7',     0,'red'],
+          ['Diag. Ambiental',          25,'red'],
+          ['Anexo IA (URLs)',            0,'red'],
+        ].map(([lbl,pct,color]) => `
+        <div class="mp-prog-row">
+          <div class="mp-prog-lbl">${lbl}</div>
+          <div class="mp-prog-track"><div class="mp-prog-fill mp-f-${color}" data-w="${pct}%" style="width:0%"></div></div>
+          <div class="mp-prog-pct"${color==='red'?' style="color:#C13030"':''}>${pct}%</div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center">
+        <div class="card-title"><i class="fas fa-clock" style="margin-right:.5rem"></i>Cronograma Crítico</div>
+        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">12 días</span>
+      </div>
+      <div style="padding:1rem 1.1rem">
+        <ul class="mp-tl">
           ${[
-            ['Antecedentes e Identificación', 100],
-            ['Filosofía Corporativa', 100],
-            ['Estructura Organizacional', 70],
-            ['Descripción del Funcionamiento', 60],
-            ['Mapa de Procesos', 50],
-            ['Diagnóstico Situación Actual (FODA/Porter)', 35],
-            ['Orientación de la Consultoría', 20],
-            ['Conclusiones y Recomendaciones', 10],
-          ].map(([label, pct]) => `
-          <li>
-            <div class="progress-label"><span>${label}</span><span class="progress-pct">${pct}%</span></div>
-            <div class="progress-bar-track"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+            ['#3B9EE0','MIÉ–VIE · 20–22 MAY','Redacción individual','Jaime → §III · Ricardo → §VI.1 Finanzas · Cecilia → §VI.1 Mercadeo · Elías → Diag. ambiental §1-2'],
+            ['#C47A15','SÁB · 23 MAY','Visita 3 — sin aviso (Jaime + Cecilia)','Llevar: ficha observación + Carta Aceptación (2 originales). Conteo pacientes, ticket promedio, journey.'],
+            ['#C47A15','LUN · 25 MAY','Visita 4 — Diag. ambiental (Ricardo + Elías)','Secciones 3-4 · costos fijos · facturas servicios básicos · fotografías residuos.'],
+            ['#C13030','MAR · 26 MAY — LÍMITE 1','Presentación al Tutor Roberto Castro','2-3 slides por consultor · Firma Carta de Aprobación del Tutor · Guardar URLs Claude para Anexo IA.'],
+            ['#677089','MIÉ–VIE · 28–30 MAY','Integración final','§VII completa · Referencias APA 7 · Anexo IA · Revisión cruzada · Control de horas.'],
+            ['#C13030','LUN · 1 JUN — LÍMITE 2','Entrega ISEADE (Jaime)','Físico anillado 9:30–18:30 + digital a vbeltran@iseade.edu.sv + sobre manila con 4 cartas sin perforar.'],
+          ].map(([col,d,t,s]) => `
+          <li class="mp-tl-item">
+            <div class="mp-tl-left"><div class="mp-tl-dot" style="background:${col}"></div><div class="mp-tl-line"></div></div>
+            <div><div class="mp-tl-d">${d}</div><div class="mp-tl-t">${t}</div><div class="mp-tl-s">${s}</div></div>
           </li>`).join('')}
         </ul>
       </div>
     </div>
+  </div>
 
-    <div class="bulletin-card">
-      <div class="bulletin-card-header"><i class="fas fa-info-circle"></i> Sobre este Portal</div>
-      <div class="bulletin-card-body">
-        <p>Portal interno de la consultoría empresarial <strong>MAE LVIII</strong> – ISEADE FEPADE.<br>
-        Empresa: <strong>Clínica Dental Clidente</strong> · Santa Tecla, La Libertad.<br>
-        Propietaria: <strong>Dra. Olga Dinora Vigil Romero</strong> · Fundada: noviembre 1998.<br>
-        Contacto en clínica: <strong>Tec. Henry Corcio</strong> – Gerente Administrativo.</p>
+  <!-- Fila 2: Pendientes + Checklist entrega -->
+  <div class="mp-grid2">
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center">
+        <div class="card-title"><i class="fas fa-exclamation-triangle" style="margin-right:.5rem;color:#C13030"></i>Pendientes Críticos</div>
+        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">6 sin comenzar</span>
+      </div>
+      <div style="padding:1rem 1.1rem">
+        ${[
+          ['no','Elías',  'Diagnóstico Ambiental — 4 secciones',                        'Henry llenó el formulario ✅. Nadie ha redactado el texto. Bloqueante para ISEADE.'],
+          ['no','Todo',   'Referencias bibliográficas APA 7',                            'Sección completamente vacía. Mínimo 5-8 fuentes académicas.'],
+          ['no','Jaime',  'Anexo IA — con URLs de cada conversación Claude',             'ISEADE exige el URL del prompt específico. Guardar links desde ahora.'],
+          ['no','Jaime',  '§VII: Alcances + Limitaciones + Metodología + Cronograma',   '4 subsecciones obligatorias no redactadas aún.'],
+          ['warn','Ricardo','§VI.1 Finanzas — cerrar con estados financieros',          'Ahora hay base documental (CPA + Auditor). Aclarar brecha ingresos formales vs operativos.'],
+          ['warn','Cecilia','Journey del paciente + mapa visual de procesos',           'Depende de observación real en Visita 3 (sáb 23).'],
+        ].map(([icon,who,title,sub]) => `
+        <div class="mp-chk-item">
+          <div class="mp-chk-icon mp-chk-${icon}">${icon==='no'?'✗':'!'}</div>
+          <div><span class="mp-who">${who}</span><strong>${title}</strong><div class="mp-chk-sub">${sub}</div></div>
+        </div>`).join('')}
       </div>
     </div>
 
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center">
+        <div class="card-title"><i class="fas fa-list-check" style="margin-right:.5rem"></i>Checklist de Entrega — 1 Junio</div>
+        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">1 de 7 listo</span>
+      </div>
+      <div style="padding:1rem 1.1rem">
+        ${[
+          ['ok',  'Carta de Confidencialidad',                  'Firmada por Dra. Vigil el 6 de mayo ✅'],
+          ['warn','Carta Aceptación Diagnóstico (Dra. Vigil)',  'Generada ✅ — llevar impresa el sáb 23 en 2 originales para firma'],
+          ['no',  'Carta Aprobación Tutor (Roberto Castro)',    'Obtener firma en reunión del martes 26'],
+          ['no',  'Control de Horas Efectivas (4 integrantes)','Completar antes del 30 de mayo'],
+          ['no',  'Informe anillado (impreso B/N doble cara)',  'Después del 30 mayo cuando el documento esté cerrado'],
+          ['no',  'Sobre manila con cartas — SIN PERFORAR',    'Las 4 cartas van aparte del anillado'],
+          ['no',  'PDF digital a vbeltran@iseade.edu.sv',      'Horario 9:30–18:30 del 1 de junio'],
+        ].map(([icon,title,sub]) => `
+        <div class="mp-chk-item">
+          <div class="mp-chk-icon mp-chk-${icon}">${icon==='ok'?'✓':icon==='warn'?'!':'✗'}</div>
+          <div><strong>${title}</strong><div class="mp-chk-sub">${sub}</div></div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- Responsabilidades por consultor -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fas fa-users" style="margin-right:.5rem"></i>Responsabilidades por Consultor — Esta Semana</div>
+    </div>
+    <div style="padding:.85rem 1.1rem">
+      <div class="mp-person-grid">
+        ${[
+          ['#1A5FA8','Jaime O. López · Líder',        [['done','Carta Aceptación generada'],['todo','Redactar §III completa'],['todo','§VII: Alcances, Limitaciones, Metodología'],['todo','Visita 3 · sáb 23 (con Cecilia)'],['crit','Anexo IA — guardar URLs Claude desde hoy']]],
+          ['#8B44C4','Cecilia B. Chicas · Consultora', [['done','§VI.1 Mercadeo CRM — diagnóstico listo'],['todo','Completar análisis canales digitales'],['todo','Visita 3 · sáb 23 — métricas + journey'],['crit','Diagrama visual mapa de procesos']]],
+          ['#C47A15','Ricardo A. Palacios · Consultor',[['done','Datos financieros recibidos (EERR + Balance)'],['todo','Redactar §VI.1 Finanzas con estados formales'],['todo','Aclarar brecha ingresos formales vs operativos'],['todo','Visita 4 · lun 25 (con Elías)']]],
+          ['#0D8A6E','Elías J. Núñez · Consultor',    [['done','Análisis de insumos documentado'],['crit','Redactar Diag. Ambiental §1-2 (urgente)'],['todo','Visita 4 · lun 25 — §3-4 ambiental'],['todo','Journey del paciente completo']]],
+        ].map(([color,name,tasks]) => `
+        <div class="mp-person-card" style="border-top-color:${color}">
+          <div class="mp-p-name" style="color:${color}">${name}</div>
+          ${tasks.map(([d,t]) => `<div class="mp-p-task"><span class="mp-p-dot mp-p-${d}"></span>${t}</div>`).join('')}
+        </div>`).join('')}
+      </div>
+    </div>
   </div>`;
 }
 
@@ -660,6 +783,10 @@ function navigate(sectionId) {
       const w = el.style.width;
       el.style.width = '0';
       requestAnimationFrame(() => { el.style.width = w; });
+    });
+    document.querySelectorAll('.mp-prog-fill[data-w]').forEach(el => {
+      el.style.width = '0%';
+      requestAnimationFrame(() => { el.style.width = el.dataset.w; });
     });
   });
 
