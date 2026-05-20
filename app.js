@@ -12,32 +12,35 @@ function renderCartelera() {
     <div class="bulletin-card">
       <div class="bulletin-card-header"><i class="fas fa-bullhorn"></i> Aviso del Equipo</div>
       <div class="bulletin-card-body">
-        <p>📌 <strong>Próxima entrega:</strong> Borrador del Capítulo II – Marco Teórico.<br>
-        Fecha límite acordada con el tutor: <strong>30 de mayo de 2025</strong>.<br>
-        Recuerden subir sus secciones asignadas a la carpeta compartida.</p>
+        <p>📌 <strong>Entrega final ISEADE:</strong> 1 de junio de 2026 (físico anillado + digital a vbeltran@iseade.edu.sv).<br>
+        📌 <strong>Presentación al tutor:</strong> martes 26 de mayo de 2026 – Lic. Roberto Castro Castañeda.<br>
+        Cada consultor preparará 2–3 diapositivas con hallazgos por área.</p>
       </div>
     </div>
 
     <div class="bulletin-card">
       <div class="bulletin-card-header"><i class="fas fa-calendar-check"></i> Próximas Actividades</div>
       <div class="bulletin-card-body">
-        <p>📅 <strong>Visita 03 a CLIDENTE</strong> – pendiente de confirmar fecha.<br>
-        📅 <strong>Reunión con Tutor #3</strong> – junio 2025.<br>
-        📅 <strong>Entrega Capítulo III</strong> – julio 2025.</p>
+        <p>📅 <strong>Visitas de Campo 2 y 3</strong> – semana del 19 al 23 de mayo de 2026.<br>
+        📅 <strong>Reunión con Tutor #2</strong> – 26 de mayo de 2026.<br>
+        📅 <strong>Visita de cierre de brechas</strong> – semana del 26 al 30 de mayo.<br>
+        📅 <strong>Entrega ISEADE</strong> – 1 de junio de 2026.</p>
       </div>
     </div>
 
     <div class="bulletin-card">
-      <div class="bulletin-card-header"><i class="fas fa-chart-line"></i> Avance del TDG</div>
+      <div class="bulletin-card-header"><i class="fas fa-chart-line"></i> Avance del Diagnóstico</div>
       <div class="bulletin-card-body">
         <ul class="progress-list">
           ${[
-            ['Propuesta de Investigación', 100],
-            ['Marco Teórico', 75],
-            ['Marco Metodológico', 60],
-            ['Diagnóstico Organizacional', 50],
-            ['Análisis de Resultados', 15],
-            ['Propuesta de Mejora', 0],
+            ['Antecedentes e Identificación', 100],
+            ['Filosofía Corporativa', 100],
+            ['Estructura Organizacional', 70],
+            ['Descripción del Funcionamiento', 60],
+            ['Mapa de Procesos', 50],
+            ['Diagnóstico Situación Actual (FODA/Porter)', 35],
+            ['Orientación de la Consultoría', 20],
+            ['Conclusiones y Recomendaciones', 10],
           ].map(([label, pct]) => `
           <li>
             <div class="progress-label"><span>${label}</span><span class="progress-pct">${pct}%</span></div>
@@ -50,9 +53,10 @@ function renderCartelera() {
     <div class="bulletin-card">
       <div class="bulletin-card-header"><i class="fas fa-info-circle"></i> Sobre este Portal</div>
       <div class="bulletin-card-body">
-        <p>Bienvenidos al portal interno del <strong>Trabajo de Graduación MBA</strong> en ISEADE FEPADE.
-        Aquí encontrarán de forma centralizada: transcripciones de visitas, actas de reunión con el tutor,
-        borradores del diagnóstico y toda la documentación del proyecto <strong>CLIDENTE</strong>.</p>
+        <p>Portal interno de la consultoría empresarial <strong>MAE LVIII</strong> – ISEADE FEPADE.<br>
+        Empresa: <strong>Clínica Dental Clidente</strong> · Santa Tecla, La Libertad.<br>
+        Propietaria: <strong>Dra. Olga Dinora Vigil Romero</strong> · Fundada: noviembre 1998.<br>
+        Contacto en clínica: <strong>Tec. Henry Corcio</strong> – Gerente Administrativo.</p>
       </div>
     </div>
 
@@ -66,39 +70,43 @@ function renderSobreProyecto() {
     <div class="info-box">
       <div class="info-box-icon blue"><i class="fas fa-university" style="color:var(--blue)"></i></div>
       <h4>Institución</h4>
-      <p>ISEADE FEPADE – MBA en Administración de Empresas, promoción 2024–2025.</p>
+      <p>ISEADE BUSINESS SCHOOL | FEPADE – Maestría en Administración de Empresas, Generación LVIII (2026).</p>
     </div>
     <div class="info-box">
-      <div class="info-box-icon green"><i class="fas fa-building" style="color:#166534"></i></div>
+      <div class="info-box-icon green"><i class="fas fa-tooth" style="color:#166534"></i></div>
       <h4>Empresa Objeto de Estudio</h4>
-      <p><strong>CLIDENTE</strong> – Clínica dental objeto del diagnóstico organizacional.</p>
+      <p><strong>Clínica Dental Clidente</strong> – fundada en noviembre de 1998 por la Dra. Olga Dinora Vigil Romero.<br>
+      2ª Calle Pte. y 2ª Av. Sur, Local 21, 2° Nivel, Santa Tecla, La Libertad.<br>
+      Eslogan: <em>"Con Clidente siempre sonriente"</em></p>
     </div>
     <div class="info-box">
       <div class="info-box-icon gold"><i class="fas fa-graduation-cap" style="color:#854d0e"></i></div>
       <h4>Tipo de Trabajo</h4>
-      <p>Diagnóstico Organizacional con propuesta de mejora. Investigación cualitativa con enfoque mixto.</p>
+      <p>Consultoría empresarial gratuita + Diagnóstico Organizacional Integral con propuesta de mejora. Tres unidades de negocio: clínica dental, depósito dental y alquiler de bodegas.</p>
     </div>
     <div class="info-box">
       <div class="info-box-icon blue"><i class="fas fa-bullseye" style="color:var(--blue)"></i></div>
-      <h4>Objetivo General</h4>
-      <p>Elaborar un diagnóstico organizacional de CLIDENTE que permita identificar oportunidades de mejora en su gestión administrativa y operativa.</p>
+      <h4>Misión de Clidente</h4>
+      <p>"Brindar un servicio integral de salud dental a través de servicios odontológicos de alta calidad, ética y vocación, ofreciendo precios competitivos y superando la expectativa de nuestros clientes."</p>
     </div>
     <div class="info-box">
-      <div class="info-box-icon green"><i class="fas fa-search" style="color:#166534"></i></div>
-      <h4>Metodología</h4>
-      <p>Investigación cualitativa. Técnicas: entrevista a profundidad, observación directa y análisis documental.</p>
+      <div class="info-box-icon green"><i class="fas fa-eye" style="color:#166534"></i></div>
+      <h4>Visión de Clidente</h4>
+      <p>"Ser una empresa innovadora, sólidamente constituida y reconocida por su calidad de servicio, creciendo a nivel nacional con la mejor tecnología e innovando continuamente en cuidado de salud bucal."</p>
     </div>
     <div class="info-box">
       <div class="info-box-icon gold"><i class="fas fa-user-tie" style="color:#854d0e"></i></div>
       <h4>Tutor Académico</h4>
-      <p>Lic. Roberto Arturo Castro Castañeda – ISEADE FEPADE.</p>
+      <p>Lic. Roberto Arturo Castro Castañeda – ISEADE FEPADE.<br>
+      Presentación al tutor: <strong>26 de mayo de 2026</strong>.</p>
     </div>
   </div>
   <div class="card">
-    <div class="card-title"><i class="fas fa-file-alt" style="margin-right:.5rem"></i>Propuesta de Investigación – Aprobada</div>
-    <p class="card-subtitle">Documento oficial aprobado por ISEADE FEPADE. Contiene título, justificación, objetivos y alcance del TDG.</p>
+    <div class="card-title"><i class="fas fa-file-alt" style="margin-right:.5rem"></i>Asignación Oficial de Consultoría – ISEADE</div>
+    <p class="card-subtitle">Carta oficial de ISEADE FEPADE asignando al Equipo MAE LVIII a la Clínica Dental Clidente. Firmada el 25 de abril de 2026 por Vanessa Beltrán (ISEADE).</p>
     <div class="resource-buttons">
-      <a href="docs/propuesta-investigacion.pdf" target="_blank" class="btn-resource"><i class="fas fa-file-pdf"></i> Ver Propuesta</a>
+      <a href="ASIGNACION DE CONSULTORIA.pdf" target="_blank" class="btn-resource"><i class="fas fa-file-pdf"></i> Ver Asignación</a>
+      <a href="SOLICITUD CLIDENTE.pdf" target="_blank" class="btn-resource"><i class="fas fa-file-pdf"></i> Ver Solicitud</a>
     </div>
   </div>`;
 }
@@ -106,26 +114,39 @@ function renderSobreProyecto() {
 function renderVisitas() {
   const visitas = [
     {
-      n: 1, title: 'Visita 01 – Presentación e inducción',
-      date: '15 de marzo de 2025', duration: '3 horas',
-      attendees: 'Gerente General, Coordinador de Operaciones, Equipo TDG',
-      summary: 'Primera visita formal a CLIDENTE. Presentación del equipo al personal directivo, recorrido por instalaciones y entrevista inicial con la Gerencia General.',
+      n: 1, title: 'Visita 01 – Presentación inicial y firma de confidencialidad',
+      date: '30 de abril de 2026', duration: '90 minutos',
+      attendees: 'Dra. Olga Vigil, Tec. Henry Corcio (Gte. Adm.), Jaime López, Cecilia Chicas',
+      summary: 'Primera visita oficial a Clínica Dental Clidente. Presentación del equipo a la propietaria Dra. Vigil y firma de cartas de confidencialidad. Reconocimiento de instalaciones (4 locales integrados, 8 sillas de atención). Entrega del cuestionario de diagnóstico ambiental (escala 0–4) para que la Dra. lo complete. Hora de llegada: 5:15 PM · 2ª Calle Pte. y 2ª Av. Sur, Local 21, 2° Nivel, Santa Tecla.',
       resources: [
-        { label: 'Transcripción', icon: 'fa-file-lines', href: 'docs/transcripcion-visita-01.pdf' },
-        { label: 'Resumen Ejecutivo', icon: 'fa-file-alt', href: 'docs/resumen-visita-01.pdf' },
-        { label: 'Notas de Campo', icon: 'fa-sticky-note', href: 'docs/notas-visita-01.pdf' },
+        { label: 'Acuerdos y Compromisos', icon: 'fa-file-lines', href: 'Acuerdos_Primera_Reunion_Clidente.pdf' },
       ]
     },
     {
-      n: 2, title: 'Visita 02 – Área operativa y RRHH',
-      date: '10 de abril de 2025', duration: '4 horas',
-      attendees: 'Jefe de RRHH, 5 empleados, Equipo TDG',
-      summary: 'Enfoque en procesos operativos y gestión del talento humano. Entrevistas estructuradas a empleados de línea y recopilación de documentos internos.',
+      n: 2, title: 'Visita 02 – Organización y Área Comercial',
+      date: '16–17 de mayo de 2026 (Pareja B)', duration: '4 horas',
+      attendees: 'Jaime Omar López + Cecilia Beatriz Chicas · Contacto: Henry Corcio',
+      summary: 'Pareja B (Organización y Área Comercial). Objetivos: validar organigrama vigente e identificar vacante de Dirección Clínica; entrevistar a Tatiana/Diego (Mercadeo) sobre redes sociales; diagnosticar sistema CRM/base de pacientes; verificar escala salarial y comisiones; obtener descriptores de puesto del manual (carpeta negra). Solicitar copia digital del organigrama a Henry.',
       resources: [
-        { label: 'Transcripción', icon: 'fa-file-lines', href: 'docs/transcripcion-visita-02.pdf' },
-        { label: 'Resumen Ejecutivo', icon: 'fa-file-alt', href: 'docs/resumen-visita-02.pdf' },
-        { label: 'Fotos de Visita', icon: 'fa-images', href: 'docs/fotos-visita-02.pdf', cls: 'btn-img' },
+        { label: 'Plan de Visitas', icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
+        { label: 'Roles del Equipo', icon: 'fa-users', href: 'Roles_Equipo_Consultor_Clidente.pdf' },
       ]
+    },
+    {
+      n: 3, title: 'Visita 03 – Operaciones y Finanzas',
+      date: '19–23 de mayo de 2026 (Pareja A)', duration: '4 horas',
+      attendees: 'Ricardo Palacios + Elías Núñez · Contacto: Henry Corcio',
+      summary: 'Pareja A (Finanzas e Inventarios). Objetivos: levantar inventario físico de insumos (codificación y sistema de requisición); mapear journey del paciente desde ingreso hasta cobro; evaluar protocolos de inocuidad y esterilización; recopilar KPIs de contabilidad y estado de P&G por unidad de negocio (clínica, depósito, bodegas); aplicar encuesta de Diagnóstico de Desempeño Ambiental.',
+      resources: [
+        { label: 'Plan de Visitas', icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
+      ]
+    },
+    {
+      n: 4, title: 'Visita 04 – Observación sin previo aviso (Operación Real)',
+      date: 'Semana del 26–30 de mayo de 2026', duration: '2–3 horas',
+      attendees: 'Cecilia Chicas + Ricardo Palacios',
+      summary: 'Visita sin previo aviso, conforme al acuerdo con la propietaria, para observar la operación en condiciones reales. Objetivo: conteo real de pacientes y ticket promedio por procedimiento, análisis de métricas de redes sociales, y cierre de brechas de información pendiente.',
+      resources: []
     },
   ];
 
@@ -160,23 +181,36 @@ function renderVisitas() {
 function renderReuniones() {
   const meetings = [
     {
-      n: 1, title: 'Sesión de Arranque',
-      date: '5 de febrero de 2025',
+      n: 1, title: 'Reunión de Coordinación con el Tutor',
+      date: '12 de mayo de 2026',
       tutor: 'Lic. Roberto Arturo Castro Castañeda',
-      topics: ['Definición del tema y empresa objeto de estudio', 'Alcance y delimitación del TDG', 'Metodología general recomendada', 'Cronograma de entregas y evaluaciones'],
+      topics: [
+        'Asignación de roles por área de especialización a cada consultor',
+        'Cecilia: área comercial, CRM y marketing (recuperación de +1,300 clientes perdidos)',
+        'Ricardo: área financiera, línea base y estado de P&G por unidad de negocio',
+        'Elías: operaciones, inventarios, journey del paciente y diagnóstico ambiental',
+        'Jaime: liderazgo, estructura organizacional, gobernanza y modelo de continuidad',
+        'Designación de Jaime como líder único para centralizar comunicación con tutor',
+        'Opciones CRM gratuitas: HubSpot, Bitrix (a customizar según necesidades)',
+        'Metodología: trabajo en parejas (Pareja A: Ricardo + Elías · Pareja B: Jaime + Cecilia)',
+      ],
       resources: [
-        { label: 'Acta de Reunión', icon: 'fa-file-lines', href: 'docs/acta-reunion-01.pdf' },
-        { label: 'Compromisos', icon: 'fa-list-check', href: 'docs/compromisos-01.pdf' },
+        { label: 'Resumen Reunión', icon: 'fa-file-lines', href: '05-12 Prometa Reunión de Coordinación con el Tutor-Adaptive Summary.pdf' },
+        { label: 'Roles del Equipo', icon: 'fa-list-check', href: 'Roles_Equipo_Consultor_Clidente.pdf' },
       ]
     },
     {
-      n: 2, title: 'Revisión Marco Teórico',
-      date: '20 de marzo de 2025',
+      n: 2, title: 'Presentación de Avances al Tutor',
+      date: '26 de mayo de 2026',
       tutor: 'Lic. Roberto Arturo Castro Castañeda',
-      topics: ['Retroalimentación sobre fuentes bibliográficas', 'Ajuste al planteamiento del problema', 'Observaciones al marco referencial', 'Próximos pasos: recolección de datos'],
-      resources: [
-        { label: 'Acta de Reunión', icon: 'fa-file-lines', href: 'docs/acta-reunion-02.pdf' },
-      ]
+      topics: [
+        'Cada consultor presenta 2–3 diapositivas con hallazgos de su área',
+        'Avances: estructura organizacional (Jaime), diagnóstico CRM/comercial (Cecilia)',
+        'Avances: inventarios y procesos (Elías), línea base financiera (Ricardo)',
+        'Revisión del Informe de Diagnóstico borrador para ISEADE',
+        'Firma de Carta de Aprobación del Diagnóstico por el tutor',
+      ],
+      resources: []
     },
   ];
 
@@ -209,28 +243,42 @@ function renderDiagnostico() {
   <h1 class="section-title">Diagnóstico Organizacional</h1>
 
   <div class="resource-group card">
-    <div class="card-title"><i class="fas fa-file-word" style="margin-right:.5rem"></i>Borrador – Diagnóstico v1</div>
-    <p class="resource-group-subtitle">Primer borrador del diagnóstico organizacional de CLIDENTE. Incluye análisis FODA, estructura organizacional y hallazgos preliminares de las visitas.</p>
+    <div class="card-title"><i class="fas fa-file-pdf" style="margin-right:.5rem"></i>Informe de Diagnóstico V1 – Clínica Dental Clidente</div>
+    <p class="resource-group-subtitle">Borrador del informe oficial para ISEADE FEPADE. Incluye: Antecedentes, Filosofía Corporativa, Estructura Organizacional, Descripción del Funcionamiento, Mapa de Procesos, Diagnóstico FODA, Análisis 5 Fuerzas de Porter, Factores Críticos de Éxito, Orientación de la Consultoría y Conclusiones. <strong>Fecha límite de entrega: 1 de junio de 2026.</strong></p>
     <div class="resource-buttons">
-      <a href="docs/diagnostico-borrador-v1.pdf" target="_blank" class="btn-resource"><i class="fas fa-file-pdf"></i> Ver Borrador PDF</a>
-      <a href="docs/diagnostico-borrador-v1.docx" target="_blank" class="btn-resource"><i class="fas fa-file-word"></i> Ver Borrador DOCX</a>
+      <a href="Diagnostico_Clidente_2026_V1.pdf" target="_blank" class="btn-resource"><i class="fas fa-file-pdf"></i> Ver Diagnóstico V1</a>
     </div>
   </div>
 
   <div class="resource-group card">
-    <div class="card-title"><i class="fas fa-sitemap" style="margin-right:.5rem"></i>Análisis FODA</div>
-    <p class="resource-group-subtitle">Matriz de Fortalezas, Oportunidades, Debilidades y Amenazas elaborada a partir de las entrevistas y observación directa.</p>
-    <div class="resource-buttons">
-      <a href="docs/foda-clidente.pdf" target="_blank" class="btn-resource"><i class="fas fa-table"></i> Ver Matriz FODA</a>
-      <a href="docs/foda-clidente.xlsx" target="_blank" class="btn-resource"><i class="fas fa-file-excel"></i> Excel FODA</a>
-    </div>
+    <div class="card-title"><i class="fas fa-sitemap" style="margin-right:.5rem"></i>Filosofía Corporativa de Clidente</div>
+    <p class="resource-group-subtitle">
+      <strong>Misión:</strong> Brindar servicios odontológicos de alta calidad, ética y vocación con precios competitivos.<br>
+      <strong>Visión:</strong> Ser una empresa innovadora reconocida por su calidad, creciendo a nivel nacional.<br>
+      <strong>Eslogan:</strong> "Con Clidente siempre sonriente"<br>
+      <strong>Valores inferidos:</strong> Ética profesional, vocación de servicio, honestidad y responsabilidad.<br>
+      <strong>Norma explícita:</strong> Tres conductas de desvinculación inmediata: mentir, ser mañoso, ser malcriado.
+    </p>
   </div>
 
   <div class="resource-group card">
-    <div class="card-title"><i class="fas fa-network-wired" style="margin-right:.5rem"></i>Organigrama</div>
-    <p class="resource-group-subtitle">Estructura organizacional actual de CLIDENTE elaborada durante la primera visita.</p>
+    <div class="card-title"><i class="fas fa-exclamation-triangle" style="margin-right:.5rem;color:#dc2626"></i>Hallazgos Críticos Identificados</div>
+    <p class="resource-group-subtitle">
+      🔴 Pérdida de más de <strong>1,300 clientes</strong> al cierre de abril de 2026.<br>
+      🔴 <strong>Ausencia de sistema CRM</strong> – sin seguimiento estructurado de pacientes activos/inactivos.<br>
+      🔴 <strong>Falta de profesionalización empresarial</strong> – modelo familiar sin controles formales.<br>
+      🔴 <strong>Desconocimiento de indicadores financieros</strong> por unidad de negocio.<br>
+      🔴 <strong>Modelo reactivo</strong> de atención (no preventivo).<br>
+      🟡 Tres unidades de negocio: clínica dental, depósito dental y alquiler de bodegas (sin estados financieros separados).
+    </p>
+  </div>
+
+  <div class="resource-group card">
+    <div class="card-title"><i class="fas fa-network-wired" style="margin-right:.5rem"></i>Estructura Organizacional</div>
+    <p class="resource-group-subtitle">Clínica con 8 sillas de atención, 10 horas diarias de operación, 24 personas en planilla ISSS (incluye otras empresas de la propietaria). Vacante identificada: <strong>Dirección Clínica</strong>. Contacto operativo: Tec. Henry Corcio – Gerente Administrativo.</p>
     <div class="resource-buttons">
-      <a href="docs/organigrama-clidente.pdf" target="_blank" class="btn-resource"><i class="fas fa-project-diagram"></i> Ver Organigrama</a>
+      <a href="Roles_Equipo_Consultor_Clidente.pdf" target="_blank" class="btn-resource"><i class="fas fa-users"></i> Roles del Equipo</a>
+      <a href="Plan_Visitas_Campo_Clidente_2026.pdf" target="_blank" class="btn-resource"><i class="fas fa-map"></i> Plan de Visitas</a>
     </div>
   </div>`;
 }
@@ -334,19 +382,18 @@ function renderEquipo() {
 
 function renderCronograma() {
   const rows = [
-    ['Enero 2025',    'Definición de tema y propuesta',          'done'],
-    ['Febrero 2025',  'Aprobación de propuesta / Reunión #1',    'done'],
-    ['Marzo 2025',    'Marco Teórico – Visita #1 a CLIDENTE',    'done'],
-    ['Abril 2025',    'Marco Metodológico – Visita #2',          'done'],
-    ['Mayo 2025',     'Diagnóstico – Capítulo II',               'wip'],
-    ['Junio 2025',    'Análisis de resultados – Visita #3',      'pending'],
-    ['Julio 2025',    'Propuesta de mejora',                     'pending'],
-    ['Agosto 2025',   'Informe final y revisión',                'pending'],
-    ['Septiembre 2025','Defensa del TDG',                        'pending'],
+    ['Abril 2026',     'Asignación ISEADE – inicio oficial de la consultoría (25 abr)',  'done'],
+    ['30 abr 2026',   'Visita #1 a Clidente – presentación y firma de confidencialidad',  'done'],
+    ['12 may 2026',   'Reunión #1 con Tutor – asignación de roles por área',             'done'],
+    ['16-17 may 2026','Visita #2 – Pareja B (Organización y Área Comercial)',            'wip'],
+    ['19-23 may 2026','Visita #3 – Pareja A (Finanzas e Inventarios)',                   'wip'],
+    ['26 may 2026',   'Reunión #2 con Tutor – presentación de avances por área',         'pending'],
+    ['26-30 may 2026','Visita #4 – Observación sin previo aviso (cierre de brechas)',    'pending'],
+    ['1 jun 2026',    'Entrega final ISEADE (físico anillado + digital)',                'pending'],
   ];
   const labels = { done:'Completado', wip:'En Progreso', pending:'Pendiente' };
   return `
-  <h1 class="section-title">Cronograma del TDG</h1>
+  <h1 class="section-title">Cronograma de la Consultoría</h1>
   <div class="card" style="padding:0;overflow:hidden">
     <table class="cronograma-table">
       <thead>
