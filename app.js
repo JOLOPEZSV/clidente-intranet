@@ -569,7 +569,7 @@ function renderEquipo() {
     { name: 'Cecilia Beatriz Chicas de Escalante', initials: 'CC', role: 'Ing. Industrial · Walmart',                    color: '#1a56a4', email: 'cecilia_cbcg@hotmail.com', tel: '6031-0312' },
     { name: 'Ricardo Alberto Palacios Valladares', initials: 'RP', role: 'Arq. de Interiores · Alcaldía de San Salvador', color: '#0e7490', email: 'ricardoa7@hotmail.com',      tel: '7922-7891' },
     { name: 'Elías José Núñez Menjívar',           initials: 'EN', role: 'Ing. Industrial · Corte Suprema de Justicia',   color: '#7c3aed', email: 'jm.josemenjivar@gmail.com', tel: '7740-3029' },
-    { name: 'Jaime Omar López Monge',              initials: 'JL', role: 'Adm. de Empresas · StarDent',                   color: '#b45309', email: 'jolopezsalsv@gmail.com',    tel: '7627-3314' },
+    { name: 'Jaime Omar López Monge',              initials: 'JL', role: 'Adm. de Empresas · StarDent',                   color: '#b45309', email: 'jolopezsalsv@gmail.com',    tel: '7627-3314', photo: 'jaime-lopez.jpeg' },
   ];
   return `
   <h1 class="section-title">Equipo de Investigación</h1>
@@ -579,7 +579,10 @@ function renderEquipo() {
   <div class="team-grid">
     ${team.map(m => `
     <div class="team-card">
-      <div class="team-avatar" style="background:${m.color}">${m.initials}</div>
+      <div class="team-avatar${m.photo ? ' has-photo' : ''}" style="background:${m.color}">
+        ${m.photo ? `<img src="${m.photo}" alt="${m.name}" loading="lazy" onerror="this.remove();this.parentElement.classList.remove('has-photo')">` : m.initials}
+        ${m.photo ? `<span>${m.initials}</span>` : ''}
+      </div>
       <div class="team-name">${m.name}</div>
       <div class="team-role">${m.role}</div>
       <div style="margin-top:.75rem;display:flex;flex-direction:column;gap:.35rem">
