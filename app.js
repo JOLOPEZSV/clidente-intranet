@@ -235,7 +235,7 @@ function renderSobreProyecto() {
 }
 
 function renderVisitas() {
-  const visitasCampo = [
+  const visitasGerenciales = [
     {
       n: 1,
       title: 'Presentación inicial y firma de confidencialidad',
@@ -249,8 +249,11 @@ function renderVisitas() {
         { label: 'Plan de Visitas',   icon: 'fa-file-lines',   href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
       ]
     },
+  ];
+
+  const visitasCampo = [
     {
-      n: 2,
+      n: 1,
       title: 'Organización y Área Comercial',
       date: '16 de mayo de 2026 (Pareja B)', duration: '4 horas',
       attendees: 'Jaime Omar López + Cecilia Beatriz Chicas · Contacto: Henry Corcio',
@@ -261,7 +264,7 @@ function renderVisitas() {
       ]
     },
     {
-      n: 3,
+      n: 2,
       title: 'Operaciones y Finanzas',
       date: '19–23 de mayo de 2026 (Pareja A)', duration: '4 horas',
       attendees: 'Ricardo Palacios + Elías Núñez · Contacto: Henry Corcio',
@@ -273,7 +276,7 @@ function renderVisitas() {
       ]
     },
     {
-      n: 4,
+      n: 3,
       title: 'Observación sin previo aviso (Operación Real)',
       date: 'Semana del 26–30 de mayo de 2026', duration: '2–3 horas',
       attendees: 'Cecilia Chicas + Ricardo Palacios',
@@ -285,7 +288,7 @@ function renderVisitas() {
       ]
     },
     {
-      n: 5,
+      n: 4,
       title: 'Por programar',
       date: 'Por definir', duration: 'Por definir',
       attendees: 'Por definir',
@@ -304,6 +307,39 @@ function renderVisitas() {
 
   return `
   <h1 class="section-title">Visitas a CLIDENTE</h1>
+
+  <!-- SUBSECCIÓN: VISITAS GERENCIALES -->
+  <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;margin-top:.5rem">
+    <div style="width:36px;height:36px;border-radius:50%;background:#0d8a6e;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <i class="fas fa-user-tie" style="color:white;font-size:.9rem"></i>
+    </div>
+    <h2 style="font-size:1.2rem;font-weight:700;color:var(--text);margin:0">Visitas Gerenciales</h2>
+    <span style="background:#e6f4ee;color:#0f4a2e;font-size:.75rem;font-weight:600;padding:.2rem .7rem;border-radius:50px">${visitasGerenciales.length} visita</span>
+  </div>
+
+  <div class="timeline" style="margin-bottom:2rem">
+    ${visitasGerenciales.map(v => `
+    <div class="tl-item">
+      <div class="tl-header">
+        <span class="tl-title">Visita Ejecutiva #${v.n} – ${v.title}</span>
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;justify-content:flex-end">
+          <span style="background:${estadoBg[v.estado]};color:${estadoColor[v.estado]};font-size:.75rem;font-weight:600;padding:.2rem .65rem;border-radius:50px;white-space:nowrap">${estadoLabel[v.estado]}</span>
+          <span class="tl-date">${v.date}</span>
+        </div>
+      </div>
+      <p class="tl-summary">${v.summary}</p>
+      <p class="tl-meta">
+        <span><i class="fas fa-clock"></i>${v.duration}</span>
+        <span><i class="fas fa-users"></i>${v.attendees}</span>
+      </p>
+      <div class="resource-buttons">
+        ${v.resources.map(r => `
+        <a href="${r.href}" target="_blank" class="btn-resource">
+          <i class="fas ${r.icon}"></i> ${r.label}
+        </a>`).join('')}
+      </div>
+    </div>`).join('')}
+  </div>
 
   <!-- SUBSECCIÓN: VISITAS DE CAMPO -->
   <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;margin-top:.5rem">
