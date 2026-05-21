@@ -379,6 +379,7 @@ img { max-width: 100%; }
   flex-wrap: wrap;
   gap: .5rem;
   justify-content: flex-end;
+  max-width: 520px;
 }
 .collaborative-doc-pdf {
   background: #fff0f0;
@@ -387,6 +388,11 @@ img { max-width: 100%; }
 }
 .collaborative-doc-pdf:hover {
   background: #ffe0e0;
+}
+.collaborative-doc-pdf:disabled {
+  cursor: wait;
+  opacity: .75;
+  transform: none;
 }
 .collaborative-doc-note {
   align-items: flex-start;
@@ -403,6 +409,26 @@ img { max-width: 100%; }
 .collaborative-doc-note i {
   color: var(--blue);
   margin-top: .1rem;
+}
+.pdf-generation-status {
+  display: none;
+  font-size: .82rem;
+  line-height: 1.45;
+  padding: .75rem 1.5rem;
+}
+.pdf-generation-status.is-working,
+.pdf-generation-status.is-info {
+  align-items: center;
+  display: flex;
+  gap: .5rem;
+}
+.pdf-generation-status.is-working {
+  background: #eef6ff;
+  color: var(--blue-dark);
+}
+.pdf-generation-status.is-info {
+  background: #fff8e7;
+  color: #7a4d00;
 }
 .collaborative-doc-frame {
   background: #f8fafc;
@@ -1034,6 +1060,7 @@ img { max-width: 100%; }
   .collaborative-doc-actions,
   .collaborative-doc-open,
   .collaborative-doc-pdf { width: 100%; }
+  .collaborative-doc-actions { max-width: none; }
   .collaborative-doc-frame { min-height: 560px; height: 72vh; }
   .ambiental-open { width: 100%; }
   .ambiental-frame { min-height: 560px; height: 72vh; }
@@ -1105,6 +1132,7 @@ img { max-width: 100%; }
   .ambiental-frame { min-height: 520px; }
   .collaborative-doc-header { padding: 1rem; }
   .collaborative-doc-note { padding: .75rem 1rem; }
+  .pdf-generation-status { padding: .75rem 1rem; }
   .collaborative-doc-frame { min-height: 520px; }
   .cronograma-intro { font-size: .85rem; margin-top: -.2rem; }
   .cronograma-mobile-card {

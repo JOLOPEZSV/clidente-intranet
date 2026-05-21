@@ -437,38 +437,35 @@ function renderReuniones() {
 
 function renderDiagnostico() {
   const collaborativeDocUrl = 'https://onedrive.live.com/:w:/g/personal/a9679c2cee16b8af/IQAenJTbznDFRb-nAXcoc66kAV5xTd_HZZ0zH57s4epiDco';
+  const collaborativePdfUrl = 'https://graph.microsoft.com/v1.0/shares/u!aHR0cHM6Ly9vbmVkcml2ZS5saXZlLmNvbS86dzovZy9wZXJzb25hbC9hOTY3OWMyY2VlMTZiOGFmL0lRQWVuSlRiem5ERlJiLW5BWGNvYzY2a0FWNXhUZF9IWlowekg1N3M0ZXBpRGNv/driveItem/content?format=pdf';
 
   return `
   <h1 class="section-title">Diagnóstico Organizacional</h1>
 
-  <div class="resource-group card">
-    <div class="card-title"><i class="fas fa-file-pdf" style="margin-right:.5rem"></i>Informe de Diagnóstico V1 – Clínica Dental Clidente</div>
-    <p class="resource-group-subtitle">Borrador del informe oficial para ISEADE FEPADE. Incluye: Antecedentes, Filosofía Corporativa, Estructura Organizacional, Descripción del Funcionamiento, Mapa de Procesos, Diagnóstico FODA, Análisis 5 Fuerzas de Porter, Factores Críticos de Éxito, Orientación de la Consultoría y Conclusiones. <strong>Fecha límite de entrega: 1 de junio de 2026.</strong></p>
-    <div class="resource-buttons">
-      <a href="Diagnostico_Clidente_2026_V1.pdf" target="_blank" class="btn-resource"><i class="fas fa-file-pdf"></i> Ver Diagnóstico V1</a>
-    </div>
-  </div>
-
-  <div class="resource-group card collaborative-doc-card">
+  <div class="resource-group card collaborative-doc-card diagnostic-workspace-card">
     <div class="collaborative-doc-header">
       <div>
-        <div class="card-title"><i class="fas fa-file-word" style="margin-right:.5rem"></i>Documento colaborativo del informe final</div>
-        <p class="resource-group-subtitle">Documento compartido en Word Online para que los 4 miembros del equipo redacten sus secciones desde un solo lugar. Los cambios se guardan directamente en el documento compartido.</p>
+        <div class="card-title"><i class="fas fa-file-signature" style="margin-right:.5rem"></i>Informe de Diagnóstico Organizacional</div>
+        <p class="resource-group-subtitle">Borrador oficial y documento colaborativo del informe final para ISEADE FEPADE. Incluye: Antecedentes, Filosofía Corporativa, Estructura Organizacional, Descripción del Funcionamiento, Mapa de Procesos, Diagnóstico FODA, Análisis 5 Fuerzas de Porter, Factores Críticos de Éxito, Orientación de la Consultoría y Conclusiones. <strong>Fecha límite de entrega: 1 de junio de 2026.</strong></p>
       </div>
       <div class="collaborative-doc-actions">
+        <a href="Diagnostico_Clidente_2026_V1.pdf" target="_blank" class="btn-resource">
+          <i class="fas fa-file-pdf"></i> Ver Diagnóstico V1
+        </a>
         <a href="${collaborativeDocUrl}" target="_blank" rel="noopener" class="btn-resource collaborative-doc-open">
           <i class="fas fa-pen-to-square"></i> Abrir y editar en Word Online
         </a>
-        <a href="${collaborativeDocUrl}" target="_blank" rel="noopener" class="btn-resource collaborative-doc-pdf" title="Abre Word Online para generar el PDF con la version actualizada del documento">
+        <button type="button" class="btn-resource collaborative-doc-pdf" data-pdf-url="${collaborativePdfUrl}" title="Genera el PDF desde la version actual guardada en Microsoft OneDrive">
           <i class="fas fa-file-pdf"></i> Generar PDF actualizado
-        </a>
+        </button>
       </div>
     </div>
 
     <div class="collaborative-doc-note">
       <i class="fas fa-circle-info"></i>
-      Si Word Online solicita inicio de sesión o bloquea la edición dentro del portal, usa el botón para abrirlo en una pestaña nueva. Para generar el PDF actualizado, abre Word Online y usa Archivo &gt; Imprimir o Exportar como PDF.
+      El botón de PDF solicita a Microsoft la conversión de la versión actual guardada en OneDrive. Si la descarga no inicia, Microsoft está pidiendo autorización del propietario o una sesión activa.
     </div>
+    <div class="pdf-generation-status" id="pdfGenerationStatus" aria-live="polite"></div>
 
     <iframe
       class="collaborative-doc-frame"
@@ -1095,6 +1092,7 @@ function navigate(sectionId) {
   // Init tabs if present
   initTabs();
   initIndiceResponsables();
+  initDiagnosticPdfButton();
 
   // Animate progress bars
   requestAnimationFrame(() => {
@@ -1168,6 +1166,41 @@ function initIndiceResponsables() {
       navigate('equipo');
     });
   }
+}
+
+function initDiagnosticPdfButton() {
+  const button = document.querySelector('.collaborative-doc-pdf[data-pdf-url]');
+  if (!button) return;
+
+  const status = document.getElementById('pdfGenerationStatus');
+  button.addEventListener('click', () => {
+    const pdfUrl = button.dataset.pdfUrl;
+    if (!pdfUrl) return;
+
+    button.disabled = true;
+    if (status) {
+      status.className = 'pdf-generation-status is-working';
+      status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando PDF actualizado desde Microsoft OneDrive...';
+    }
+
+    const oldFrame = document.getElementById('pdfDownloadFrame');
+    if (oldFrame) oldFrame.remove();
+
+    const frame = document.createElement('iframe');
+    frame.id = 'pdfDownloadFrame';
+    frame.name = 'pdfDownloadFrame';
+    frame.hidden = true;
+    frame.src = pdfUrl;
+    document.body.appendChild(frame);
+
+    window.setTimeout(() => {
+      button.disabled = false;
+      if (status) {
+        status.className = 'pdf-generation-status is-info';
+        status.innerHTML = '<i class="fas fa-circle-info"></i> Si la descarga no inició, Microsoft no autorizó la conversión directa desde este portal. El documento sigue seguro en OneDrive.';
+      }
+    }, 4500);
+  });
 }
 
 function closeSidebar() {
