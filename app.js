@@ -655,6 +655,29 @@ const INDICE_RESPONSABLES_BY_ID = Object.fromEntries(
     .map(row => [`${row.code}|${row.item}`, row])
 );
 
+const INDICE_JUSTIFICACIONES = [
+  {
+    name: 'JAIME',
+    className: 'jaime',
+    text: 'Lider del equipo - 22 anos en sector dental (StarDent) - Asume vision estrategica total: antecedentes, estructura, FODA, FCE y toda la Orientacion (VII). Es quien mejor conoce el sector y quien integra el documento final.'
+  },
+  {
+    name: 'CECILIA',
+    className: 'cecilia',
+    text: 'Ing. Industrial - Walmart - Todo lo comercial y competitivo: clientes, mercado, canales y 5 Fuerzas. Walmart vive analizando exactamente esas dinamicas. Ya tiene el diagnostico CRM de campo.'
+  },
+  {
+    name: 'RICARDO',
+    className: 'ricardo',
+    text: 'Arq. Interiores - Alcaldia SS - Filosofia corporativa (M/V/V) y area financiera. Tiene los estados financieros (EERR + Balance + costos por servicio 2024). Seccion con mas documentacion disponible.'
+  },
+  {
+    name: 'ELIAS',
+    className: 'elias',
+    text: 'Ing. Industrial - CSJ - Todo lo operativo: proveedores (levanto inventario con Delmy), procesos, mapa, journey del paciente y Diagnostico Ambiental. Mapear procesos y diseniar sistemas es su metodologia natural.'
+  },
+];
+
 function getIndiceResponsablesSaved() {
   try {
     return JSON.parse(localStorage.getItem(INDICE_RESPONSABLES_STORAGE_KEY)) || {};
@@ -732,6 +755,17 @@ function renderIndiceResponsables() {
           </div>
         </article>
       `).join('')}
+    </div>
+
+    <div class="indice-justificacion">
+      <h3>Justificacion de las asignaciones</h3>
+      <div class="indice-justificacion-grid">
+        ${INDICE_JUSTIFICACIONES.map(item => `
+          <div class="indice-justificacion-name ${item.className}">${item.name}</div>
+          <div class="indice-justificacion-text">${item.text}</div>
+        `).join('')}
+      </div>
+      <p class="indice-note"><strong>Nota:</strong> Las secciones TODOS requieren insumos de cada consultor; Jaime integra y consolida el documento final. Mision y vision (Ricardo, Secc. II) ya tienen texto redactado — citar como: Vigil Romero, O. D., comunicacion personal, 6 de mayo de 2026.</p>
     </div>
   </section>`;
 }

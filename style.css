@@ -561,6 +561,53 @@ img { max-width: 100%; }
   line-height: 1.45;
   margin-bottom: .65rem;
 }
+.indice-justificacion {
+  border-top: 1px solid var(--border);
+  padding: 1.2rem 1.35rem 1.35rem;
+}
+.indice-justificacion h3 {
+  color: var(--blue-dark);
+  font-size: .95rem;
+  font-weight: 800;
+  margin-bottom: .75rem;
+}
+.indice-justificacion-grid {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(0, 2.6fr);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.indice-justificacion-name,
+.indice-justificacion-text {
+  border-bottom: 1px solid var(--border);
+  padding: .85rem 1rem;
+}
+.indice-justificacion-name {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  font-size: .78rem;
+  font-weight: 900;
+  text-align: center;
+}
+.indice-justificacion-text {
+  color: var(--text);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+.indice-justificacion-name.jaime { background: #dbeafe; color: #1a56a4; }
+.indice-justificacion-name.cecilia { background: #f3e8ff; color: #6d28d9; }
+.indice-justificacion-name.ricardo { background: #fff7ed; color: #9a3412; }
+.indice-justificacion-name.elias { background: #e6f4ee; color: #0f766e; }
+.indice-justificacion-grid > :nth-last-child(-n + 2) { border-bottom: 0; }
+.indice-note {
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-style: italic;
+  line-height: 1.45;
+  margin-top: .75rem;
+}
 
 /* CRONOGRAMA ───────────────────────────────────────────────── */
 .cronograma-intro {
@@ -966,6 +1013,27 @@ img { max-width: 100%; }
     gap: .7rem;
     padding: .9rem 1rem;
   }
+  .indice-justificacion { padding: 1rem; }
+  .indice-justificacion-grid {
+    border: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+  }
+  .indice-justificacion-name {
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    justify-content: flex-start;
+    padding: .65rem .8rem;
+  }
+  .indice-justificacion-text {
+    border: 1px solid var(--border);
+    border-radius: 0 0 8px 8px;
+    margin-top: -.7rem;
+    padding: .8rem;
+  }
+  .indice-justificacion-grid > :nth-last-child(-n + 2) { border-bottom: 1px solid var(--border); }
   .card,
   .info-box,
   .team-card,
