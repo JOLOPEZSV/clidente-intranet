@@ -600,6 +600,142 @@ function renderMetodologia() {
   </div>`;
 }
 
+const INDICE_RESPONSABLES_STORAGE_KEY = 'clidente_indice_responsables_v1';
+const INDICE_RESPONSABLE_OPTIONS = ['JAIME', 'CECILIA', 'RICARDO', 'ELIAS', 'TODOS'];
+const INDICE_RESPONSABLES_ROWS = [
+  { type: 'section', title: 'DOCUMENTOS DE PRESENTACION' },
+  { code: '--', item: 'Portada', responsible: 'JAIME' },
+  { code: '--', item: 'Indice general', responsible: 'JAIME' },
+  { type: 'section', title: 'I. ANTECEDENTES DE LA ORGANIZACION' },
+  { code: 'I', item: 'Origenes, tiempo de operacion y sector en que opera', responsible: 'JAIME' },
+  { code: 'I', item: 'Localizacion, instalaciones y unidades de negocio', responsible: 'JAIME' },
+  { type: 'section', title: 'II. VISION, MISION, PRINCIPIOS Y VALORES' },
+  { code: 'II', item: 'Mision institucional', responsible: 'RICARDO' },
+  { code: 'II', item: 'Vision institucional', responsible: 'RICARDO' },
+  { code: 'II', item: 'Principios y valores organizacionales', responsible: 'RICARDO' },
+  { type: 'section', title: 'III. ESTRUCTURA ORGANIZACIONAL' },
+  { code: 'III', item: 'Organigrama y responsabilidades principales por area', responsible: 'JAIME' },
+  { code: 'III', item: 'Descriptores de puestos (9 roles documentados)', responsible: 'JAIME' },
+  { code: 'III', item: 'Escala salarial y esquema de comisiones', responsible: 'JAIME' },
+  { code: 'III', item: 'Marco regulatorio laboral (Reglamento Interno 2021)', responsible: 'JAIME' },
+  { type: 'section', title: 'IV. DESCRIPCION DEL FUNCIONAMIENTO DE LA ORGANIZACION' },
+  { code: 'IV', item: 'Principales productos y/o servicios', responsible: 'RICARDO' },
+  { code: 'IV', item: 'Principales proveedores (locales y extranjeros)', responsible: 'ELIAS' },
+  { code: 'IV', item: 'Principales clientes', responsible: 'CECILIA' },
+  { code: 'IV', item: 'Caracterizacion de clientes y participacion de mercado', responsible: 'CECILIA' },
+  { code: 'IV', item: 'Canales de distribucion', responsible: 'CECILIA' },
+  { code: 'IV', item: 'Descripcion de principales procesos operacionales', responsible: 'ELIAS' },
+  { type: 'section', title: 'V. MAPA DE PROCESOS' },
+  { code: 'V', item: 'Clasificacion: procesos estrategicos, misionales y de apoyo', responsible: 'ELIAS' },
+  { code: 'V', item: 'Diagrama visual del mapa de procesos', responsible: 'ELIAS' },
+  { type: 'section', title: 'VI. DIAGNOSTICO DE LA SITUACION ACTUAL' },
+  { code: 'VI', item: 'Evaluacion general del area de Finanzas', responsible: 'RICARDO' },
+  { code: 'VI', item: 'Evaluacion general del area de Mercadeo y Ventas', responsible: 'CECILIA' },
+  { code: 'VI', item: 'Evaluacion general del area de Produccion/Operaciones', responsible: 'ELIAS' },
+  { code: 'VI', item: 'Identificacion de Factores Criticos de Exito (FCE)', responsible: 'JAIME' },
+  { code: 'VI', item: 'Analisis FODA (con implicaciones de los aspectos identificados)', responsible: 'JAIME' },
+  { code: 'VI', item: 'Analisis de las 5 Fuerzas de Porter', responsible: 'CECILIA' },
+  { type: 'section', title: 'VII. ORIENTACION DE LA CONSULTORIA A DESARROLLAR' },
+  { code: 'VII', item: 'Objetivo General y Objetivos Especificos a lograr', responsible: 'JAIME' },
+  { code: 'VII', item: 'Alcances de la consultoria (delimitacion)', responsible: 'JAIME' },
+  { code: 'VII', item: 'Limitaciones', responsible: 'JAIME' },
+  { code: 'VII', item: 'Metodologia a utilizar y principales actividades a realizar', responsible: 'JAIME' },
+  { code: 'VII', item: 'Plan de Trabajo a desarrollar (cronograma 1-2 paginas)', responsible: 'JAIME' },
+  { code: 'VII', item: 'CONCLUSIONES Y RECOMENDACIONES', responsible: 'JAIME' },
+  { type: 'section', title: 'ANEXOS Y DOCUMENTOS COMPLEMENTARIOS' },
+  { code: 'Anx', item: 'Diagnostico de Desempeno Ambiental (4 secciones)', responsible: 'ELIAS' },
+  { code: 'Anx', item: 'Referencias bibliograficas en formato APA 7', responsible: 'TODOS' },
+  { code: 'Anx', item: 'Anexo metodologico de uso de Inteligencia Artificial (con URLs)', responsible: 'JAIME' },
+  { code: 'Anx', item: 'Control de Horas Efectivas por integrante', responsible: 'TODOS' },
+];
+
+const INDICE_RESPONSABLES_BY_ID = Object.fromEntries(
+  INDICE_RESPONSABLES_ROWS
+    .filter(row => row.type !== 'section')
+    .map(row => [`${row.code}|${row.item}`, row])
+);
+
+function getIndiceResponsablesSaved() {
+  try {
+    return JSON.parse(localStorage.getItem(INDICE_RESPONSABLES_STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function renderResponsableSelect(row, saved) {
+  const rowId = `${row.code}|${row.item}`;
+  const current = saved[rowId] || row.responsible;
+  return `
+    <select class="indice-responsable-select" data-row-id="${rowId}" aria-label="Responsable para ${row.item}">
+      ${INDICE_RESPONSABLE_OPTIONS.map(option => `
+        <option value="${option}"${option === current ? ' selected' : ''}>${option}</option>
+      `).join('')}
+    </select>`;
+}
+
+function renderIndiceResponsables() {
+  const saved = getIndiceResponsablesSaved();
+
+  return `
+  <section class="indice-card">
+    <div class="indice-header">
+      <div>
+        <div class="card-title"><i class="fas fa-table-list" style="margin-right:.5rem"></i>Índice Oficial ISEADE y Responsables</div>
+        <p class="card-subtitle">Asignación editable de responsables por sección del informe oficial ISEADE.</p>
+      </div>
+      <button class="btn-resource indice-reset-btn" id="indiceResetResponsables" type="button">
+        <i class="fas fa-rotate-left"></i> Restaurar responsables oficiales
+      </button>
+    </div>
+
+    <div class="indice-legend">
+      ${INDICE_RESPONSABLE_OPTIONS.map(option => `<span>${option}</span>`).join('')}
+    </div>
+
+    <div class="indice-save-status" id="indiceSaveStatus">
+      <i class="fas fa-circle-check"></i> Cambios guardados en este navegador
+    </div>
+
+    <div class="indice-table-wrap">
+      <table class="indice-table">
+        <thead>
+          <tr>
+            <th>N</th>
+            <th>Sección / contenido oficial ISEADE 2026</th>
+            <th>Responsable</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${INDICE_RESPONSABLES_ROWS.map(row => row.type === 'section' ? `
+            <tr class="indice-section-row"><td colspan="3">${row.title}</td></tr>
+          ` : `
+            <tr>
+              <td>${row.code}</td>
+              <td>${row.item}</td>
+              <td>${renderResponsableSelect(row, saved)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="indice-mobile-list">
+      ${INDICE_RESPONSABLES_ROWS.map(row => row.type === 'section' ? `
+        <div class="indice-mobile-section">${row.title}</div>
+      ` : `
+        <article class="indice-mobile-item">
+          <div class="indice-mobile-code">${row.code}</div>
+          <div class="indice-mobile-content">
+            <p>${row.item}</p>
+            ${renderResponsableSelect(row, saved)}
+          </div>
+        </article>
+      `).join('')}
+    </div>
+  </section>`;
+}
+
 function renderEquipo() {
   const team = [
     { name: 'Cecilia Beatriz Chicas de Escalante', initials: 'CC', role: 'Ing. Industrial · Walmart',                    color: '#1a56a4', email: 'cecilia_cbcg@hotmail.com', tel: '6031-0312' },
@@ -648,7 +784,8 @@ function renderEquipo() {
         </div>
       </div>
     </div>
-  </div>`;
+  </div>
+  ${renderIndiceResponsables()}`;
 }
 
 function renderFases() {
@@ -891,6 +1028,7 @@ function navigate(sectionId) {
 
   // Init tabs if present
   initTabs();
+  initIndiceResponsables();
 
   // Animate progress bars
   requestAnimationFrame(() => {
@@ -922,6 +1060,48 @@ function initTabs() {
       if (panel) panel.classList.add('active');
     });
   });
+}
+
+function initIndiceResponsables() {
+  const selects = document.querySelectorAll('.indice-responsable-select');
+  if (!selects.length) return;
+
+  const status = document.getElementById('indiceSaveStatus');
+  const updateStatus = text => {
+    if (status) status.innerHTML = `<i class="fas fa-circle-check"></i> ${text}`;
+  };
+
+  selects.forEach(select => {
+    select.addEventListener('change', () => {
+      const rowId = select.dataset.rowId;
+      const official = INDICE_RESPONSABLES_BY_ID[rowId]?.responsible;
+      const saved = getIndiceResponsablesSaved();
+
+      if (select.value === official) {
+        delete saved[rowId];
+      } else {
+        saved[rowId] = select.value;
+      }
+
+      if (Object.keys(saved).length) {
+        localStorage.setItem(INDICE_RESPONSABLES_STORAGE_KEY, JSON.stringify(saved));
+      } else {
+        localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
+      }
+      document.querySelectorAll(`.indice-responsable-select[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
+        if (peer !== select) peer.value = select.value;
+      });
+      updateStatus('Cambios guardados en este navegador');
+    });
+  });
+
+  const reset = document.getElementById('indiceResetResponsables');
+  if (reset) {
+    reset.addEventListener('click', () => {
+      localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
+      navigate('equipo');
+    });
+  }
 }
 
 function closeSidebar() {

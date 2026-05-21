@@ -429,6 +429,139 @@ img { max-width: 100%; }
 .team-name { font-weight: 700; font-size: .95rem; margin-bottom: .25rem; }
 .team-role { font-size: .78rem; color: var(--text-muted); }
 
+.indice-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  margin-top: 1.5rem;
+  overflow: hidden;
+}
+.indice-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.35rem;
+  border-bottom: 1px solid var(--border);
+}
+.indice-reset-btn {
+  flex: 0 0 auto;
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+.indice-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .9rem 1.35rem 0;
+}
+.indice-legend span {
+  background: var(--blue-light);
+  color: var(--blue-dark);
+  border: 1px solid rgba(26,86,164,.12);
+  border-radius: 999px;
+  font-size: .74rem;
+  font-weight: 800;
+  padding: .22rem .65rem;
+}
+.indice-save-status {
+  color: #166534;
+  font-size: .78rem;
+  font-weight: 600;
+  padding: .75rem 1.35rem 1rem;
+}
+.indice-save-status i { margin-right: .35rem; }
+.indice-table-wrap { overflow-x: auto; }
+.indice-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .84rem;
+}
+.indice-table th {
+  background: var(--blue);
+  color: #fff;
+  font-size: .76rem;
+  letter-spacing: .04em;
+  padding: .75rem .9rem;
+  text-align: left;
+  text-transform: uppercase;
+}
+.indice-table td {
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  padding: .7rem .9rem;
+  vertical-align: middle;
+}
+.indice-table td:first-child {
+  color: var(--blue-dark);
+  font-weight: 800;
+  width: 86px;
+}
+.indice-table td:last-child { width: 170px; }
+.indice-section-row td {
+  background: #f8fafc;
+  color: var(--blue-dark) !important;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.indice-responsable-select {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--blue-dark);
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 800;
+  padding: .35rem .55rem;
+}
+.indice-responsable-select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26,86,164,.14);
+  outline: none;
+}
+.indice-mobile-list { display: none; }
+.indice-mobile-section {
+  background: #f8fafc;
+  border-top: 1px solid var(--border);
+  color: var(--blue-dark);
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  padding: .75rem 1rem;
+  text-transform: uppercase;
+}
+.indice-mobile-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: .8rem;
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+}
+.indice-mobile-code {
+  width: 38px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--blue-light);
+  color: var(--blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .78rem;
+  font-weight: 800;
+}
+.indice-mobile-content p {
+  color: var(--text);
+  font-size: .85rem;
+  line-height: 1.45;
+  margin-bottom: .65rem;
+}
+
 /* CRONOGRAMA ───────────────────────────────────────────────── */
 .cronograma-intro {
   color: var(--text-muted);
@@ -775,6 +908,13 @@ img { max-width: 100%; }
     flex-direction: column;
     gap: .85rem;
   }
+  .indice-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .indice-table-wrap { display: none; }
+  .indice-mobile-list { display: block; }
+  .indice-reset-btn { width: 100%; }
   .mp-kpi-row,
   .mp-person-grid,
   .team-grid,
@@ -811,6 +951,21 @@ img { max-width: 100%; }
   .header-title { white-space: normal; line-height: 1.25; font-size: .8rem; }
   .content-area { padding: 1rem .85rem; }
   .section-title { font-size: 1.35rem; margin-bottom: 1rem; }
+  .indice-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+  }
+  .indice-legend,
+  .indice-save-status { padding-left: 1rem; padding-right: 1rem; }
+  .indice-table-wrap { display: none; }
+  .indice-mobile-list { display: block; }
+  .indice-reset-btn { width: 100%; }
+  .indice-mobile-item {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: .7rem;
+    padding: .9rem 1rem;
+  }
   .card,
   .info-box,
   .team-card,
