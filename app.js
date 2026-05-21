@@ -638,8 +638,8 @@ const INDICE_RESPONSABLES_ROWS = [
   { code: 'VI', item: 'Evaluacion general del area de Finanzas', responsible: 'RICARDO' },
   { code: 'VI', item: 'Evaluacion general del area de Mercadeo y Ventas', responsible: 'CECILIA' },
   { code: 'VI', item: 'Evaluacion general del area de Produccion/Operaciones', responsible: 'ELIAS' },
-  { code: 'VI', item: 'Identificacion de Factores Criticos de Exito (FCE)', responsible: 'JAIME' },
-  { code: 'VI', item: 'Analisis FODA (con implicaciones de los aspectos identificados)', responsible: 'JAIME' },
+  { code: 'VI', item: 'Identificacion de Factores Criticos de Exito (FCE)', responsible: 'RICARDO' },
+  { code: 'VI', item: 'Analisis FODA (con implicaciones de los aspectos identificados)', responsible: 'RICARDO' },
   { code: 'VI', item: 'Analisis de las 5 Fuerzas de Porter', responsible: 'CECILIA' },
   { type: 'section', title: 'VII. ORIENTACION DE LA CONSULTORIA A DESARROLLAR' },
   { code: 'VII', item: 'Objetivo General y Objetivos Especificos a lograr', responsible: 'JAIME' },
@@ -665,7 +665,7 @@ const INDICE_JUSTIFICACIONES = [
   {
     name: 'JAIME',
     className: 'jaime',
-    text: 'Lider del equipo - 22 anos en sector dental (StarDent) - Asume vision estrategica total: antecedentes, estructura, FODA, FCE y toda la Orientacion (VII). Es quien mejor conoce el sector y quien integra el documento final.'
+    text: 'Lider del equipo - 22 anos en sector dental (StarDent) - Asume vision estrategica total: antecedentes, estructura y toda la Orientacion (VII). Es quien mejor conoce el sector y quien integra el documento final.'
   },
   {
     name: 'CECILIA',
@@ -675,7 +675,7 @@ const INDICE_JUSTIFICACIONES = [
   {
     name: 'RICARDO',
     className: 'ricardo',
-    text: 'Arq. Interiores - Alcaldia SS - Filosofia corporativa (M/V/V) y area financiera. Tiene los estados financieros (EERR + Balance + costos por servicio 2024). Seccion con mas documentacion disponible.'
+    text: 'Arq. Interiores - Alcaldia SS - Filosofia corporativa (M/V/V), area financiera, FODA y Factores Criticos de Exito. Tiene los estados financieros (EERR + Balance + costos por servicio 2024). Seccion con mas documentacion disponible.'
   },
   {
     name: 'ELIAS',
