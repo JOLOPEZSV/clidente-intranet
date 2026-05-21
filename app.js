@@ -449,9 +449,6 @@ function renderDiagnostico() {
         <p class="resource-group-subtitle">Borrador oficial y documento colaborativo del informe final para ISEADE FEPADE. Incluye: Antecedentes, Filosofía Corporativa, Estructura Organizacional, Descripción del Funcionamiento, Mapa de Procesos, Diagnóstico FODA, Análisis 5 Fuerzas de Porter, Factores Críticos de Éxito, Orientación de la Consultoría y Conclusiones. <strong>Fecha límite de entrega: 1 de junio de 2026.</strong></p>
       </div>
       <div class="collaborative-doc-actions">
-        <a href="Diagnostico_Clidente_2026_V1.pdf" target="_blank" class="btn-resource">
-          <i class="fas fa-file-pdf"></i> Ver Diagnóstico V1
-        </a>
         <a href="${collaborativeDocUrl}" target="_blank" rel="noopener" class="btn-resource collaborative-doc-open">
           <i class="fas fa-pen-to-square"></i> Abrir y editar en Word Online
         </a>
