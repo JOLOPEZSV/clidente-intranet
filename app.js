@@ -436,6 +436,8 @@ function renderReuniones() {
 }
 
 function renderDiagnostico() {
+  const collaborativeDocUrl = 'https://onedrive.live.com/:w:/g/personal/a9679c2cee16b8af/IQAenJTbznDFRb-nAXcoc66kAV5xTd_HZZ0zH57s4epiDco';
+
   return `
   <h1 class="section-title">Diagnóstico Organizacional</h1>
 
@@ -445,6 +447,31 @@ function renderDiagnostico() {
     <div class="resource-buttons">
       <a href="Diagnostico_Clidente_2026_V1.pdf" target="_blank" class="btn-resource"><i class="fas fa-file-pdf"></i> Ver Diagnóstico V1</a>
     </div>
+  </div>
+
+  <div class="resource-group card collaborative-doc-card">
+    <div class="collaborative-doc-header">
+      <div>
+        <div class="card-title"><i class="fas fa-file-word" style="margin-right:.5rem"></i>Documento colaborativo del informe final</div>
+        <p class="resource-group-subtitle">Documento compartido en Word Online para que los 4 miembros del equipo redacten sus secciones desde un solo lugar. Los cambios se guardan directamente en el documento compartido.</p>
+      </div>
+      <a href="${collaborativeDocUrl}" target="_blank" rel="noopener" class="btn-resource collaborative-doc-open">
+        <i class="fas fa-pen-to-square"></i> Abrir y editar en Word Online
+      </a>
+    </div>
+
+    <div class="collaborative-doc-note">
+      <i class="fas fa-circle-info"></i>
+      Si Word Online solicita inicio de sesión o bloquea la edición dentro del portal, usa el botón para abrirlo en una pestaña nueva.
+    </div>
+
+    <iframe
+      class="collaborative-doc-frame"
+      src="${collaborativeDocUrl}"
+      title="Documento colaborativo del diagnóstico organizacional"
+      loading="lazy"
+      allow="clipboard-read; clipboard-write; fullscreen"
+    ></iframe>
   </div>
 
   <div class="resource-group card">

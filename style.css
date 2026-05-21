@@ -357,6 +357,47 @@ img { max-width: 100%; }
 .btn-resource.btn-audio { background: #f0f7ff; color: #1565c0; border-color: rgba(21,101,192,.2); }
 .btn-resource.btn-img   { background: #f0fff4; color: #1a7340; border-color: rgba(26,115,64,.2); }
 
+.collaborative-doc-card {
+  padding: 0;
+  overflow: hidden;
+}
+.collaborative-doc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem 1.5rem 1rem;
+}
+.collaborative-doc-open {
+  background: #e8f0fb;
+  color: var(--blue-dark);
+  flex: 0 0 auto;
+}
+.collaborative-doc-note {
+  align-items: flex-start;
+  background: #f8fafc;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex;
+  font-size: .82rem;
+  gap: .5rem;
+  line-height: 1.45;
+  padding: .75rem 1.5rem;
+}
+.collaborative-doc-note i {
+  color: var(--blue);
+  margin-top: .1rem;
+}
+.collaborative-doc-frame {
+  background: #f8fafc;
+  border: 0;
+  display: block;
+  height: min(78vh, 820px);
+  min-height: 640px;
+  width: 100%;
+}
+
 /* TIMELINE ─────────────────────────────────────────────────── */
 .timeline { position: relative; padding-left: 2.5rem; }
 .timeline::before {
@@ -970,10 +1011,13 @@ img { max-width: 100%; }
     grid-template-columns: 1fr;
   }
   .ambiental-hero,
-  .ambiental-frame-toolbar {
+  .ambiental-frame-toolbar,
+  .collaborative-doc-header {
     flex-direction: column;
     align-items: stretch;
   }
+  .collaborative-doc-open { width: 100%; }
+  .collaborative-doc-frame { min-height: 560px; height: 72vh; }
   .ambiental-open { width: 100%; }
   .ambiental-frame { min-height: 560px; height: 72vh; }
   .mp-prog-row {
@@ -1042,6 +1086,9 @@ img { max-width: 100%; }
   .ambiental-hero h2 { font-size: 1.08rem; }
   .ambiental-frame-toolbar { padding: .9rem; }
   .ambiental-frame { min-height: 520px; }
+  .collaborative-doc-header { padding: 1rem; }
+  .collaborative-doc-note { padding: .75rem 1rem; }
+  .collaborative-doc-frame { min-height: 520px; }
   .cronograma-intro { font-size: .85rem; margin-top: -.2rem; }
   .cronograma-mobile-card {
     grid-template-columns: 36px minmax(0, 1fr);
