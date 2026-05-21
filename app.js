@@ -506,35 +506,6 @@ function renderDiagnostico() {
   </div>
 
   <div class="resource-group card">
-    <div class="card-title"><i class="fas fa-list-check" style="margin-right:.5rem;color:#1a56a4"></i>Guía del Informe Final — Estructura Oficial ISEADE</div>
-    <p class="resource-group-subtitle" style="margin-bottom:1.25rem">Estructura requerida por ISEADE FEPADE para el informe final de consultoría. Marca cada sección conforme se vaya completando. <strong>Fecha límite: 31 de agosto de 2026.</strong></p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem .5rem">
-      ${[
-        ['Portada',                                                              false],
-        ['Índice',                                                               false],
-        ['Introducción',                                                         false],
-        ['Resumen Ejecutivo',                                                    false],
-        ['Elementos relevantes del Diagnóstico y objetivos del trabajo',         false],
-        ['Metodología a utilizar',                                               false],
-        ['Actividades realizadas (con enfoque gerencial)',                        false],
-        ['Contenido de los productos entregados de la consultoría',              false],
-        ['Conclusiones',                                                         false],
-        ['Recomendaciones (incluir recomendación ambiental del diagnóstico)',    false],
-        ['Anexos',                                                               false],
-      ].map(([item], i) => `
-      <label style="display:flex;align-items:flex-start;gap:.6rem;padding:.6rem .75rem;border-radius:8px;border:1px solid var(--border);background:#f8fafc;cursor:pointer;font-size:.85rem;color:var(--text);line-height:1.4;transition:background .15s"
-             onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#f8fafc'">
-        <input type="checkbox" id="inf-item-${i}" style="margin-top:.1rem;accent-color:#1a56a4;flex-shrink:0;width:16px;height:16px"
-               onchange="document.getElementById('inf-label-${i}').style.textDecoration=this.checked?'line-through':'none';document.getElementById('inf-label-${i}').style.color=this.checked?'#9ca3af':'var(--text)'">
-        <span id="inf-label-${i}">${item}</span>
-      </label>`).join('')}
-    </div>
-    <p style="font-size:.78rem;color:var(--text-muted);margin-top:.75rem;font-style:italic">
-      <i class="fas fa-info-circle"></i> Las marcas se guardan mientras no recargues la página. Se envía guía de presentación oficial del informe final por ISEADE.
-    </p>
-  </div>
-
-  <div class="resource-group card">
     <div class="card-title"><i class="fas fa-file-circle-check" style="margin-right:.5rem;color:#166534"></i>Documentos a Entregar al Finalizar el Diagnóstico</div>
     <p class="resource-group-subtitle" style="margin-bottom:1.25rem">Según lineamientos ISEADE. <strong>Fecha de entrega: 1 de junio de 2026.</strong></p>
     <div style="display:flex;flex-direction:column;gap:.5rem">
