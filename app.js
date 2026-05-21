@@ -224,6 +224,15 @@ function renderSobreProyecto() {
       Presentación al tutor: <strong>26 de mayo de 2026</strong>.</p>
     </div>
   </div>
+  <div class="card guide-access-card">
+    <div class="guide-access-copy">
+      <div class="card-title"><i class="fas fa-person-chalkboard" style="margin-right:.5rem"></i>PPT Guía e Instrucciones de Vanessa</div>
+      <p class="card-subtitle">Presentación base de ISEADE para el inicio del Trabajo de Graduación MAE 58. Resume la definición del trabajo, etapas de la consultoría, entregables, lineamientos generales, fechas importantes y la estructura esperada para el informe final.</p>
+    </div>
+    <a href="https://drive.google.com/file/d/1_INSK4S69XBQg5D1Qwq8X6MF5RNXyf_X/view?usp=sharing" target="_blank" rel="noopener" class="btn-resource guide-access-btn">
+      <i class="fas fa-file-powerpoint"></i> Abrir PPT Guía de Vanessa
+    </a>
+  </div>
   <div class="card">
     <div class="card-title"><i class="fas fa-file-alt" style="margin-right:.5rem"></i>Asignación Oficial de Consultoría – ISEADE</div>
     <p class="card-subtitle">Carta oficial de ISEADE FEPADE asignando al Equipo MAE LVIII a la Clínica Dental Clidente. Firmada el 25 de abril de 2026 por Vanessa Beltrán (ISEADE).</p>
@@ -964,6 +973,102 @@ function renderAmbiental() {
   </div>`;
 }
 
+function renderDesarrolloPlan() {
+  const reportItems = [
+    'Control de seguimiento quincenal usando el modelo proporcionado por ISEADE.',
+    'Plan de trabajo con actividades desglosadas.',
+    'Porcentaje de avance en relación con la programación de actividades.',
+  ];
+
+  return `
+  <h1 class="section-title">Desarrollo Plan de Trabajo</h1>
+
+  <div class="guide-stage-hero">
+    <div>
+      <div class="guide-stage-kicker">Etapa II · Desarrollo en 10 semanas</div>
+      <h2>Realización de actividades</h2>
+      <p>Según la guía de Vanessa para MAE 58, esta etapa analiza las posibles alternativas y define las acciones a realizar con base en los objetivos generales y específicos de la consultoría.</p>
+    </div>
+    <span class="guide-stage-badge"><i class="fas fa-calendar-days"></i> Finaliza: 16 de agosto de 2026</span>
+  </div>
+
+  <div class="guide-stage-grid">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-bullseye" style="margin-right:.5rem"></i>Enfoque de la etapa</div>
+      <p class="guide-stage-text">El enfoque principal es fortalecer las capacidades de la empresa mediante el perfeccionamiento de sus estrategias, políticas y procesos.</p>
+      <p class="guide-stage-text">Las acciones a realizar deberán ser acordadas con la empresa y, en la medida de lo posible, implementadas durante el proceso de consultoría.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="fas fa-file-lines" style="margin-right:.5rem"></i>Informes quincenales</div>
+      <p class="guide-stage-text">En esta etapa se entregan informes quincenales con evidencia de seguimiento y avance.</p>
+      <ul class="guide-stage-list">
+        ${reportItems.map(item => `<li>${item}</li>`).join('')}
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><i class="fas fa-clipboard-check" style="margin-right:.5rem"></i>Aplicación para CLIDENTE</div>
+    <div class="guide-action-grid">
+      <div><span>1</span><strong>Priorizar alternativas</strong><p>Convertir hallazgos del diagnóstico en líneas de acción concretas.</p></div>
+      <div><span>2</span><strong>Acordar acciones</strong><p>Validar con CLIDENTE qué acciones son factibles durante la consultoría.</p></div>
+      <div><span>3</span><strong>Medir avance</strong><p>Reportar cada quince días actividades, responsables y porcentaje de cumplimiento.</p></div>
+    </div>
+  </div>`;
+}
+
+function renderInformeFinal() {
+  const guideItems = [
+    'Portada',
+    'Índice',
+    'Introducción',
+    'Resumen Ejecutivo',
+    'Elementos relevantes del Diagnóstico y objetivos del trabajo',
+    'Metodología a utilizar',
+    'Actividades realizadas con enfoque gerencial',
+    'Contenido de los productos entregados de la consultoría',
+    'Conclusiones',
+    'Recomendaciones, incluyendo la recomendación ambiental del diagnóstico',
+    'Anexos',
+  ];
+
+  return `
+  <h1 class="section-title">Elaboración del Informe Final</h1>
+
+  <div class="guide-stage-hero guide-stage-hero-purple">
+    <div>
+      <div class="guide-stage-kicker">Etapa III · Trabajo de escritorio</div>
+      <h2>Guía oficial del informe</h2>
+      <p>Contenido tomado de la presentación de instrucciones de Vanessa para MAE 58. Esta estructura ordena el documento final que se entregará a ISEADE.</p>
+    </div>
+    <span class="guide-stage-badge"><i class="fas fa-calendar-check"></i> Entrega: 31 de agosto de 2026</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><i class="fas fa-list-ol" style="margin-right:.5rem"></i>Estructura requerida</div>
+    <div class="final-report-grid">
+      ${guideItems.map((item, index) => `
+      <div class="final-report-item">
+        <span>${index + 1}</span>
+        <p>${item}</p>
+      </div>`).join('')}
+    </div>
+    <p class="guide-note"><i class="fas fa-circle-info"></i> La guía indica que se enviará una presentación oficial del informe final con la documentación que se debe presentar.</p>
+  </div>
+
+  <div class="guide-stage-grid">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-compass" style="margin-right:.5rem"></i>Criterio de redacción</div>
+      <p class="guide-stage-text">El informe debe conservar enfoque gerencial: diagnóstico, actividades realizadas, productos de consultoría, conclusiones y recomendaciones accionables para la empresa.</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="fas fa-leaf" style="margin-right:.5rem"></i>Recomendación ambiental</div>
+      <p class="guide-stage-text">ISEADE solicita incluir dentro de las recomendaciones la recomendación ambiental derivada del diagnóstico ambiental.</p>
+    </div>
+  </div>`;
+}
+
 function renderCronograma() {
   const rows = [
     ['22–24 abr 2026',  'Comunicación oficial a empresa y tutor – inicio formal MAE LVIII',                           'done'],
@@ -1036,6 +1141,8 @@ const SECTIONS = {
   'visitas':        { label: 'Visitas a CLIDENTE',   render: renderVisitas },
   'reuniones':      { label: 'Reuniones con Tutor',  render: renderReuniones },
   'diagnostico':    { label: 'Diagnóstico',          render: renderDiagnostico },
+  'desarrollo-plan': { label: 'Desarrollo Plan de Trabajo', render: renderDesarrolloPlan },
+  'informe-final':  { label: 'Elaboración del Informe Final', render: renderInformeFinal },
   'cronograma':     { label: 'Cronograma',           render: renderCronograma },
 };
 
