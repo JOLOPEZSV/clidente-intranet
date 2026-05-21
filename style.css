@@ -373,6 +373,21 @@ img { max-width: 100%; }
   color: var(--blue-dark);
   flex: 0 0 auto;
 }
+.collaborative-doc-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: .5rem;
+  justify-content: flex-end;
+}
+.collaborative-doc-pdf {
+  background: #fff0f0;
+  border-color: rgba(192,57,43,.2);
+  color: #c0392b;
+}
+.collaborative-doc-pdf:hover {
+  background: #ffe0e0;
+}
 .collaborative-doc-note {
   align-items: flex-start;
   background: #f8fafc;
@@ -1016,7 +1031,9 @@ img { max-width: 100%; }
     flex-direction: column;
     align-items: stretch;
   }
-  .collaborative-doc-open { width: 100%; }
+  .collaborative-doc-actions,
+  .collaborative-doc-open,
+  .collaborative-doc-pdf { width: 100%; }
   .collaborative-doc-frame { min-height: 560px; height: 72vh; }
   .ambiental-open { width: 100%; }
   .ambiental-frame { min-height: 560px; height: 72vh; }

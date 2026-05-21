@@ -455,14 +455,19 @@ function renderDiagnostico() {
         <div class="card-title"><i class="fas fa-file-word" style="margin-right:.5rem"></i>Documento colaborativo del informe final</div>
         <p class="resource-group-subtitle">Documento compartido en Word Online para que los 4 miembros del equipo redacten sus secciones desde un solo lugar. Los cambios se guardan directamente en el documento compartido.</p>
       </div>
-      <a href="${collaborativeDocUrl}" target="_blank" rel="noopener" class="btn-resource collaborative-doc-open">
-        <i class="fas fa-pen-to-square"></i> Abrir y editar en Word Online
-      </a>
+      <div class="collaborative-doc-actions">
+        <a href="${collaborativeDocUrl}" target="_blank" rel="noopener" class="btn-resource collaborative-doc-open">
+          <i class="fas fa-pen-to-square"></i> Abrir y editar en Word Online
+        </a>
+        <a href="${collaborativeDocUrl}" target="_blank" rel="noopener" class="btn-resource collaborative-doc-pdf" title="Abre Word Online para generar el PDF con la version actualizada del documento">
+          <i class="fas fa-file-pdf"></i> Generar PDF actualizado
+        </a>
+      </div>
     </div>
 
     <div class="collaborative-doc-note">
       <i class="fas fa-circle-info"></i>
-      Si Word Online solicita inicio de sesión o bloquea la edición dentro del portal, usa el botón para abrirlo en una pestaña nueva.
+      Si Word Online solicita inicio de sesión o bloquea la edición dentro del portal, usa el botón para abrirlo en una pestaña nueva. Para generar el PDF actualizado, abre Word Online y usa Archivo &gt; Imprimir o Exportar como PDF.
     </div>
 
     <iframe
