@@ -246,6 +246,10 @@ img { max-width: 100%; }
   width: 100%;
   min-width: 0;
 }
+.content-area-wide {
+  max-width: none;
+  width: 100%;
+}
 
 /* ── SECTION TITLE ───────────────────────────────────────────── */
 .section-title {
@@ -981,6 +985,21 @@ img { max-width: 100%; }
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
   overflow-x: auto;
+  max-width: calc(100vw - var(--sidebar-w) - 4rem);
+  position: relative;
+}
+.project-top-scroll {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  height: 18px;
+  margin-bottom: .55rem;
+  max-width: calc(100vw - var(--sidebar-w) - 4rem);
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.project-top-scroll div {
+  height: 1px;
 }
 .project-grid {
   display: grid;
@@ -1002,6 +1021,28 @@ img { max-width: 100%; }
 .project-grid-row > * {
   border-bottom: 1px solid var(--border);
   padding: .65rem .55rem;
+}
+.project-grid-header > div:nth-child(1),
+.project-grid-row > div:nth-child(1) {
+  background: inherit;
+  left: 0;
+  position: sticky;
+  z-index: 3;
+}
+.project-grid-header > div:nth-child(2),
+.project-grid-row > select:nth-child(2) {
+  background: inherit;
+  left: 44px;
+  position: sticky;
+  z-index: 3;
+}
+.project-grid-row > div:nth-child(1),
+.project-grid-row > select:nth-child(2) {
+  background: #fff;
+}
+.project-grid-row:hover > div:nth-child(1),
+.project-grid-row:hover > select:nth-child(2) {
+  background: #f8fbff;
 }
 .project-grid-row:hover { background: #f8fbff; }
 .project-group-row {
@@ -1265,6 +1306,7 @@ img { max-width: 100%; }
   .sidebar { transform: translateX(-100%); transition: transform .3s; }
   .sidebar.open { transform: translateX(0); }
   .main-wrapper { margin-left: 0; }
+  .content-area-wide { max-width: none; }
   .top-header { padding: 0 1rem; }
   .content-area { padding: 1.25rem; }
   .cartelera-grid { grid-template-columns: 1fr; }
@@ -1362,6 +1404,8 @@ img { max-width: 100%; }
   .project-save-status { margin-left: 0; text-align: center; }
   .project-grid,
   .project-group-row { min-width: 1540px; }
+  .project-card,
+  .project-top-scroll { max-width: calc(100vw - 2.5rem); }
   .tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: .2rem; }
   .tab-btn { flex: 0 0 auto; }
   .timeline { padding-left: 1.5rem; }
@@ -1431,6 +1475,8 @@ img { max-width: 100%; }
   .header-logo-clidente { height: 34px; }
   .header-title { white-space: normal; line-height: 1.25; font-size: .8rem; }
   .content-area { padding: 1rem .85rem; }
+  .project-card,
+  .project-top-scroll { max-width: calc(100vw - 1.7rem); }
   .section-title { font-size: 1.35rem; margin-bottom: 1rem; }
   .indice-header {
     flex-direction: column;

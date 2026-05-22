@@ -1214,6 +1214,9 @@ function renderCronograma() {
     <span class="project-save-status" id="cronogramaSaveStatus"><i class="fas fa-circle-check"></i> Cambios guardados en este navegador</span>
   </div>
 
+  <div class="project-top-scroll" id="projectTopScroll" aria-hidden="true">
+    <div></div>
+  </div>
   <div class="project-card">
     <div class="project-grid project-grid-header">
       <div>#</div>
@@ -1288,6 +1291,7 @@ function navigate(sectionId) {
 
   // Render content
   const area = document.getElementById('contentArea');
+  area.classList.toggle('content-area-wide', sectionId === 'cronograma');
   area.innerHTML = `<div class="fade-in">${section.render()}</div>`;
 
   // Update breadcrumb
@@ -1463,6 +1467,13 @@ function exportCronogramaExcel(tasks) {
 function initCronogramaProject() {
   const card = document.querySelector('.project-card');
   if (!card) return;
+  const topScroll = document.getElementById('projectTopScroll');
+  const grid = card.querySelector('.project-grid');
+  if (topScroll && grid) {
+    topScroll.querySelector('div').style.width = `${grid.scrollWidth}px`;
+    topScroll.addEventListener('scroll', () => { card.scrollLeft = topScroll.scrollLeft; });
+    card.addEventListener('scroll', () => { topScroll.scrollLeft = card.scrollLeft; });
+  }
 
   const rerender = tasks => {
     saveCronogramaTasks(tasks);
