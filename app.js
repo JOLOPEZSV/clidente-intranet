@@ -1259,7 +1259,6 @@ function renderCronograma() {
   <p class="cronograma-intro">Cronograma editable tipo Microsoft Project para registrar actividades, responsables, avance, fechas y documentos de soporte. El tutor solicito entregas internas al menos 8 dias antes de las fechas ISEADE.</p>
 
   <div class="project-toolbar">
-    <button class="btn-resource" id="cronogramaAddTask" type="button"><i class="fas fa-plus"></i> Agregar actividad</button>
     <button class="btn-resource" id="cronogramaExportExcel" type="button"><i class="fas fa-file-excel"></i> Exportar a Excel</button>
     <button class="btn-resource" id="cronogramaExportWord" type="button"><i class="fas fa-file-word"></i> Exportar a Word</button>
     <button class="btn-resource project-reset-btn" id="cronogramaReset" type="button"><i class="fas fa-rotate-left"></i> Restaurar base</button>
@@ -1707,15 +1706,6 @@ function initCronogramaProject() {
     const filtered = tasks.filter(task => task.id !== taskId);
     rerender(filtered.length ? filtered : CRONOGRAMA_DEFAULT_TASKS);
   });
-
-  const add = document.getElementById('cronogramaAddTask');
-  if (add) {
-    add.addEventListener('click', () => {
-      const tasks = readCronogramaFromDom();
-      tasks.push(createBlankCronogramaTask());
-      rerender(tasks);
-    });
-  }
 
   const reset = document.getElementById('cronogramaReset');
   if (reset) {
