@@ -719,7 +719,7 @@ img { max-width: 100%; }
   width: 86px;
 }
 .indice-table td:nth-child(3) { width: 120px; }
-.indice-table td:last-child { width: 170px; }
+.indice-table td:last-child { width: 230px; }
 .indice-section-row td {
   background: #f8fafc;
   color: var(--blue-dark) !important;
@@ -728,7 +728,17 @@ img { max-width: 100%; }
   letter-spacing: .04em;
   text-transform: uppercase;
 }
+.indice-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+  justify-content: flex-end;
+}
 .indice-responsable-select {
+  display: grid;
+  gap: .3rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   width: 100%;
   min-height: 36px;
   border: 1px solid var(--border);
@@ -738,7 +748,22 @@ img { max-width: 100%; }
   font: inherit;
   font-size: .82rem;
   font-weight: 800;
-  padding: .35rem .55rem;
+  padding: .45rem .55rem;
+}
+.indice-responsable-select label {
+  align-items: center;
+  display: flex;
+  gap: .28rem;
+  min-width: 0;
+}
+.indice-responsable-select input {
+  accent-color: var(--blue);
+  flex-shrink: 0;
+}
+.indice-responsable-select span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .indice-responsable-select:focus {
   border-color: var(--blue);
@@ -1081,6 +1106,9 @@ img { max-width: 100%; }
 .project-grid select {
   color: var(--blue-dark);
   font-weight: 800;
+}
+.project-responsable-multiple {
+  min-height: 96px !important;
 }
 .project-grid textarea:focus,
 .project-grid select:focus,

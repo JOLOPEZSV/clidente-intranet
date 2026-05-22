@@ -743,15 +743,32 @@ function getIndiceDashboardSummary() {
   };
 }
 
+function normalizeResponsibleList(value) {
+  const raw = Array.isArray(value) ? value : String(value || '').split(',');
+  const list = raw
+    .map(item => item.trim())
+    .filter(item => INDICE_RESPONSABLE_OPTIONS.includes(item));
+  return list.length ? [...new Set(list)] : ['TODOS'];
+}
+
+function sameResponsibleList(a, b) {
+  const left = normalizeResponsibleList(a).sort().join('|');
+  const right = normalizeResponsibleList(b).sort().join('|');
+  return left === right;
+}
+
 function renderResponsableSelect(row, saved) {
   const rowId = `${row.code}|${row.item}`;
-  const current = saved[rowId] || row.responsible;
+  const current = normalizeResponsibleList(saved[rowId] || row.responsible);
   return `
-    <select class="indice-responsable-select" data-row-id="${rowId}" aria-label="Responsable para ${row.item}">
+    <div class="indice-responsable-select" data-row-id="${rowId}" aria-label="Responsables para ${row.item}">
       ${INDICE_RESPONSABLE_OPTIONS.map(option => `
-        <option value="${option}"${option === current ? ' selected' : ''}>${option}</option>
+        <label>
+          <input class="indice-responsable-option" data-row-id="${rowId}" type="checkbox" value="${option}"${current.includes(option) ? ' checked' : ''}>
+          <span>${option}</span>
+        </label>
       `).join('')}
-    </select>`;
+    </div>`;
 }
 
 function renderAvanceInput(row, saved) {
@@ -775,9 +792,14 @@ function renderIndiceResponsables() {
         <div class="card-title"><i class="fas fa-table-list" style="margin-right:.5rem"></i>Índice Oficial ISEADE y Responsables</div>
         <p class="card-subtitle">Asignación editable de responsables por sección del informe oficial ISEADE.</p>
       </div>
-      <button class="btn-resource indice-reset-btn" id="indiceResetResponsables" type="button">
-        <i class="fas fa-rotate-left"></i> Restaurar responsables oficiales
-      </button>
+      <div class="indice-actions">
+        <button class="btn-resource" id="indiceExportChanges" type="button"><i class="fas fa-file-export"></i> Exportar cambios</button>
+        <button class="btn-resource" id="indiceImportChanges" type="button"><i class="fas fa-file-import"></i> Importar cambios</button>
+        <button class="btn-resource indice-reset-btn" id="indiceResetResponsables" type="button">
+          <i class="fas fa-rotate-left"></i> Restaurar responsables oficiales
+        </button>
+        <input id="indiceImportFile" type="file" accept="application/json,.json" hidden>
+      </div>
     </div>
 
     <div class="indice-legend">
@@ -1297,8 +1319,8 @@ function renderCronograma() {
         </select>
         <textarea data-field="actividad" rows="2">${escapeHtml(task.actividad)}</textarea>
         <textarea data-field="descripcion" rows="2">${escapeHtml(task.descripcion)}</textarea>
-        <select data-field="responsable">
-          ${CRONOGRAMA_RESPONSABLES.map(name => `<option value="${name}"${task.responsable === name ? ' selected' : ''}>${name}</option>`).join('')}
+        <select data-field="responsable" multiple size="5" class="project-responsable-multiple" aria-label="Responsables de ${escapeHtml(task.actividad)}">
+          ${CRONOGRAMA_RESPONSABLES.map(name => `<option value="${name}"${normalizeResponsibleList(task.responsable).includes(name) ? ' selected' : ''}>${name}</option>`).join('')}
         </select>
         <label class="project-percent"><input data-field="avance" type="number" min="0" max="100" step="1" value="${Number(task.avance) || 0}"><span>%</span></label>
         <input data-field="fechaMeta" type="date" value="${task.fechaMeta || ''}">
@@ -1392,7 +1414,7 @@ function initTabs() {
 }
 
 function initIndiceResponsables() {
-  const selects = document.querySelectorAll('.indice-responsable-select');
+  const selects = document.querySelectorAll('.indice-responsable-option');
   const avances = document.querySelectorAll('.indice-avance-input');
   if (!selects.length && !avances.length) return;
 
@@ -1401,16 +1423,25 @@ function initIndiceResponsables() {
     if (status) status.innerHTML = `<i class="fas fa-circle-check"></i> ${text}`;
   };
 
-  selects.forEach(select => {
-    select.addEventListener('change', () => {
-      const rowId = select.dataset.rowId;
+  const getCheckedResponsables = rowId => {
+    const checked = Array.from(document.querySelectorAll(`.indice-responsable-option[data-row-id="${CSS.escape(rowId)}"]:checked`)).map(input => input.value);
+    return checked.length ? [...new Set(checked)] : ['TODOS'];
+  };
+
+  selects.forEach(input => {
+    input.addEventListener('change', () => {
+      const rowId = input.dataset.rowId;
+      document.querySelectorAll(`.indice-responsable-option[data-row-id="${CSS.escape(rowId)}"][value="${CSS.escape(input.value)}"]`).forEach(peer => {
+        peer.checked = input.checked;
+      });
       const official = INDICE_RESPONSABLES_BY_ID[rowId]?.responsible;
       const saved = getIndiceResponsablesSaved();
+      const selected = getCheckedResponsables(rowId);
 
-      if (select.value === official) {
+      if (sameResponsibleList(selected, official)) {
         delete saved[rowId];
       } else {
-        saved[rowId] = select.value;
+        saved[rowId] = selected.join(', ');
       }
 
       if (Object.keys(saved).length) {
@@ -1418,10 +1449,10 @@ function initIndiceResponsables() {
       } else {
         localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
       }
-      document.querySelectorAll(`.indice-responsable-select[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
-        if (peer !== select) peer.value = select.value;
+      document.querySelectorAll(`.indice-responsable-option[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
+        peer.checked = selected.includes(peer.value);
       });
-      updateStatus('Cambios guardados en este navegador');
+      updateStatus('Cambios guardados solo en este navegador');
     });
   });
 
@@ -1447,9 +1478,52 @@ function initIndiceResponsables() {
       document.querySelectorAll(`.indice-avance-input[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
         if (peer !== input) peer.value = value;
       });
-      updateStatus('Cambios guardados en este navegador');
+      updateStatus('Cambios guardados solo en este navegador');
     });
   });
+
+  const exportBtn = document.getElementById('indiceExportChanges');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      const payload = {
+        app: 'clidente-indice-responsables',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        data: getIndiceResponsablesSaved(),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'clidente-indice-responsables-cambios.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+      updateStatus('Archivo de cambios exportado');
+    });
+  }
+
+  const importBtn = document.getElementById('indiceImportChanges');
+  const importFile = document.getElementById('indiceImportFile');
+  if (importBtn && importFile) {
+    importBtn.addEventListener('click', () => importFile.click());
+    importFile.addEventListener('change', () => {
+      const file = importFile.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || '{}'));
+          const data = parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed;
+          localStorage.setItem(INDICE_RESPONSABLES_STORAGE_KEY, JSON.stringify(data));
+          navigate('equipo');
+        } catch {
+          updateStatus('No se pudo importar el archivo de cambios');
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
 
   const reset = document.getElementById('indiceResetResponsables');
   if (reset) {
@@ -1463,12 +1537,13 @@ function initIndiceResponsables() {
 function readCronogramaFromDom() {
   return Array.from(document.querySelectorAll('.project-grid-row')).map(row => {
     const field = name => row.querySelector(`[data-field="${name}"]`);
+    const responsables = Array.from(field('responsable')?.selectedOptions || []).map(option => option.value);
     return {
       id: row.dataset.taskId,
       grupo: field('grupo')?.value || 'Fase 1 - Diagnostico',
       actividad: field('actividad')?.value.trim() || 'Nueva actividad',
       descripcion: field('descripcion')?.value.trim() || '',
-      responsable: field('responsable')?.value || 'TODOS',
+      responsable: (responsables.length ? responsables : ['TODOS']).join(', '),
       avance: Math.max(0, Math.min(100, Number(field('avance')?.value) || 0)),
       fechaMeta: field('fechaMeta')?.value || '',
       fechaRealizada: field('fechaRealizada')?.value || '',
