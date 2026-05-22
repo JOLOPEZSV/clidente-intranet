@@ -703,6 +703,17 @@ function renderResponsableSelect(row, saved) {
     </select>`;
 }
 
+function renderAvanceInput(row, saved) {
+  const rowId = `${row.code}|${row.item}`;
+  const savedValue = saved[`avance|${rowId}`];
+  const current = Number.isFinite(Number(savedValue)) ? Number(savedValue) : 0;
+  return `
+    <label class="indice-avance-control" aria-label="Avance para ${row.item}">
+      <input class="indice-avance-input" data-row-id="${rowId}" type="number" min="0" max="100" step="1" value="${current}">
+      <span>%</span>
+    </label>`;
+}
+
 function renderIndiceResponsables() {
   const saved = getIndiceResponsablesSaved();
 
@@ -732,16 +743,18 @@ function renderIndiceResponsables() {
           <tr>
             <th>N</th>
             <th>Sección / contenido oficial ISEADE 2026</th>
+            <th>Avance</th>
             <th>Responsable</th>
           </tr>
         </thead>
         <tbody>
           ${INDICE_RESPONSABLES_ROWS.map(row => row.type === 'section' ? `
-            <tr class="indice-section-row"><td colspan="3">${row.title}</td></tr>
+            <tr class="indice-section-row"><td colspan="4">${row.title}</td></tr>
           ` : `
             <tr>
               <td>${row.code}</td>
               <td>${row.item}</td>
+              <td>${renderAvanceInput(row, saved)}</td>
               <td>${renderResponsableSelect(row, saved)}</td>
             </tr>
           `).join('')}
@@ -757,7 +770,14 @@ function renderIndiceResponsables() {
           <div class="indice-mobile-code">${row.code}</div>
           <div class="indice-mobile-content">
             <p>${row.item}</p>
-            ${renderResponsableSelect(row, saved)}
+            <div class="indice-mobile-field">
+              <span>Avance</span>
+              ${renderAvanceInput(row, saved)}
+            </div>
+            <div class="indice-mobile-field">
+              <span>Responsable</span>
+              ${renderResponsableSelect(row, saved)}
+            </div>
           </div>
         </article>
       `).join('')}
@@ -1203,7 +1223,8 @@ function initTabs() {
 
 function initIndiceResponsables() {
   const selects = document.querySelectorAll('.indice-responsable-select');
-  if (!selects.length) return;
+  const avances = document.querySelectorAll('.indice-avance-input');
+  if (!selects.length && !avances.length) return;
 
   const status = document.getElementById('indiceSaveStatus');
   const updateStatus = text => {
@@ -1229,6 +1250,32 @@ function initIndiceResponsables() {
       }
       document.querySelectorAll(`.indice-responsable-select[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
         if (peer !== select) peer.value = select.value;
+      });
+      updateStatus('Cambios guardados en este navegador');
+    });
+  });
+
+  avances.forEach(input => {
+    input.addEventListener('change', () => {
+      const rowId = input.dataset.rowId;
+      const saved = getIndiceResponsablesSaved();
+      const value = Math.max(0, Math.min(100, Number(input.value) || 0));
+      input.value = value;
+
+      if (value === 0) {
+        delete saved[`avance|${rowId}`];
+      } else {
+        saved[`avance|${rowId}`] = value;
+      }
+
+      if (Object.keys(saved).length) {
+        localStorage.setItem(INDICE_RESPONSABLES_STORAGE_KEY, JSON.stringify(saved));
+      } else {
+        localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
+      }
+
+      document.querySelectorAll(`.indice-avance-input[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
+        if (peer !== input) peer.value = value;
       });
       updateStatus('Cambios guardados en este navegador');
     });
