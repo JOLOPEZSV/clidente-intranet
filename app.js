@@ -9,6 +9,7 @@ function renderCartelera() {
   const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const now    = new Date();
   const dateStr = `${days[now.getDay()]} ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
+  const diagnosticoDashboard = getIndiceDashboardSummary();
 
   return `
   <h1 class="section-title">Cartelera</h1>
@@ -55,7 +56,7 @@ function renderCartelera() {
 
   <!-- KPIs -->
   <div class="mp-kpi-row">
-    <div class="mp-kpi green"><div class="mp-kpi-label">Avance global</div><div class="mp-kpi-value">57%</div><div class="mp-kpi-sub">+15 pts esta semana</div></div>
+    <div class="mp-kpi green"><div class="mp-kpi-label">Avance global</div><div class="mp-kpi-value">${diagnosticoDashboard.global}%</div><div class="mp-kpi-sub">${diagnosticoDashboard.completed}/${diagnosticoDashboard.total} actividades al 100%</div></div>
     <div class="mp-kpi red"><div class="mp-kpi-label">Días a entrega ISEADE</div><div class="mp-kpi-value">12</div><div class="mp-kpi-sub">Lun 1 junio · anillado</div></div>
     <div class="mp-kpi amber"><div class="mp-kpi-label">Días al tutor Roberto</div><div class="mp-kpi-value">6</div><div class="mp-kpi-sub">Mar 26 mayo · online</div></div>
     <div class="mp-kpi blue"><div class="mp-kpi-label">Visitas realizadas</div><div class="mp-kpi-value">2/5</div><div class="mp-kpi-sub">Próxima: sáb 23 sin aviso</div></div>
@@ -66,26 +67,11 @@ function renderCartelera() {
     <div class="card">
       <div class="card-header" style="display:flex;align-items:center">
         <div class="card-title"><i class="fas fa-chart-bar" style="margin-right:.5rem"></i>Avance por Sección del Diagnóstico</div>
-        <span class="mp-chip mp-chip-warn" style="margin-left:auto;flex-shrink:0">En proceso</span>
+        <span class="mp-chip ${diagnosticoDashboard.global >= 80 ? 'mp-chip-ok' : diagnosticoDashboard.global >= 50 ? 'mp-chip-warn' : 'mp-chip-no'}" style="margin-left:auto;flex-shrink:0">${diagnosticoDashboard.global >= 80 ? 'Avanzado' : diagnosticoDashboard.global >= 50 ? 'En proceso' : 'Requiere impulso'}</span>
       </div>
       <div style="padding:1rem 1.1rem">
-        ${[
-          ['Portada + Índice',         92,'green'],
-          ['§I Antecedentes',          90,'green'],
-          ['§II Filosofía corp.',      85,'green'],
-          ['§III Estructura org.',     82,'green'],
-          ['§IV Funcionamiento',       58,'amber'],
-          ['§V Mapa procesos',         45,'amber'],
-          ['§VI.1 Finanzas',           55,'amber'],
-          ['§VI.1 Mercadeo',           65,'amber'],
-          ['§VI.1 Operaciones',        78,'green'],
-          ['§VI.2-4 FODA/Porter/FCE',  90,'green'],
-          ['§VII Orientación',         55,'amber'],
-          ['§VIII Conclusiones',       75,'amber'],
-          ['§IX Referencias APA 7',     0,'red'],
-          ['Diag. Ambiental',          25,'red'],
-          ['Anexo IA (URLs)',            0,'red'],
-        ].map(([lbl,pct,color]) => `
+        <p class="mp-dashboard-note">Vista gerencial calculada automaticamente desde el Indice Oficial ISEADE y Responsables.</p>
+        ${diagnosticoDashboard.sections.map(section => [section.label, section.percent, section.color]).map(([lbl,pct,color]) => `
         <div class="mp-prog-row">
           <div class="mp-prog-lbl">${lbl}</div>
           <div class="mp-prog-track"><div class="mp-prog-fill mp-f-${color}" data-w="${pct}%" style="width:0%"></div></div>
@@ -690,6 +676,71 @@ function getIndiceResponsablesSaved() {
   } catch {
     return {};
   }
+}
+
+function getIndiceDashboardSummary() {
+  const saved = getIndiceResponsablesSaved();
+  const sectionLabels = {
+    'DOCUMENTOS DE PRESENTACION': 'Documentos de presentacion',
+    'I. ANTECEDENTES DE LA ORGANIZACION': 'I. Antecedentes',
+    'II. VISION, MISION, PRINCIPIOS Y VALORES': 'II. Filosofia corporativa',
+    'III. ESTRUCTURA ORGANIZACIONAL': 'III. Estructura organizacional',
+    'IV. DESCRIPCION DEL FUNCIONAMIENTO DE LA ORGANIZACION': 'IV. Funcionamiento',
+    'V. MAPA DE PROCESOS': 'V. Mapa de procesos',
+    'VI. DIAGNOSTICO DE LA SITUACION ACTUAL': 'VI. Diagnostico',
+    'VII. ORIENTACION DE LA CONSULTORIA A DESARROLLAR': 'VII. Orientacion',
+    'ANEXOS Y DOCUMENTOS COMPLEMENTARIOS': 'Anexos complementarios',
+  };
+  const sections = [];
+  let current = null;
+
+  INDICE_RESPONSABLES_ROWS.forEach(row => {
+    if (row.type === 'section') {
+      current = {
+        key: row.title,
+        label: sectionLabels[row.title] || row.title,
+        total: 0,
+        done: 0,
+        sum: 0,
+      };
+      sections.push(current);
+      return;
+    }
+
+    if (!current) return;
+    const rowId = `${row.code}|${row.item}`;
+    const avance = Math.max(0, Math.min(100, Number(saved[`avance|${rowId}`]) || 0));
+    current.total += 1;
+    current.done += avance >= 100 ? 1 : 0;
+    current.sum += avance;
+  });
+
+  const preparedSections = sections
+    .filter(section => section.total > 0)
+    .map(section => {
+      const percent = Math.round(section.sum / section.total);
+      const color = percent >= 75 ? 'green' : percent >= 40 ? 'amber' : 'red';
+      return {
+        ...section,
+        label: `${section.label} (${section.done}/${section.total})`,
+        percent,
+        color,
+      };
+    });
+
+  const totals = preparedSections.reduce((acc, section) => {
+    acc.total += section.total;
+    acc.done += section.done;
+    acc.sum += section.sum;
+    return acc;
+  }, { total: 0, done: 0, sum: 0 });
+
+  return {
+    global: totals.total ? Math.round(totals.sum / totals.total) : 0,
+    completed: totals.done,
+    total: totals.total,
+    sections: preparedSections,
+  };
 }
 
 function renderResponsableSelect(row, saved) {
