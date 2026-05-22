@@ -759,16 +759,13 @@ function sameResponsibleList(a, b) {
 
 function renderResponsableSelect(row, saved) {
   const rowId = `${row.code}|${row.item}`;
-  const current = normalizeResponsibleList(saved[rowId] || row.responsible);
+  const current = normalizeResponsibleList(saved[rowId] || row.responsible)[0];
   return `
-    <div class="indice-responsable-select" data-row-id="${rowId}" aria-label="Responsables para ${row.item}">
+    <select class="indice-responsable-select" data-row-id="${rowId}" aria-label="Responsable para ${row.item}">
       ${INDICE_RESPONSABLE_OPTIONS.map(option => `
-        <label>
-          <input class="indice-responsable-option" data-row-id="${rowId}" type="checkbox" value="${option}"${current.includes(option) ? ' checked' : ''}>
-          <span>${option}</span>
-        </label>
+        <option value="${option}"${option === current ? ' selected' : ''}>${option}</option>
       `).join('')}
-    </div>`;
+    </select>`;
 }
 
 function renderAvanceInput(row, saved) {
@@ -807,7 +804,14 @@ function renderIndiceResponsables() {
     </div>
 
     <div class="indice-save-status" id="indiceSaveStatus">
-      <i class="fas fa-circle-check"></i> Cambios guardados en este navegador
+      <i class="fas fa-circle-check"></i> Cambios guardados solo en este navegador
+    </div>
+
+    <div class="indice-sync-note">
+      <i class="fas fa-circle-info"></i>
+      <div>
+        <strong>Como compartir avances:</strong> cuando termines de trabajar, presiona <b>Exportar cambios</b> y envia el archivo al equipo. Antes de que Ricardo, Jaime, Cecilia o Elias sigan trabajando, deben presionar <b>Importar cambios</b> y cargar el ultimo archivo recibido. Asi todos parten de la misma version.
+      </div>
     </div>
 
     <div class="indice-table-wrap">
@@ -1414,7 +1418,7 @@ function initTabs() {
 }
 
 function initIndiceResponsables() {
-  const selects = document.querySelectorAll('.indice-responsable-option');
+  const selects = document.querySelectorAll('.indice-responsable-select');
   const avances = document.querySelectorAll('.indice-avance-input');
   if (!selects.length && !avances.length) return;
 
@@ -1423,25 +1427,16 @@ function initIndiceResponsables() {
     if (status) status.innerHTML = `<i class="fas fa-circle-check"></i> ${text}`;
   };
 
-  const getCheckedResponsables = rowId => {
-    const checked = Array.from(document.querySelectorAll(`.indice-responsable-option[data-row-id="${CSS.escape(rowId)}"]:checked`)).map(input => input.value);
-    return checked.length ? [...new Set(checked)] : ['TODOS'];
-  };
-
-  selects.forEach(input => {
-    input.addEventListener('change', () => {
-      const rowId = input.dataset.rowId;
-      document.querySelectorAll(`.indice-responsable-option[data-row-id="${CSS.escape(rowId)}"][value="${CSS.escape(input.value)}"]`).forEach(peer => {
-        peer.checked = input.checked;
-      });
+  selects.forEach(select => {
+    select.addEventListener('change', () => {
+      const rowId = select.dataset.rowId;
       const official = INDICE_RESPONSABLES_BY_ID[rowId]?.responsible;
       const saved = getIndiceResponsablesSaved();
-      const selected = getCheckedResponsables(rowId);
 
-      if (sameResponsibleList(selected, official)) {
+      if (sameResponsibleList(select.value, official)) {
         delete saved[rowId];
       } else {
-        saved[rowId] = selected.join(', ');
+        saved[rowId] = select.value;
       }
 
       if (Object.keys(saved).length) {
@@ -1449,8 +1444,8 @@ function initIndiceResponsables() {
       } else {
         localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
       }
-      document.querySelectorAll(`.indice-responsable-option[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
-        peer.checked = selected.includes(peer.value);
+      document.querySelectorAll(`.indice-responsable-select[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
+        if (peer !== select) peer.value = select.value;
       });
       updateStatus('Cambios guardados solo en este navegador');
     });
