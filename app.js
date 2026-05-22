@@ -1155,21 +1155,22 @@ const CRONOGRAMA_STORAGE_KEY = 'clidente_cronograma_project_v1';
 const CRONOGRAMA_START = new Date('2026-04-22T00:00:00');
 const CRONOGRAMA_END = new Date('2026-09-18T00:00:00');
 const CRONOGRAMA_RESPONSABLES = ['JAIME', 'CECILIA', 'RICARDO', 'ELIAS', 'TODOS'];
+const CRONOGRAMA_GRUPOS = ['Fase 1 - Diagnostico', 'Fase 2 - Desarrollo Plan de Trabajo', 'Fase 3 - Elaboracion Informe Final', 'Fase 4 - Presentacion y Evaluacion', 'Post-correcciones'];
 const CRONOGRAMA_DEFAULT_TASKS = [
-  { id: 'cr-001', actividad: 'Comunicacion oficial a empresa y tutor', descripcion: 'Inicio formal del proceso MAE LVIII.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-04-24', fechaRealizada: '2026-04-24' },
-  { id: 'cr-002', actividad: 'Asignacion ISEADE a CLIDENTE', descripcion: 'Inicio oficial de la consultoria.', responsable: 'JAIME', avance: 100, fechaMeta: '2026-04-25', fechaRealizada: '2026-04-25' },
-  { id: 'cr-003', actividad: 'Visita inicial y confidencialidad', descripcion: 'Presentacion con Clidente, reconocimiento de instalaciones y firma de carta de confidencialidad.', responsable: 'JAIME', avance: 100, fechaMeta: '2026-04-30', fechaRealizada: '2026-05-06' },
-  { id: 'cr-004', actividad: 'Reunion 1 con Tutor Roberto', descripcion: 'Asignacion de roles por area y lineamientos de trabajo.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-05-12', fechaRealizada: '2026-05-12' },
-  { id: 'cr-005', actividad: 'Visita de campo: organizacion y area comercial', descripcion: 'Validar organigrama, CRM, clientes, canales y area comercial.', responsable: 'CECILIA', avance: 90, fechaMeta: '2026-05-17', fechaRealizada: '2026-05-16' },
-  { id: 'cr-006', actividad: 'Visita de campo: operaciones y finanzas', descripcion: 'Inventarios, procesos, journey del paciente y documentacion financiera.', responsable: 'RICARDO', avance: 80, fechaMeta: '2026-05-23', fechaRealizada: '2026-05-21' },
-  { id: 'cr-007', actividad: 'Entrega interna del diagnostico al tutor', descripcion: 'Version consolidada para revision del tutor, al menos 8 dias antes de la entrega ISEADE.', responsable: 'JAIME', avance: 65, fechaMeta: '2026-05-24', fechaRealizada: '' },
-  { id: 'cr-008', actividad: 'Reunion 2 con Tutor Roberto', descripcion: 'Presentacion consolidada de elementos solicitados por integrante y revision de soportes.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-05-26', fechaRealizada: '' },
-  { id: 'cr-009', actividad: 'Entrega ISEADE: diagnostico', descripcion: 'Entrega fisica anillada y digital del informe de diagnostico.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-06-01', fechaRealizada: '' },
-  { id: 'cr-010', actividad: 'Desarrollo del plan de trabajo', descripcion: 'Ejecucion de acciones acordadas, seguimiento quincenal y medicion de avances.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-08-16', fechaRealizada: '' },
-  { id: 'cr-011', actividad: 'Entrega interna informe final al tutor', descripcion: 'Documento final para revision del tutor, 8 dias antes de ISEADE.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-08-23', fechaRealizada: '' },
-  { id: 'cr-012', actividad: 'Entrega ISEADE: informe final', descripcion: 'Trabajo de escritorio final y documentacion completa.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-08-31', fechaRealizada: '' },
-  { id: 'cr-013', actividad: 'Presentacion ante jurado evaluador', descripcion: 'Exposicion ejecutiva del informe final de consultoria.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-09-07', fechaRealizada: '' },
-  { id: 'cr-014', actividad: 'Informe final ajustado y empastado', descripcion: 'Entrega posterior a correcciones del jurado.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-09-18', fechaRealizada: '' },
+  { id: 'cr-001', grupo: 'Fase 1 - Diagnostico', actividad: 'Comunicacion oficial a empresa y tutor', descripcion: 'Inicio formal del proceso MAE LVIII.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-04-24', fechaRealizada: '2026-04-24' },
+  { id: 'cr-002', grupo: 'Fase 1 - Diagnostico', actividad: 'Asignacion ISEADE a CLIDENTE', descripcion: 'Inicio oficial de la consultoria.', responsable: 'JAIME', avance: 100, fechaMeta: '2026-04-25', fechaRealizada: '2026-04-25' },
+  { id: 'cr-003', grupo: 'Fase 1 - Diagnostico', actividad: 'Visita inicial y confidencialidad', descripcion: 'Presentacion con Clidente, reconocimiento de instalaciones y firma de carta de confidencialidad.', responsable: 'JAIME', avance: 100, fechaMeta: '2026-04-30', fechaRealizada: '2026-05-06' },
+  { id: 'cr-004', grupo: 'Fase 1 - Diagnostico', actividad: 'Reunion 1 con Tutor Roberto', descripcion: 'Asignacion de roles por area y lineamientos de trabajo.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-05-12', fechaRealizada: '2026-05-12' },
+  { id: 'cr-005', grupo: 'Fase 1 - Diagnostico', actividad: 'Visita de campo: organizacion y area comercial', descripcion: 'Validar organigrama, CRM, clientes, canales y area comercial.', responsable: 'CECILIA', avance: 90, fechaMeta: '2026-05-17', fechaRealizada: '2026-05-16' },
+  { id: 'cr-006', grupo: 'Fase 1 - Diagnostico', actividad: 'Visita de campo: operaciones y finanzas', descripcion: 'Inventarios, procesos, journey del paciente y documentacion financiera.', responsable: 'RICARDO', avance: 80, fechaMeta: '2026-05-23', fechaRealizada: '2026-05-21' },
+  { id: 'cr-007', grupo: 'Fase 1 - Diagnostico', actividad: 'Entrega interna del diagnostico al tutor', descripcion: 'Version consolidada para revision del tutor, al menos 8 dias antes de la entrega ISEADE.', responsable: 'JAIME', avance: 65, fechaMeta: '2026-05-24', fechaRealizada: '' },
+  { id: 'cr-008', grupo: 'Fase 1 - Diagnostico', actividad: 'Reunion 2 con Tutor Roberto', descripcion: 'Presentacion consolidada de elementos solicitados por integrante y revision de soportes.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-05-26', fechaRealizada: '' },
+  { id: 'cr-009', grupo: 'Fase 1 - Diagnostico', actividad: 'Entrega ISEADE: diagnostico', descripcion: 'Entrega fisica anillada y digital del informe de diagnostico.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-06-01', fechaRealizada: '' },
+  { id: 'cr-010', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', actividad: 'Desarrollo del plan de trabajo', descripcion: 'Ejecucion de acciones acordadas, seguimiento quincenal y medicion de avances.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-08-16', fechaRealizada: '' },
+  { id: 'cr-011', grupo: 'Fase 3 - Elaboracion Informe Final', actividad: 'Entrega interna informe final al tutor', descripcion: 'Documento final para revision del tutor, 8 dias antes de ISEADE.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-08-23', fechaRealizada: '' },
+  { id: 'cr-012', grupo: 'Fase 3 - Elaboracion Informe Final', actividad: 'Entrega ISEADE: informe final', descripcion: 'Trabajo de escritorio final y documentacion completa.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-08-31', fechaRealizada: '' },
+  { id: 'cr-013', grupo: 'Fase 4 - Presentacion y Evaluacion', actividad: 'Presentacion ante jurado evaluador', descripcion: 'Exposicion ejecutiva del informe final de consultoria.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-09-07', fechaRealizada: '' },
+  { id: 'cr-014', grupo: 'Post-correcciones', actividad: 'Informe final ajustado y empastado', descripcion: 'Entrega posterior a correcciones del jurado.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-09-18', fechaRealizada: '' },
 ];
 
 function escapeHtml(value) {
@@ -1215,6 +1216,7 @@ function renderCronograma() {
   <div class="project-card">
     <div class="project-grid project-grid-header">
       <div>#</div>
+      <div>Fase</div>
       <div>Actividad</div>
       <div>Descripcion</div>
       <div>Responsable</div>
@@ -1230,9 +1232,14 @@ function renderCronograma() {
       const [status, label] = getCronogramaStatus(task);
       const left = getGanttLeft(task.fechaMeta);
       const width = Math.max(3, Math.min(100 - left, Number(task.avance) || 3));
+      const showGroup = index === 0 || task.grupo !== tasks[index - 1]?.grupo;
       return `
+      ${showGroup ? `<div class="project-group-row">${escapeHtml(task.grupo || 'Sin fase')}</div>` : ''}
       <div class="project-grid project-grid-row" data-task-id="${task.id}">
         <div class="project-index">${index + 1}</div>
+        <select data-field="grupo">
+          ${CRONOGRAMA_GRUPOS.map(name => `<option value="${name}"${(task.grupo || 'Fase 1 - Diagnostico') === name ? ' selected' : ''}>${name}</option>`).join('')}
+        </select>
         <textarea data-field="actividad" rows="2">${escapeHtml(task.actividad)}</textarea>
         <textarea data-field="descripcion" rows="2">${escapeHtml(task.descripcion)}</textarea>
         <select data-field="responsable">
@@ -1402,6 +1409,7 @@ function readCronogramaFromDom() {
     const field = name => row.querySelector(`[data-field="${name}"]`);
     return {
       id: row.dataset.taskId,
+      grupo: field('grupo')?.value || 'Fase 1 - Diagnostico',
       actividad: field('actividad')?.value.trim() || 'Nueva actividad',
       descripcion: field('descripcion')?.value.trim() || '',
       responsable: field('responsable')?.value || 'TODOS',
@@ -1422,6 +1430,7 @@ function saveCronogramaTasks(tasks) {
 function createBlankCronogramaTask() {
   return {
     id: `cr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    grupo: 'Fase 1 - Diagnostico',
     actividad: 'Nueva actividad',
     descripcion: '',
     responsable: 'TODOS',
@@ -1433,10 +1442,10 @@ function createBlankCronogramaTask() {
 }
 
 function exportCronogramaExcel(tasks) {
-  const headers = ['Actividad', 'Descripcion', 'Responsable', 'Avance %', 'Fecha meta', 'Fecha realizada', 'Documentos', 'Estado'];
+  const headers = ['Fase', 'Actividad', 'Descripcion', 'Responsable', 'Avance %', 'Fecha meta', 'Fecha realizada', 'Documentos', 'Estado'];
   const rows = tasks.map(task => {
     const [, status] = getCronogramaStatus(task);
-    return [task.actividad, task.descripcion, task.responsable, task.avance, task.fechaMeta, task.fechaRealizada, task.documentos || '', status];
+    return [task.grupo || '', task.actividad, task.descripcion, task.responsable, task.avance, task.fechaMeta, task.fechaRealizada, task.documentos || '', status];
   });
   const tableRows = [headers, ...rows].map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
   const html = `<html><head><meta charset="UTF-8"></head><body><table>${tableRows}</table></body></html>`;
