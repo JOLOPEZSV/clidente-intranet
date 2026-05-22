@@ -1155,10 +1155,11 @@ const CRONOGRAMA_STORAGE_KEY = 'clidente_cronograma_project_v1';
 const CRONOGRAMA_START = new Date('2026-04-22T00:00:00');
 const CRONOGRAMA_END = new Date('2026-09-18T00:00:00');
 const CRONOGRAMA_RESPONSABLES = ['JAIME', 'CECILIA', 'RICARDO', 'ELIAS', 'TODOS'];
-const CRONOGRAMA_GRUPOS = ['Fase 1 - Diagnostico', 'Fase 2 - Desarrollo Plan de Trabajo', 'Fase 3 - Elaboracion Informe Final', 'Fase 4 - Presentacion y Evaluacion', 'Post-correcciones'];
+const CRONOGRAMA_GRUPOS = ['Fase 0 - Inicio del Trabajo de Graduacion', 'Fase 1 - Diagnostico', 'Fase 2 - Desarrollo Plan de Trabajo', 'Fase 3 - Elaboracion Informe Final', 'Fase 4 - Presentacion y Evaluacion', 'Post-correcciones'];
 const CRONOGRAMA_DEFAULT_TASKS = [
-  { id: 'cr-001', grupo: 'Fase 1 - Diagnostico', actividad: 'Comunicacion oficial a empresa y tutor', descripcion: 'Inicio formal del proceso MAE LVIII.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-04-24', fechaRealizada: '2026-04-24' },
-  { id: 'cr-002', grupo: 'Fase 1 - Diagnostico', actividad: 'Asignacion ISEADE a CLIDENTE', descripcion: 'Inicio oficial de la consultoria.', responsable: 'JAIME', avance: 100, fechaMeta: '2026-04-25', fechaRealizada: '2026-04-25' },
+  { id: 'cr-000', grupo: 'Fase 0 - Inicio del Trabajo de Graduacion', actividad: 'Induccion de reglas del Trabajo de Graduacion', descripcion: 'Sesion inicial con Vanessa e ISEADE para explicar reglas, etapas, entregables, fechas importantes y lineamientos generales del proceso MAE LVIII.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-04-22', fechaRealizada: '2026-04-22' },
+  { id: 'cr-001', grupo: 'Fase 0 - Inicio del Trabajo de Graduacion', actividad: 'Comunicacion oficial a empresa y tutor', descripcion: 'Inicio formal del proceso MAE LVIII.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-04-24', fechaRealizada: '2026-04-24' },
+  { id: 'cr-002', grupo: 'Fase 0 - Inicio del Trabajo de Graduacion', actividad: 'Asignacion ISEADE a CLIDENTE', descripcion: 'Inicio oficial de la consultoria.', responsable: 'JAIME', avance: 100, fechaMeta: '2026-04-25', fechaRealizada: '2026-04-25' },
   { id: 'cr-003', grupo: 'Fase 1 - Diagnostico', actividad: 'Visita inicial y confidencialidad', descripcion: 'Presentacion con Clidente, reconocimiento de instalaciones y firma de carta de confidencialidad.', responsable: 'JAIME', avance: 100, fechaMeta: '2026-04-30', fechaRealizada: '2026-05-06' },
   { id: 'cr-004', grupo: 'Fase 1 - Diagnostico', actividad: 'Reunion 1 con Tutor Roberto', descripcion: 'Asignacion de roles por area y lineamientos de trabajo.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-05-12', fechaRealizada: '2026-05-12' },
   { id: 'cr-005', grupo: 'Fase 1 - Diagnostico', actividad: 'Visita de campo: organizacion y area comercial', descripcion: 'Validar organigrama, CRM, clientes, canales y area comercial.', responsable: 'CECILIA', avance: 90, fechaMeta: '2026-05-17', fechaRealizada: '2026-05-16' },
