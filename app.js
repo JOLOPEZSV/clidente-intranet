@@ -1203,7 +1203,7 @@ function renderCronograma() {
 
   return `
   <h1 class="section-title">Cronograma de la Consultoria</h1>
-  <p class="cronograma-intro">Cronograma editable tipo Microsoft Project para registrar actividades, responsables, avance, fecha meta y fecha realizada. El tutor solicito entregas internas al menos 8 dias antes de las fechas ISEADE.</p>
+  <p class="cronograma-intro">Cronograma editable tipo Microsoft Project para registrar actividades, responsables, avance, fechas y documentos de soporte. El tutor solicito entregas internas al menos 8 dias antes de las fechas ISEADE.</p>
 
   <div class="project-toolbar">
     <button class="btn-resource" id="cronogramaAddTask" type="button"><i class="fas fa-plus"></i> Agregar actividad</button>
@@ -1221,6 +1221,7 @@ function renderCronograma() {
       <div>Avance</div>
       <div>Fecha meta</div>
       <div>Fecha realizada</div>
+      <div>Documentos</div>
       <div>Estado</div>
       <div>Gantt</div>
       <div>Acción</div>
@@ -1240,6 +1241,7 @@ function renderCronograma() {
         <label class="project-percent"><input data-field="avance" type="number" min="0" max="100" step="1" value="${Number(task.avance) || 0}"><span>%</span></label>
         <input data-field="fechaMeta" type="date" value="${task.fechaMeta || ''}">
         <input data-field="fechaRealizada" type="date" value="${task.fechaRealizada || ''}">
+        <textarea data-field="documentos" rows="2" placeholder="Pega links de Drive, PDFs o notas de soporte">${escapeHtml(task.documentos || '')}</textarea>
         <span class="status-badge status-${status}">${label}</span>
         <div class="project-gantt-cell">
           <div class="project-gantt-track"><span style="left:${left}%;width:${width}%"></span></div>
@@ -1401,6 +1403,7 @@ function readCronogramaFromDom() {
       avance: Math.max(0, Math.min(100, Number(field('avance')?.value) || 0)),
       fechaMeta: field('fechaMeta')?.value || '',
       fechaRealizada: field('fechaRealizada')?.value || '',
+      documentos: field('documentos')?.value.trim() || '',
     };
   });
 }
@@ -1412,10 +1415,10 @@ function saveCronogramaTasks(tasks) {
 }
 
 function exportCronogramaExcel(tasks) {
-  const headers = ['Actividad', 'Descripcion', 'Responsable', 'Avance %', 'Fecha meta', 'Fecha realizada', 'Estado'];
+  const headers = ['Actividad', 'Descripcion', 'Responsable', 'Avance %', 'Fecha meta', 'Fecha realizada', 'Documentos', 'Estado'];
   const rows = tasks.map(task => {
     const [, status] = getCronogramaStatus(task);
-    return [task.actividad, task.descripcion, task.responsable, task.avance, task.fechaMeta, task.fechaRealizada, status];
+    return [task.actividad, task.descripcion, task.responsable, task.avance, task.fechaMeta, task.fechaRealizada, task.documentos || '', status];
   });
   const tableRows = [headers, ...rows].map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
   const html = `<html><head><meta charset="UTF-8"></head><body><table>${tableRows}</table></body></html>`;
@@ -1453,6 +1456,9 @@ function initCronogramaProject() {
   card.addEventListener('click', event => {
     const button = event.target.closest('.project-delete');
     if (!button) return;
+    const row = button.closest('.project-grid-row');
+    const activity = row?.querySelector('[data-field="actividad"]')?.value || 'esta actividad';
+    if (!window.confirm(`¿Seguro que deseas eliminar "${activity}" del cronograma?`)) return;
     const tasks = readCronogramaFromDom().filter(task => task.id !== button.closest('.project-grid-row')?.dataset.taskId);
     rerender(tasks.length ? tasks : CRONOGRAMA_DEFAULT_TASKS);
   });
@@ -1469,6 +1475,7 @@ function initCronogramaProject() {
         avance: 0,
         fechaMeta: '',
         fechaRealizada: '',
+        documentos: '',
       });
       rerender(tasks);
     });
