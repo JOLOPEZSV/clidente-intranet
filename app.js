@@ -1223,7 +1223,7 @@ function renderCronograma() {
       <div>Fecha realizada</div>
       <div>Estado</div>
       <div>Gantt</div>
-      <div></div>
+      <div>Acción</div>
     </div>
     ${tasks.map((task, index) => {
       const [status, label] = getCronogramaStatus(task);
@@ -1244,7 +1244,7 @@ function renderCronograma() {
         <div class="project-gantt-cell">
           <div class="project-gantt-track"><span style="left:${left}%;width:${width}%"></span></div>
         </div>
-        <button class="project-delete" type="button" title="Eliminar actividad"><i class="fas fa-trash"></i></button>
+        <button class="project-delete" type="button" title="Eliminar actividad"><i class="fas fa-trash"></i><span>Eliminar</span></button>
       </div>`;
     }).join('')}
   </div>`;
