@@ -1259,7 +1259,7 @@ function renderCronograma() {
   <p class="cronograma-intro">Cronograma editable tipo Microsoft Project para registrar actividades, responsables, avance, fechas y documentos de soporte. El tutor solicito entregas internas al menos 8 dias antes de las fechas ISEADE.</p>
 
   <div class="project-toolbar">
-    <button class="btn-resource" id="cronogramaExportExcel" type="button"><i class="fas fa-file-excel"></i> Exportar a Excel</button>
+    <button class="btn-resource" id="cronogramaExportExcel" type="button"><i class="fas fa-file-excel"></i> Exportar Excel ejecutivo</button>
     <button class="btn-resource" id="cronogramaExportWord" type="button"><i class="fas fa-file-word"></i> Exportar a Word</button>
     <button class="btn-resource project-reset-btn" id="cronogramaReset" type="button"><i class="fas fa-rotate-left"></i> Restaurar base</button>
     <span class="project-save-status" id="cronogramaSaveStatus"><i class="fas fa-circle-check"></i> Cambios guardados en este navegador</span>
@@ -1498,17 +1498,143 @@ function createBlankCronogramaTask() {
 }
 
 function exportCronogramaExcel(tasks) {
-  const headers = ['Fase', 'Actividad', 'Descripcion', 'Responsable', 'Avance %', 'Fecha meta', 'Fecha realizada', 'Documentos', 'Estado'];
-  const rows = tasks.map(task => {
+  const generatedAt = new Date().toLocaleDateString('es-SV', { day: '2-digit', month: 'long', year: 'numeric' });
+  const summary = getCronogramaSummary(tasks);
+  const groups = groupCronogramaTasks(tasks);
+  const phaseRows = Object.entries(groups).map(([phase, phaseTasks]) => {
+    const phaseSummary = getCronogramaSummary(phaseTasks);
+    const nextDate = phaseTasks
+      .map(task => task.fechaMeta)
+      .filter(Boolean)
+      .sort()[0] || '';
+    return `
+      <tr>
+        <td>${escapeHtml(phase)}</td>
+        <td class="center">${phaseSummary.total}</td>
+        <td class="center">${phaseSummary.average}%</td>
+        <td class="center">${phaseSummary.done}</td>
+        <td class="center">${phaseSummary.wip}</td>
+        <td class="center">${phaseSummary.pending}</td>
+        <td>${formatCronogramaDate(nextDate)}</td>
+      </tr>`;
+  }).join('');
+
+  const upcomingRows = tasks
+    .filter(task => getCronogramaStatus(task)[0] !== 'done')
+    .slice()
+    .sort((a, b) => String(a.fechaMeta || '9999-12-31').localeCompare(String(b.fechaMeta || '9999-12-31')))
+    .slice(0, 8)
+    .map(task => {
+      const [, status] = getCronogramaStatus(task);
+      return `
+      <tr>
+        <td>${formatCronogramaDate(task.fechaMeta)}</td>
+        <td>${escapeHtml(task.grupo || '')}</td>
+        <td>${escapeHtml(task.actividad || '')}</td>
+        <td class="center">${escapeHtml(task.responsable || '')}</td>
+        <td class="center">${Number(task.avance) || 0}%</td>
+        <td class="status-${status.toLowerCase().replace(/\s+/g, '-')}">${status}</td>
+      </tr>`;
+    }).join('');
+
+  const detailRows = tasks.map((task, index) => {
     const [, status] = getCronogramaStatus(task);
-    return [task.grupo || '', task.actividad, task.descripcion, task.responsable, task.avance, task.fechaMeta, task.fechaRealizada, task.documentos || '', status];
-  });
-  const tableRows = [headers, ...rows].map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
-  const html = `<html><head><meta charset="UTF-8"></head><body><table>${tableRows}</table></body></html>`;
+    const statusClass = status === 'Completado' ? 'status-completado' : status === 'En progreso' ? 'status-en-progreso' : 'status-pendiente';
+    return `
+      <tr>
+        <td class="center">${index + 1}</td>
+        <td>${escapeHtml(task.grupo || '')}</td>
+        <td>${escapeHtml(task.actividad || '')}</td>
+        <td>${escapeHtml(task.descripcion || '')}</td>
+        <td class="center">${escapeHtml(task.responsable || '')}</td>
+        <td class="center">${Number(task.avance) || 0}%</td>
+        <td>${formatCronogramaDate(task.fechaMeta)}</td>
+        <td>${formatCronogramaDate(task.fechaRealizada)}</td>
+        <td class="${statusClass}">${status}</td>
+        <td>${escapeHtml(task.documentos || 'Sin documentos registrados')}</td>
+      </tr>`;
+  }).join('');
+
+  const html = `
+  <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+  <head>
+    <meta charset="UTF-8">
+    <!--[if gte mso 9]><xml>
+      <x:ExcelWorkbook>
+        <x:ExcelWorksheets>
+          <x:ExcelWorksheet><x:Name>Resumen Ejecutivo</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>
+          <x:ExcelWorksheet><x:Name>Detalle Cronograma</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>
+        </x:ExcelWorksheets>
+      </x:ExcelWorkbook>
+    </xml><![endif]-->
+    <style>
+      body { font-family: Arial, sans-serif; color: #1f2937; }
+      table { border-collapse: collapse; width: 100%; }
+      th { background: #1a56a4; border: 1px solid #123d73; color: #fff; font-size: 12px; padding: 8px; text-align: left; text-transform: uppercase; }
+      td { border: 1px solid #cfd9e6; font-size: 12px; padding: 7px; vertical-align: top; }
+      .title { background: #123d73; color: #fff; font-size: 22px; font-weight: 700; padding: 14px; }
+      .subtitle { background: #e8f0fb; color: #123d73; font-size: 13px; font-weight: 700; padding: 9px; }
+      .section { background: #dbeafe; color: #123d73; font-size: 14px; font-weight: 700; padding: 9px; }
+      .kpi { background: #edf4ff; color: #123d73; font-size: 20px; font-weight: 700; text-align: center; }
+      .kpi-label { background: #f8fafc; color: #5d6f89; font-size: 11px; font-weight: 700; text-align: center; text-transform: uppercase; }
+      .center { text-align: center; }
+      .status-completado { background: #dcfce7; color: #166534; font-weight: 700; text-align: center; }
+      .status-en-progreso { background: #fef3c7; color: #854d0e; font-weight: 700; text-align: center; }
+      .status-pendiente { background: #dbeafe; color: #1a56a4; font-weight: 700; text-align: center; }
+      .note { color: #5d6f89; font-size: 11px; }
+    </style>
+  </head>
+  <body>
+    <table>
+      <tr><td class="title" colspan="7">Cronograma de la Consultoria - CLIDENTE</td></tr>
+      <tr><td class="subtitle" colspan="7">Resumen ejecutivo generado desde el Portal TDG - ${generatedAt}</td></tr>
+      <tr><td class="note" colspan="7">Criterio de seguimiento: entregas internas al tutor al menos 8 dias antes de las fechas oficiales solicitadas por ISEADE.</td></tr>
+      <tr><td colspan="7"></td></tr>
+      <tr>
+        <td class="kpi">${summary.total}</td>
+        <td class="kpi">${summary.average}%</td>
+        <td class="kpi">${summary.done}</td>
+        <td class="kpi">${summary.wip}</td>
+        <td class="kpi">${summary.pending}</td>
+        <td class="kpi" colspan="2">${Object.keys(groups).length}</td>
+      </tr>
+      <tr>
+        <td class="kpi-label">Actividades</td>
+        <td class="kpi-label">Avance promedio</td>
+        <td class="kpi-label">Completadas</td>
+        <td class="kpi-label">En progreso</td>
+        <td class="kpi-label">Pendientes</td>
+        <td class="kpi-label" colspan="2">Fases</td>
+      </tr>
+      <tr><td colspan="7"></td></tr>
+      <tr><td class="section" colspan="7">Avance por fase</td></tr>
+      <tr>
+        <th>Fase</th><th>Actividades</th><th>Avance promedio</th><th>Completadas</th><th>En progreso</th><th>Pendientes</th><th>Primera fecha meta</th>
+      </tr>
+      ${phaseRows}
+      <tr><td colspan="7"></td></tr>
+      <tr><td class="section" colspan="7">Proximos hitos pendientes</td></tr>
+      <tr>
+        <th>Fecha meta</th><th>Fase</th><th>Actividad</th><th>Responsable</th><th>Avance</th><th colspan="2">Estado</th>
+      </tr>
+      ${upcomingRows || '<tr><td colspan="7" class="center">No hay hitos pendientes registrados.</td></tr>'}
+    </table>
+
+    <br style="mso-special-character:line-break;page-break-before:always">
+
+    <table>
+      <tr><td class="title" colspan="10">Detalle del Cronograma</td></tr>
+      <tr>
+        <th>N</th><th>Fase</th><th>Actividad</th><th>Descripcion</th><th>Responsable</th><th>Avance</th><th>Fecha meta</th><th>Fecha realizada</th><th>Estado</th><th>Documentos</th>
+      </tr>
+      ${detailRows}
+    </table>
+  </body>
+  </html>`;
   const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = 'cronograma-clidente.xls';
+  link.download = 'cronograma-ejecutivo-clidente.xls';
   document.body.appendChild(link);
   link.click();
   link.remove();
