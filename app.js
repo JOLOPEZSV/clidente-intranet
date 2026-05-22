@@ -1210,6 +1210,7 @@ function renderCronograma() {
   <div class="project-toolbar">
     <button class="btn-resource" id="cronogramaAddTask" type="button"><i class="fas fa-plus"></i> Agregar actividad</button>
     <button class="btn-resource" id="cronogramaExportExcel" type="button"><i class="fas fa-file-excel"></i> Exportar a Excel</button>
+    <button class="btn-resource" id="cronogramaExportWord" type="button"><i class="fas fa-file-word"></i> Exportar a Word</button>
     <button class="btn-resource project-reset-btn" id="cronogramaReset" type="button"><i class="fas fa-rotate-left"></i> Restaurar base</button>
     <span class="project-save-status" id="cronogramaSaveStatus"><i class="fas fa-circle-check"></i> Cambios guardados en este navegador</span>
   </div>
@@ -1464,6 +1465,134 @@ function exportCronogramaExcel(tasks) {
   URL.revokeObjectURL(link.href);
 }
 
+function formatCronogramaDate(dateValue) {
+  if (!dateValue) return 'Pendiente';
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateValue;
+  return date.toLocaleDateString('es-SV', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function getCronogramaSummary(tasks) {
+  const total = tasks.length;
+  const done = tasks.filter(task => getCronogramaStatus(task)[0] === 'done').length;
+  const wip = tasks.filter(task => getCronogramaStatus(task)[0] === 'wip').length;
+  const pending = Math.max(0, total - done - wip);
+  const average = total ? Math.round(tasks.reduce((sum, task) => sum + (Number(task.avance) || 0), 0) / total) : 0;
+  return { total, done, wip, pending, average };
+}
+
+function groupCronogramaTasks(tasks) {
+  return tasks.reduce((groups, task) => {
+    const name = task.grupo || 'Sin fase';
+    if (!groups[name]) groups[name] = [];
+    groups[name].push(task);
+    return groups;
+  }, {});
+}
+
+function exportCronogramaWord(tasks) {
+  const generatedAt = new Date().toLocaleDateString('es-SV', { day: '2-digit', month: 'long', year: 'numeric' });
+  const summary = getCronogramaSummary(tasks);
+  const groups = groupCronogramaTasks(tasks);
+  const phaseSections = Object.entries(groups).map(([group, groupTasks]) => {
+    const phaseAverage = groupTasks.length
+      ? Math.round(groupTasks.reduce((sum, task) => sum + (Number(task.avance) || 0), 0) / groupTasks.length)
+      : 0;
+    const rows = groupTasks.map((task, index) => {
+      const [, status] = getCronogramaStatus(task);
+      const documents = task.documentos ? escapeHtml(task.documentos).replace(/\n/g, '<br>') : 'Sin documentos registrados';
+      return `
+        <tr>
+          <td class="center">${index + 1}</td>
+          <td><strong>${escapeHtml(task.actividad)}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
+          <td class="center">${escapeHtml(task.responsable || '')}</td>
+          <td class="center"><strong>${Number(task.avance) || 0}%</strong></td>
+          <td>${formatCronogramaDate(task.fechaMeta)}</td>
+          <td>${formatCronogramaDate(task.fechaRealizada)}</td>
+          <td class="center">${status}</td>
+          <td>${documents}</td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <h2>${escapeHtml(group)}</h2>
+      <p class="phase-note">Actividades: <strong>${groupTasks.length}</strong> | Avance promedio: <strong>${phaseAverage}%</strong></p>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:5%">N</th>
+            <th style="width:27%">Actividad y descripcion</th>
+            <th style="width:11%">Responsable</th>
+            <th style="width:9%">Avance</th>
+            <th style="width:13%">Fecha meta</th>
+            <th style="width:13%">Fecha realizada</th>
+            <th style="width:10%">Estado</th>
+            <th style="width:12%">Documentos</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }).join('');
+
+  const html = `
+  <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+  <head>
+    <meta charset="UTF-8">
+    <title>Cronograma de la Consultoria CLIDENTE</title>
+    <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
+    <style>
+      @page WordSection1 { size: 11in 8.5in; margin: .55in .45in .55in .45in; }
+      div.WordSection1 { page: WordSection1; }
+      body { color: #1f2937; font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.35; }
+      h1 { color: #123d73; font-size: 22pt; margin: 0 0 6pt; }
+      h2 { background: #1a56a4; color: #fff; font-size: 12pt; margin: 18pt 0 0; padding: 7pt 9pt; text-transform: uppercase; }
+      .subtitle { color: #5d6f89; font-size: 11pt; margin: 0 0 12pt; }
+      .meta { border-top: 3pt solid #1a56a4; margin-bottom: 14pt; padding-top: 8pt; }
+      .summary { border-collapse: collapse; margin: 10pt 0 16pt; width: 100%; }
+      .summary td { background: #edf4ff; border: 1pt solid #c8d8ef; color: #123d73; font-weight: bold; padding: 8pt; text-align: center; }
+      .summary span { color: #5d6f89; display: block; font-size: 8pt; font-weight: normal; margin-top: 2pt; text-transform: uppercase; }
+      .phase-note { color: #5d6f89; font-size: 9pt; margin: 5pt 0 7pt; }
+      table { border-collapse: collapse; margin-bottom: 12pt; width: 100%; }
+      th { background: #dbeafe; border: 1pt solid #9fb8dc; color: #123d73; font-size: 8pt; padding: 6pt 5pt; text-transform: uppercase; }
+      td { border: 1pt solid #cfd9e6; font-size: 8.5pt; padding: 6pt 5pt; vertical-align: top; }
+      td span { color: #5d6f89; font-size: 8pt; }
+      .center { text-align: center; }
+      .footer { border-top: 1pt solid #cfd9e6; color: #5d6f89; font-size: 8pt; margin-top: 16pt; padding-top: 7pt; }
+    </style>
+  </head>
+  <body>
+    <div class="WordSection1">
+      <div class="meta">
+        <h1>Cronograma de la Consultoria</h1>
+        <p class="subtitle">Trabajo de Graduacion MBA ISEADE FEPADE - Clinica Dental CLIDENTE</p>
+        <p><strong>Documento generado:</strong> ${generatedAt}<br>
+        <strong>Criterio de seguimiento:</strong> entregas internas al tutor al menos 8 dias antes de las fechas oficiales solicitadas por ISEADE.</p>
+      </div>
+      <table class="summary">
+        <tr>
+          <td>${summary.total}<span>Actividades</span></td>
+          <td>${summary.average}%<span>Avance promedio</span></td>
+          <td>${summary.done}<span>Completadas</span></td>
+          <td>${summary.wip}<span>En progreso</span></td>
+          <td>${summary.pending}<span>Pendientes</span></td>
+        </tr>
+      </table>
+      ${phaseSections}
+      <p class="footer">Fuente: Portal TDG - CLIDENTE. Este cronograma se genera con la version editable guardada en este navegador.</p>
+    </div>
+  </body>
+  </html>`;
+
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'cronograma-profesional-clidente.doc';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
 function initCronogramaProject() {
   const card = document.querySelector('.project-card');
   if (!card) return;
@@ -1548,6 +1677,11 @@ function initCronogramaProject() {
   const exportBtn = document.getElementById('cronogramaExportExcel');
   if (exportBtn) {
     exportBtn.addEventListener('click', () => exportCronogramaExcel(readCronogramaFromDom()));
+  }
+
+  const exportWordBtn = document.getElementById('cronogramaExportWord');
+  if (exportWordBtn) {
+    exportWordBtn.addEventListener('click', () => exportCronogramaWord(readCronogramaFromDom()));
   }
 }
 
