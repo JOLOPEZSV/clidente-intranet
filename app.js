@@ -1246,7 +1246,12 @@ function renderCronograma() {
         <div class="project-gantt-cell">
           <div class="project-gantt-track"><span style="left:${left}%;width:${width}%"></span></div>
         </div>
-        <button class="project-delete" type="button" title="Eliminar actividad"><i class="fas fa-trash"></i><span>Eliminar</span></button>
+        <div class="project-actions">
+          <button class="project-row-action project-move-up" type="button" title="Subir actividad"><i class="fas fa-arrow-up"></i></button>
+          <button class="project-row-action project-move-down" type="button" title="Bajar actividad"><i class="fas fa-arrow-down"></i></button>
+          <button class="project-row-action project-insert-after" type="button" title="Insertar actividad debajo"><i class="fas fa-plus"></i></button>
+          <button class="project-row-action project-delete" type="button" title="Eliminar actividad"><i class="fas fa-trash"></i></button>
+        </div>
       </div>`;
     }).join('')}
   </div>`;
@@ -1414,6 +1419,19 @@ function saveCronogramaTasks(tasks) {
   if (status) status.innerHTML = '<i class="fas fa-circle-check"></i> Cambios guardados en este navegador';
 }
 
+function createBlankCronogramaTask() {
+  return {
+    id: `cr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    actividad: 'Nueva actividad',
+    descripcion: '',
+    responsable: 'TODOS',
+    avance: 0,
+    fechaMeta: '',
+    fechaRealizada: '',
+    documentos: '',
+  };
+}
+
 function exportCronogramaExcel(tasks) {
   const headers = ['Actividad', 'Descripcion', 'Responsable', 'Avance %', 'Fecha meta', 'Fecha realizada', 'Documentos', 'Estado'];
   const rows = tasks.map(task => {
@@ -1454,29 +1472,46 @@ function initCronogramaProject() {
   });
 
   card.addEventListener('click', event => {
-    const button = event.target.closest('.project-delete');
+    const button = event.target.closest('.project-row-action');
     if (!button) return;
     const row = button.closest('.project-grid-row');
+    const taskId = row?.dataset.taskId;
+    const tasks = readCronogramaFromDom();
+    const index = tasks.findIndex(task => task.id === taskId);
+    if (index < 0) return;
+
+    if (button.classList.contains('project-insert-after')) {
+      tasks.splice(index + 1, 0, createBlankCronogramaTask());
+      rerender(tasks);
+      return;
+    }
+
+    if (button.classList.contains('project-move-up')) {
+      if (index === 0) return;
+      [tasks[index - 1], tasks[index]] = [tasks[index], tasks[index - 1]];
+      rerender(tasks);
+      return;
+    }
+
+    if (button.classList.contains('project-move-down')) {
+      if (index === tasks.length - 1) return;
+      [tasks[index + 1], tasks[index]] = [tasks[index], tasks[index + 1]];
+      rerender(tasks);
+      return;
+    }
+
+    if (!button.classList.contains('project-delete')) return;
     const activity = row?.querySelector('[data-field="actividad"]')?.value || 'esta actividad';
     if (!window.confirm(`¿Seguro que deseas eliminar "${activity}" del cronograma?`)) return;
-    const tasks = readCronogramaFromDom().filter(task => task.id !== button.closest('.project-grid-row')?.dataset.taskId);
-    rerender(tasks.length ? tasks : CRONOGRAMA_DEFAULT_TASKS);
+    const filtered = tasks.filter(task => task.id !== taskId);
+    rerender(filtered.length ? filtered : CRONOGRAMA_DEFAULT_TASKS);
   });
 
   const add = document.getElementById('cronogramaAddTask');
   if (add) {
     add.addEventListener('click', () => {
       const tasks = readCronogramaFromDom();
-      tasks.push({
-        id: `cr-${Date.now()}`,
-        actividad: 'Nueva actividad',
-        descripcion: '',
-        responsable: 'TODOS',
-        avance: 0,
-        fechaMeta: '',
-        fechaRealizada: '',
-        documentos: '',
-      });
+      tasks.push(createBlankCronogramaTask());
       rerender(tasks);
     });
   }

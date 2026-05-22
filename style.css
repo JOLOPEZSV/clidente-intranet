@@ -1069,21 +1069,39 @@ img { max-width: 100%; }
   position: absolute;
   top: 2px;
 }
-.project-delete {
+.project-actions {
   align-items: center;
-  background: #fff0f0;
-  border: 1px solid rgba(192,57,43,.2);
+  display: grid;
+  gap: .3rem;
+  grid-template-columns: repeat(2, 34px);
+  justify-content: center;
+}
+.project-row-action {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid var(--border);
   border-radius: 7px;
-  color: #c0392b;
+  color: var(--blue-dark);
   display: inline-flex;
-  gap: .35rem;
   height: 34px;
   justify-content: center;
-  margin: .65rem .55rem;
-  padding: 0 .65rem;
-  width: auto;
+  margin: 0;
+  padding: 0;
+  width: 34px;
   font-size: .76rem;
   font-weight: 800;
+}
+.project-row-action:hover { background: var(--blue-light); }
+.project-insert-after {
+  background: #f0fff4;
+  border-color: rgba(26,115,64,.2);
+  color: #166534;
+}
+.project-insert-after:hover { background: #dcfce7; }
+.project-delete {
+  background: #fff0f0;
+  border-color: rgba(192,57,43,.2);
+  color: #c0392b;
 }
 .project-delete:hover { background: #ffe0e0; }
 
