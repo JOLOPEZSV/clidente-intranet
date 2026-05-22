@@ -958,6 +958,132 @@ img { max-width: 100%; }
 }
 
 /* INFO BOXES ───────────────────────────────────────────────── */
+.project-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-bottom: 1rem;
+}
+.project-reset-btn {
+  background: #f8fafc;
+  color: var(--text-muted);
+}
+.project-save-status {
+  color: #166534;
+  font-size: .78rem;
+  font-weight: 700;
+  margin-left: auto;
+}
+.project-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  overflow-x: auto;
+}
+.project-grid {
+  display: grid;
+  grid-template-columns: 44px minmax(190px, 1.25fr) minmax(220px, 1.5fr) 122px 94px 138px 138px 112px minmax(190px, 1fr) 44px;
+  min-width: 1320px;
+}
+.project-grid-header {
+  background: var(--blue);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  position: sticky;
+  text-transform: uppercase;
+  top: 0;
+  z-index: 1;
+}
+.project-grid-header > div,
+.project-grid-row > * {
+  border-bottom: 1px solid var(--border);
+  padding: .65rem .55rem;
+}
+.project-grid-row:hover { background: #f8fbff; }
+.project-index {
+  color: var(--blue-dark);
+  font-weight: 800;
+  text-align: center;
+}
+.project-grid textarea,
+.project-grid select,
+.project-grid input[type="date"],
+.project-percent input {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font: inherit;
+  font-size: .78rem;
+  min-height: 34px;
+  padding: .35rem .45rem;
+  width: 100%;
+}
+.project-grid textarea {
+  line-height: 1.35;
+  resize: vertical;
+}
+.project-grid select {
+  color: var(--blue-dark);
+  font-weight: 800;
+}
+.project-grid textarea:focus,
+.project-grid select:focus,
+.project-grid input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(26,86,164,.14);
+  outline: none;
+}
+.project-percent {
+  align-items: center;
+  display: flex;
+  gap: .3rem;
+}
+.project-percent input { text-align: right; }
+.project-percent span {
+  color: var(--text-muted);
+  font-size: .76rem;
+  font-weight: 800;
+}
+.project-gantt-cell {
+  align-items: center;
+  display: flex;
+}
+.project-gantt-track {
+  background: #eef2f7;
+  border: 1px solid #d7e0ec;
+  border-radius: 999px;
+  height: 16px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+.project-gantt-track span {
+  background: linear-gradient(90deg, #1a56a4, #0e7490);
+  border-radius: 999px;
+  bottom: 2px;
+  display: block;
+  position: absolute;
+  top: 2px;
+}
+.project-delete {
+  align-items: center;
+  background: #fff0f0;
+  border: 1px solid rgba(192,57,43,.2);
+  border-radius: 7px;
+  color: #c0392b;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  margin: .65rem .55rem;
+  padding: 0;
+  width: 34px;
+}
+.project-delete:hover { background: #ffe0e0; }
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -1200,6 +1326,9 @@ img { max-width: 100%; }
   .wm-logo-iseade { height: 42px; }
   .resource-buttons { align-items: stretch; }
   .btn-resource { justify-content: center; flex: 1 1 100%; text-align: center; }
+  .project-toolbar { align-items: stretch; flex-direction: column; }
+  .project-save-status { margin-left: 0; text-align: center; }
+  .project-grid { min-width: 1180px; }
   .tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: .2rem; }
   .tab-btn { flex: 0 0 auto; }
   .timeline { padding-left: 1.5rem; }

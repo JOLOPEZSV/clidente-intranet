@@ -1151,6 +1151,105 @@ function renderCronograma() {
   </div>`;
 }
 
+const CRONOGRAMA_STORAGE_KEY = 'clidente_cronograma_project_v1';
+const CRONOGRAMA_START = new Date('2026-04-22T00:00:00');
+const CRONOGRAMA_END = new Date('2026-09-18T00:00:00');
+const CRONOGRAMA_RESPONSABLES = ['JAIME', 'CECILIA', 'RICARDO', 'ELIAS', 'TODOS'];
+const CRONOGRAMA_DEFAULT_TASKS = [
+  { id: 'cr-001', actividad: 'Comunicacion oficial a empresa y tutor', descripcion: 'Inicio formal del proceso MAE LVIII.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-04-24', fechaRealizada: '2026-04-24' },
+  { id: 'cr-002', actividad: 'Asignacion ISEADE a CLIDENTE', descripcion: 'Inicio oficial de la consultoria.', responsable: 'JAIME', avance: 100, fechaMeta: '2026-04-25', fechaRealizada: '2026-04-25' },
+  { id: 'cr-003', actividad: 'Visita inicial y confidencialidad', descripcion: 'Presentacion con Clidente, reconocimiento de instalaciones y firma de carta de confidencialidad.', responsable: 'JAIME', avance: 100, fechaMeta: '2026-04-30', fechaRealizada: '2026-05-06' },
+  { id: 'cr-004', actividad: 'Reunion 1 con Tutor Roberto', descripcion: 'Asignacion de roles por area y lineamientos de trabajo.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-05-12', fechaRealizada: '2026-05-12' },
+  { id: 'cr-005', actividad: 'Visita de campo: organizacion y area comercial', descripcion: 'Validar organigrama, CRM, clientes, canales y area comercial.', responsable: 'CECILIA', avance: 90, fechaMeta: '2026-05-17', fechaRealizada: '2026-05-16' },
+  { id: 'cr-006', actividad: 'Visita de campo: operaciones y finanzas', descripcion: 'Inventarios, procesos, journey del paciente y documentacion financiera.', responsable: 'RICARDO', avance: 80, fechaMeta: '2026-05-23', fechaRealizada: '2026-05-21' },
+  { id: 'cr-007', actividad: 'Entrega interna del diagnostico al tutor', descripcion: 'Version consolidada para revision del tutor, al menos 8 dias antes de la entrega ISEADE.', responsable: 'JAIME', avance: 65, fechaMeta: '2026-05-24', fechaRealizada: '' },
+  { id: 'cr-008', actividad: 'Reunion 2 con Tutor Roberto', descripcion: 'Presentacion consolidada de elementos solicitados por integrante y revision de soportes.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-05-26', fechaRealizada: '' },
+  { id: 'cr-009', actividad: 'Entrega ISEADE: diagnostico', descripcion: 'Entrega fisica anillada y digital del informe de diagnostico.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-06-01', fechaRealizada: '' },
+  { id: 'cr-010', actividad: 'Desarrollo del plan de trabajo', descripcion: 'Ejecucion de acciones acordadas, seguimiento quincenal y medicion de avances.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-08-16', fechaRealizada: '' },
+  { id: 'cr-011', actividad: 'Entrega interna informe final al tutor', descripcion: 'Documento final para revision del tutor, 8 dias antes de ISEADE.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-08-23', fechaRealizada: '' },
+  { id: 'cr-012', actividad: 'Entrega ISEADE: informe final', descripcion: 'Trabajo de escritorio final y documentacion completa.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-08-31', fechaRealizada: '' },
+  { id: 'cr-013', actividad: 'Presentacion ante jurado evaluador', descripcion: 'Exposicion ejecutiva del informe final de consultoria.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-09-07', fechaRealizada: '' },
+  { id: 'cr-014', actividad: 'Informe final ajustado y empastado', descripcion: 'Entrega posterior a correcciones del jurado.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-09-18', fechaRealizada: '' },
+];
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function getCronogramaTasks() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CRONOGRAMA_STORAGE_KEY));
+    return Array.isArray(saved) && saved.length ? saved : CRONOGRAMA_DEFAULT_TASKS;
+  } catch {
+    return CRONOGRAMA_DEFAULT_TASKS;
+  }
+}
+
+function getCronogramaStatus(task) {
+  if (Number(task.avance) >= 100 && task.fechaRealizada) return ['done', 'Completado'];
+  if (Number(task.avance) > 0) return ['wip', 'En progreso'];
+  return ['pending', 'Pendiente'];
+}
+
+function getGanttLeft(dateValue) {
+  const date = dateValue ? new Date(`${dateValue}T00:00:00`) : CRONOGRAMA_START;
+  const total = CRONOGRAMA_END - CRONOGRAMA_START;
+  const current = Math.max(0, Math.min(total, date - CRONOGRAMA_START));
+  return Math.round((current / total) * 100);
+}
+
+function renderCronograma() {
+  const tasks = getCronogramaTasks();
+
+  return `
+  <h1 class="section-title">Cronograma de la Consultoria</h1>
+  <p class="cronograma-intro">Cronograma editable tipo Microsoft Project para registrar actividades, responsables, avance, fecha meta y fecha realizada. El tutor solicito entregas internas al menos 8 dias antes de las fechas ISEADE.</p>
+
+  <div class="project-toolbar">
+    <button class="btn-resource" id="cronogramaAddTask" type="button"><i class="fas fa-plus"></i> Agregar actividad</button>
+    <button class="btn-resource" id="cronogramaExportExcel" type="button"><i class="fas fa-file-excel"></i> Exportar a Excel</button>
+    <button class="btn-resource project-reset-btn" id="cronogramaReset" type="button"><i class="fas fa-rotate-left"></i> Restaurar base</button>
+    <span class="project-save-status" id="cronogramaSaveStatus"><i class="fas fa-circle-check"></i> Cambios guardados en este navegador</span>
+  </div>
+
+  <div class="project-card">
+    <div class="project-grid project-grid-header">
+      <div>#</div>
+      <div>Actividad</div>
+      <div>Descripcion</div>
+      <div>Responsable</div>
+      <div>Avance</div>
+      <div>Fecha meta</div>
+      <div>Fecha realizada</div>
+      <div>Estado</div>
+      <div>Gantt</div>
+      <div></div>
+    </div>
+    ${tasks.map((task, index) => {
+      const [status, label] = getCronogramaStatus(task);
+      const left = getGanttLeft(task.fechaMeta);
+      const width = Math.max(3, Math.min(100 - left, Number(task.avance) || 3));
+      return `
+      <div class="project-grid project-grid-row" data-task-id="${task.id}">
+        <div class="project-index">${index + 1}</div>
+        <textarea data-field="actividad" rows="2">${escapeHtml(task.actividad)}</textarea>
+        <textarea data-field="descripcion" rows="2">${escapeHtml(task.descripcion)}</textarea>
+        <select data-field="responsable">
+          ${CRONOGRAMA_RESPONSABLES.map(name => `<option value="${name}"${task.responsable === name ? ' selected' : ''}>${name}</option>`).join('')}
+        </select>
+        <label class="project-percent"><input data-field="avance" type="number" min="0" max="100" step="1" value="${Number(task.avance) || 0}"><span>%</span></label>
+        <input data-field="fechaMeta" type="date" value="${task.fechaMeta || ''}">
+        <input data-field="fechaRealizada" type="date" value="${task.fechaRealizada || ''}">
+        <span class="status-badge status-${status}">${label}</span>
+        <div class="project-gantt-cell">
+          <div class="project-gantt-track"><span style="left:${left}%;width:${width}%"></span></div>
+        </div>
+        <button class="project-delete" type="button" title="Eliminar actividad"><i class="fas fa-trash"></i></button>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 /* ── SECTION MAP ───────────────────────────────────────────── */
 const SECTIONS = {
   'cartelera':      { label: 'Cartelera',            render: renderCartelera },
@@ -1188,6 +1287,7 @@ function navigate(sectionId) {
   initTabs();
   initIndiceResponsables();
   initDiagnosticPdfButton();
+  initCronogramaProject();
 
   // Animate progress bars
   requestAnimationFrame(() => {
@@ -1287,6 +1387,104 @@ function initIndiceResponsables() {
       localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
       navigate('equipo');
     });
+  }
+}
+
+function readCronogramaFromDom() {
+  return Array.from(document.querySelectorAll('.project-grid-row')).map(row => {
+    const field = name => row.querySelector(`[data-field="${name}"]`);
+    return {
+      id: row.dataset.taskId,
+      actividad: field('actividad')?.value.trim() || 'Nueva actividad',
+      descripcion: field('descripcion')?.value.trim() || '',
+      responsable: field('responsable')?.value || 'TODOS',
+      avance: Math.max(0, Math.min(100, Number(field('avance')?.value) || 0)),
+      fechaMeta: field('fechaMeta')?.value || '',
+      fechaRealizada: field('fechaRealizada')?.value || '',
+    };
+  });
+}
+
+function saveCronogramaTasks(tasks) {
+  localStorage.setItem(CRONOGRAMA_STORAGE_KEY, JSON.stringify(tasks));
+  const status = document.getElementById('cronogramaSaveStatus');
+  if (status) status.innerHTML = '<i class="fas fa-circle-check"></i> Cambios guardados en este navegador';
+}
+
+function exportCronogramaExcel(tasks) {
+  const headers = ['Actividad', 'Descripcion', 'Responsable', 'Avance %', 'Fecha meta', 'Fecha realizada', 'Estado'];
+  const rows = tasks.map(task => {
+    const [, status] = getCronogramaStatus(task);
+    return [task.actividad, task.descripcion, task.responsable, task.avance, task.fechaMeta, task.fechaRealizada, status];
+  });
+  const tableRows = [headers, ...rows].map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
+  const html = `<html><head><meta charset="UTF-8"></head><body><table>${tableRows}</table></body></html>`;
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'cronograma-clidente.xls';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(link.href);
+}
+
+function initCronogramaProject() {
+  const card = document.querySelector('.project-card');
+  if (!card) return;
+
+  const rerender = tasks => {
+    saveCronogramaTasks(tasks);
+    navigate('cronograma');
+  };
+
+  card.addEventListener('change', event => {
+    if (!event.target.matches('[data-field]')) return;
+    const tasks = readCronogramaFromDom();
+    saveCronogramaTasks(tasks);
+    navigate('cronograma');
+  });
+
+  card.addEventListener('input', event => {
+    if (!event.target.matches('textarea')) return;
+    saveCronogramaTasks(readCronogramaFromDom());
+  });
+
+  card.addEventListener('click', event => {
+    const button = event.target.closest('.project-delete');
+    if (!button) return;
+    const tasks = readCronogramaFromDom().filter(task => task.id !== button.closest('.project-grid-row')?.dataset.taskId);
+    rerender(tasks.length ? tasks : CRONOGRAMA_DEFAULT_TASKS);
+  });
+
+  const add = document.getElementById('cronogramaAddTask');
+  if (add) {
+    add.addEventListener('click', () => {
+      const tasks = readCronogramaFromDom();
+      tasks.push({
+        id: `cr-${Date.now()}`,
+        actividad: 'Nueva actividad',
+        descripcion: '',
+        responsable: 'TODOS',
+        avance: 0,
+        fechaMeta: '',
+        fechaRealizada: '',
+      });
+      rerender(tasks);
+    });
+  }
+
+  const reset = document.getElementById('cronogramaReset');
+  if (reset) {
+    reset.addEventListener('click', () => {
+      localStorage.removeItem(CRONOGRAMA_STORAGE_KEY);
+      navigate('cronograma');
+    });
+  }
+
+  const exportBtn = document.getElementById('cronogramaExportExcel');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => exportCronogramaExcel(readCronogramaFromDom()));
   }
 }
 
