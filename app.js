@@ -468,6 +468,18 @@ function renderDiagnostico() {
     ></iframe>
   </div>
 
+  <div class="resource-group card journey-map-card">
+    <div class="card-title"><i class="fas fa-route" style="margin-right:.5rem"></i>Jornada del Cliente / Journey del Paciente</div>
+    <p class="resource-group-subtitle">
+      Mapa visual del recorrido actual del paciente en CLIDENTE, desde el primer contacto hasta la atencion, pago, seguimiento y oportunidades de mejora identificadas durante la etapa de diagnostico.
+    </p>
+    <div class="resource-buttons">
+      <a href="docs/clidente-journey-map.html" target="_blank" rel="noopener" class="btn-resource">
+        <i class="fas fa-route"></i> Ver Journey Map del Cliente
+      </a>
+    </div>
+  </div>
+
   <div class="resource-group card">
     <div class="card-title"><i class="fas fa-sitemap" style="margin-right:.5rem"></i>Filosofía Corporativa de Clidente</div>
     <p class="resource-group-subtitle">

@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mapa de Jornada del Paciente — Clínica Dental Clidente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f8fa;
+  --white:#ffffff;
+  --border:rgba(15,23,42,.07);
+  --border-md:rgba(15,23,42,.13);
+  --navy:#0f172a;
+  --slate:#475569;
+  --muted:#94a3b8;
+  --teal:#0891b2;
+  --teal-l:#ecfeff;
+  --teal-b:rgba(8,145,178,.18);
+  --green:#059669;
+  --green-l:#f0fdf4;
+  --green-b:rgba(5,150,105,.18);
+  --amber:#b45309;
+  --amber-l:#fffbeb;
+  --amber-b:rgba(180,83,9,.18);
+  --red:#dc2626;
+  --red-l:#fef2f2;
+  --red-b:rgba(220,38,38,.18);
+  --serif:'Playfair Display',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow:0 4px 16px rgba(0,0,0,.07),0 1px 4px rgba(0,0,0,.04);
+  --shadow-lg:0 12px 40px rgba(0,0,0,.1),0 4px 12px rgba(0,0,0,.05);
+}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--navy);font-size:14px;line-height:1.65;min-height:100vh}
+
+/* ── PAGE LOAD ANIMATION ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes drawCurve{from{stroke-dashoffset:1200}to{stroke-dashoffset:0}}
+@keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+@keyframes slideDetail{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.fade-up{animation:fadeUp .6s ease both}
+.fade-up:nth-child(1){animation-delay:.05s}
+.fade-up:nth-child(2){animation-delay:.12s}
+.fade-up:nth-child(3){animation-delay:.19s}
+.fade-up:nth-child(4){animation-delay:.26s}
+
+/* ── HEADER ── */
+header{
+  position:sticky;top:0;z-index:300;
+  display:flex;align-items:center;justify-content:space-between;
+  height:58px;padding:0 48px;
+  background:rgba(247,248,250,.94);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.hd-left{display:flex;align-items:center;gap:14px}
+.hd-logo{
+  width:32px;height:32px;border-radius:8px;
+  background:linear-gradient(135deg,#0891b2,#0e7490);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(8,145,178,.3);
+}
+.hd-logo svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.hd-texts{}
+.hd-name{font-family:var(--serif);font-size:14px;font-weight:500;color:var(--navy);line-height:1.2}
+.hd-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.hd-right{display:flex;align-items:center;gap:10px}
+.hd-prog{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.hd-dots{display:flex;gap:4px}
+.hd-dot{width:6px;height:6px;border-radius:50%;background:var(--border-md);transition:background .25s}
+.hd-dot.active{background:var(--teal)}
+.conf-badge{
+  font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  padding:4px 10px;border-radius:20px;
+  background:var(--red-l);color:var(--red);border:1px solid var(--red-b);
+}
+
+/* ── HERO ── */
+.hero{
+  max-width:1100px;margin:0 auto;
+  padding:64px 48px 48px;
+  display:grid;grid-template-columns:1fr auto;gap:48px;align-items:start;
+  animation:fadeUp .7s ease both;
+}
+.hero-left{}
+.hero-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:500;color:var(--teal);
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:20px;
+}
+.hero-tag-line{width:28px;height:1.5px;background:var(--teal);border-radius:1px}
+h1{
+  font-family:var(--serif);font-size:50px;font-weight:700;
+  line-height:1.08;letter-spacing:-.02em;color:var(--navy);margin-bottom:18px;
+}
+h1 em{font-style:italic;color:var(--teal)}
+.hero-desc{font-size:14.5px;color:var(--slate);line-height:1.75;max-width:500px;font-weight:300}
+.hero-right{padding-top:8px}
+.hero-meta-grid{display:flex;flex-direction:column;gap:16px;min-width:220px}
+.meta-row{border-left:2px solid var(--border-md);padding-left:14px}
+.meta-l{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}
+.meta-v{font-size:13px;color:var(--slate);font-weight:400}
+
+/* ── STATS BAR ── */
+.stats{
+  max-width:1100px;margin:0 auto;padding:0 48px 48px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+  animation:fadeUp .7s .15s ease both;
+}
+.stat-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:14px;padding:20px 22px;
+  box-shadow:var(--shadow-sm);position:relative;overflow:hidden;
+}
+.stat-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+}
+.stat-card.c-teal::after{background:var(--teal)}
+.stat-card.c-green::after{background:var(--green)}
+.stat-card.c-amber::after{background:var(--amber)}
+.stat-card.c-red::after{background:var(--red)}
+.stat-n{font-family:var(--serif);font-size:32px;font-weight:700;line-height:1;margin-bottom:6px}
+.stat-card.c-teal .stat-n{color:var(--teal)}
+.stat-card.c-green .stat-n{color:var(--green)}
+.stat-card.c-amber .stat-n{color:var(--amber)}
+.stat-card.c-red .stat-n{color:var(--red)}
+.stat-l{font-size:12px;color:var(--slate);line-height:1.45}
+
+/* ── INSIGHT BANNER ── */
+.insight-wrap{max-width:1100px;margin:0 auto;padding:0 48px 44px;animation:fadeUp .7s .25s ease both}
+.insight-card{
+  background:linear-gradient(135deg,#fef2f2 0%,#fff5f5 100%);
+  border:1px solid var(--red-b);border-radius:16px;
+  padding:20px 24px;
+  display:flex;align-items:flex-start;gap:16px;
+}
+.insight-icon{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:var(--red-l);border:1px solid var(--red-b);
+  display:flex;align-items:center;justify-content:center;
+}
+.insight-icon svg{width:18px;height:18px;stroke:var(--red);fill:none;stroke-width:1.8;stroke-linecap:round}
+.insight-body{}
+.insight-title{font-size:13px;font-weight:500;color:var(--red);margin-bottom:4px}
+.insight-text{font-size:13px;color:#7f1d1d;line-height:1.55}
+.insight-tags{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.itag{
+  font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;
+  background:rgba(220,38,38,.09);color:var(--red);border:1px solid var(--red-b);
+}
+
+/* ── CURVE SECTION ── */
+.curve-section{max-width:1100px;margin:0 auto;padding:0 48px 44px;animation:fadeUp .7s .3s ease both}
+.section-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
+.curve-legend{display:flex;gap:16px}
+.cl-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--slate)}
+.cl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.curve-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:20px;padding:28px 24px 16px;
+  box-shadow:var(--shadow-sm);overflow:hidden;
+}
+.curve-card svg{width:100%;height:auto;display:block}
+#curve-path{
+  stroke-dasharray:1200;
+  stroke-dashoffset:1200;
+  animation:drawCurve 1.8s .5s cubic-bezier(.4,0,.2,1) forwards;
+}
+.curve-dot-group circle{transition:r .2s,filter .2s}
+.curve-dot-group circle:hover{filter:drop-shadow(0 0 4px currentColor)}
+
+/* ── TIMELINE SECTION ── */
+.timeline-section{max-width:1100px;margin:0 auto;padding:0 48px 24px}
+.timeline-wrap{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:20px;padding:8px;
+  box-shadow:var(--shadow-sm);
+  display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;
+}
+.timeline-wrap::-webkit-scrollbar{display:none}
+.stage-btn{
+  flex:1;min-width:96px;padding:12px 8px 10px;
+  border:1.5px solid transparent;border-radius:13px;
+  background:transparent;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:7px;
+  transition:background .2s,border-color .2s,box-shadow .2s;
+  position:relative;
+}
+.stage-btn:hover{background:#f8fafc}
+.stage-btn.active{
+  background:var(--white);
+  border-color:var(--border-md);
+  box-shadow:0 2px 8px rgba(0,0,0,.07);
+}
+.s-dot{
+  width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:500;
+  transition:transform .2s,box-shadow .2s;
+  border:1.5px solid;
+}
+.stage-btn.active .s-dot{transform:scale(1.1);box-shadow:0 0 0 3px rgba(0,0,0,.05)}
+.dot-g{background:var(--green-l);color:var(--green);border-color:var(--green-b)}
+.dot-w{background:var(--amber-l);color:var(--amber);border-color:var(--amber-b)}
+.dot-p{background:var(--red-l);color:var(--red);border-color:var(--red-b)}
+.s-name{font-size:10px;color:var(--muted);text-align:center;line-height:1.3;max-width:72px;font-weight:400}
+.stage-btn.active .s-name{color:var(--navy);font-weight:500}
+.s-bar{
+  position:absolute;bottom:0;left:12px;right:12px;height:2px;
+  border-radius:2px;opacity:0;transition:opacity .2s;
+}
+.stage-btn.active .s-bar{opacity:1}
+.bar-g{background:var(--green)}.bar-w{background:var(--amber)}.bar-p{background:var(--red)}
+
+/* ── DETAIL CARD ── */
+.detail-section{max-width:1100px;margin:0 auto;padding:16px 48px 80px}
+.d-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:20px;overflow:hidden;
+  box-shadow:var(--shadow);
+  animation:slideDetail .3s ease both;
+}
+.d-top-stripe{height:4px;width:100%}
+.stripe-g{background:linear-gradient(90deg,var(--green),#10b981)}
+.stripe-w{background:linear-gradient(90deg,var(--amber),#f59e0b)}
+.stripe-p{background:linear-gradient(90deg,var(--red),#ef4444)}
+.d-header{
+  padding:32px 40px 28px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:24px;
+  border-bottom:1px solid var(--border);
+}
+.d-header-left{display:flex;gap:20px;align-items:flex-start}
+.d-num-badge{
+  width:56px;height:56px;border-radius:16px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-size:26px;font-weight:700;
+  border:1.5px solid;
+}
+.badge-g{background:var(--green-l);color:var(--green);border-color:var(--green-b)}
+.badge-w{background:var(--amber-l);color:var(--amber);border-color:var(--amber-b)}
+.badge-p{background:var(--red-l);color:var(--red);border-color:var(--red-b)}
+.d-title-area{}
+.d-tag{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.d-title{font-family:var(--serif);font-size:28px;font-weight:500;line-height:1.15;color:var(--navy);margin-bottom:8px}
+.d-emo-chip{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 12px;border-radius:20px;font-size:12px;font-weight:400;
+}
+.emo-g{background:var(--green-l);color:var(--green);border:1px solid var(--green-b)}
+.emo-w{background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-b)}
+.emo-p{background:var(--red-l);color:var(--red);border:1px solid var(--red-b)}
+.emo-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.d-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.d-nav-pills{display:flex;gap:6px}
+.nav-pill{
+  display:flex;align-items:center;gap:5px;
+  padding:7px 14px;border:1px solid var(--border-md);border-radius:10px;
+  background:transparent;font-family:var(--sans);font-size:12px;
+  color:var(--slate);cursor:pointer;transition:all .18s;font-weight:400;
+}
+.nav-pill:hover{background:var(--bg);border-color:var(--border-md);color:var(--navy)}
+.nav-pill:disabled{opacity:.3;cursor:default}
+.nav-pill svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.d-counter{font-size:11px;color:var(--muted)}
+
+/* ── DETAIL BODY ── */
+.d-body{padding:32px 40px}
+.d-quadrant{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.d-quad{padding:0 0 28px}
+.d-quad:nth-child(odd){padding-right:32px;border-right:1px solid var(--border)}
+.d-quad:nth-child(even){padding-left:32px}
+.d-quad:nth-child(3),.d-quad:nth-child(4){padding-top:28px;border-top:1px solid var(--border)}
+.q-label{
+  display:flex;align-items:center;gap:7px;
+  font-size:10px;font-weight:500;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.09em;margin-bottom:12px;
+}
+.q-icon{width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round}
+.q-list{list-style:none}
+.q-list li{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:13px;color:var(--slate);padding:4px 0;line-height:1.5;
+}
+.q-list li::before{
+  content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--border-md);flex-shrink:0;margin-top:7px;
+}
+.pills-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:11.5px;padding:4px 11px;border-radius:20px;font-weight:400;line-height:1.4}
+.pill-blue{background:#eff6ff;color:#1d4ed8;border:1px solid rgba(29,78,216,.15)}
+.pill-teal{background:var(--teal-l);color:var(--teal);border:1px solid var(--teal-b)}
+
+/* ── GAPS SECTION ── */
+.d-gaps-wrap{border-top:1px solid var(--border);padding:28px 40px 32px}
+.gaps-header{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.gaps-icon{
+  width:26px;height:26px;border-radius:8px;flex-shrink:0;
+  background:var(--red-l);border:1px solid var(--red-b);
+  display:flex;align-items:center;justify-content:center;
+}
+.gaps-icon svg{width:13px;height:13px;stroke:var(--red);fill:none;stroke-width:2;stroke-linecap:round}
+.gaps-title{font-size:11px;font-weight:500;color:var(--red);text-transform:uppercase;letter-spacing:.08em}
+.gaps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+.gap-item{
+  background:var(--red-l);border:1px solid rgba(220,38,38,.12);
+  border-radius:10px;padding:11px 14px;
+  font-size:12.5px;color:#991b1b;line-height:1.5;
+  display:flex;gap:8px;align-items:flex-start;
+}
+.gap-bullet{
+  width:4px;height:4px;border-radius:50%;
+  background:var(--red);flex-shrink:0;margin-top:8px;
+}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid var(--border);padding:20px 48px;
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;
+  background:var(--white);
+}
+.ft-left{display:flex;align-items:center;gap:12px}
+.ft-divider{width:1px;height:14px;background:var(--border-md)}
+.ft-text{font-size:11px;color:var(--muted)}
+.ft-right{font-size:11px;color:var(--muted);text-align:right;line-height:1.6}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  header{padding:0 20px}
+  .hero{grid-template-columns:1fr;padding:40px 20px 32px;gap:28px}
+  h1{font-size:34px}
+  .hero-meta-grid{flex-direction:row;flex-wrap:wrap;gap:16px}
+  .meta-row{border-left:none;border-top:1px solid var(--border);padding:10px 0 0;border-left:0;padding-left:0}
+  .stats{grid-template-columns:1fr 1fr;padding:0 20px 32px}
+  .insight-wrap,.curve-section,.timeline-section,.detail-section{padding-left:20px;padding-right:20px}
+  .d-header{flex-direction:column;padding:24px 24px 20px}
+  .d-header-right{flex-direction:row;align-items:center}
+  .d-body{padding:24px}
+  .d-quadrant{grid-template-columns:1fr}
+  .d-quad:nth-child(odd){padding-right:0;border-right:none;border-bottom:1px solid var(--border);padding-bottom:20px}
+  .d-quad:nth-child(even){padding-left:0;padding-top:20px}
+  .d-quad:nth-child(3),.d-quad:nth-child(4){border-top:none}
+  .d-gaps-wrap{padding:20px 24px 24px}
+  .gaps-grid{grid-template-columns:1fr}
+  footer{padding:16px 20px;flex-direction:column;gap:6px;align-items:flex-start}
+  .hd-dots{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="hd-left">
+    <div class="hd-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 3C9 3 6.5 5 6.5 8c0 2 .6 3.8 1.8 6L10 20c.4 1.8 1 2.8 2 2.8s1.6-1 2-2.8l1.7-6c1.2-2.2 1.8-4 1.8-6C17.5 5 15 3 12 3z"/></svg>
+    </div>
+    <div class="hd-texts">
+      <div class="hd-name">Clínica Dental Clidente</div>
+      <div class="hd-sub">Mapa de Jornada del Paciente · 2026</div>
+    </div>
+  </div>
+  <div class="hd-right">
+    <div class="hd-prog">
+      <span id="hd-stage-txt">Etapa 1</span>
+      <div class="hd-dots" id="hd-dots"></div>
+    </div>
+    <div class="conf-badge">Confidencial</div>
+  </div>
+</header>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-tag"><span class="hero-tag-line"></span>Customer Journey Map · Fase de Diagnóstico</div>
+    <h1>La jornada de<br>cada <em>paciente</em></h1>
+    <p class="hero-desc">Análisis completo del recorrido real del paciente de Clidente: desde el primer momento de descubrimiento hasta el seguimiento post-atención. Construido con datos de campo observados en tres visitas a la clínica durante mayo 2026.</p>
+  </div>
+  <div class="hero-right">
+    <div class="hero-meta-grid">
+      <div class="meta-row fade-up">
+        <div class="meta-l">Organización</div>
+        <div class="meta-v">Clínica Dental Clidente, Santa Tecla</div>
+      </div>
+      <div class="meta-row fade-up">
+        <div class="meta-l">Fuente de datos</div>
+        <div class="meta-v">3 visitas de campo — mayo 2026</div>
+      </div>
+      <div class="meta-row fade-up">
+        <div class="meta-l">Programa</div>
+        <div class="meta-v">MAE LVIII · ISEADE-FEPADE</div>
+      </div>
+      <div class="meta-row fade-up">
+        <div class="meta-l">Equipo consultor</div>
+        <div class="meta-v">Pareja A y Pareja B</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS ── -->
+<section class="stats">
+  <div class="stat-card c-teal fade-up">
+    <div class="stat-n">8</div>
+    <div class="stat-l">Etapas del ciclo<br>del paciente documentadas</div>
+  </div>
+  <div class="stat-card c-green fade-up">
+    <div class="stat-n">3</div>
+    <div class="stat-l">Visitas de campo<br>realizadas en mayo 2026</div>
+  </div>
+  <div class="stat-card c-amber fade-up">
+    <div class="stat-n">970</div>
+    <div class="stat-l">Pacientes promedio<br>atendidos por mes</div>
+  </div>
+  <div class="stat-card c-red fade-up">
+    <div class="stat-n">2</div>
+    <div class="stat-l">Brechas críticas<br>identificadas en la jornada</div>
+  </div>
+</section>
+
+<!-- ── INSIGHT BANNER ── -->
+<div class="insight-wrap">
+  <div class="insight-card">
+    <div class="insight-icon">
+      <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="insight-body">
+      <div class="insight-title">2 brechas críticas identificadas en la jornada</div>
+      <div class="insight-text">Las etapas de <strong>Espera</strong> (E5) y <strong>Post-visita</strong> (E8) concentran los mayores riesgos de pérdida del paciente. En E5 el tiempo de espera oscila entre menos de 1 minuto y 6 horas 15 min sin comunicación al paciente. En E8 el protocolo de seguimiento 24h post-atención está suspendido desde mayo 2026 sin alternativa implementada.</div>
+      <div class="insight-tags">
+        <span class="itag">E5 · Espera sin protocolo</span>
+        <span class="itag">E8 · Seguimiento suspendido</span>
+        <span class="itag">WhatsApp suspendido mayo 2026</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── EMOTION CURVE ── -->
+<section class="curve-section">
+  <div class="section-header">
+    <span class="section-title">Curva de experiencia emocional del paciente</span>
+    <div class="curve-legend">
+      <div class="cl-item"><span class="cl-dot" style="background:var(--green)"></span>Buena experiencia</div>
+      <div class="cl-item"><span class="cl-dot" style="background:var(--amber)"></span>Fricción</div>
+      <div class="cl-item"><span class="cl-dot" style="background:var(--red)"></span>Brecha crítica</div>
+    </div>
+  </div>
+  <div class="curve-card">
+    <svg viewBox="0 0 920 210" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="grad-pos" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(5,150,105,.15)"/>
+          <stop offset="100%" stop-color="rgba(5,150,105,0)"/>
+        </linearGradient>
+        <linearGradient id="grad-pain" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(220,38,38,.10)"/>
+          <stop offset="100%" stop-color="rgba(220,38,38,0)"/>
+        </linearGradient>
+      </defs>
+      <!-- Grid -->
+      <line x1="60" y1="30" x2="900" y2="30" stroke="rgba(15,23,42,.05)" stroke-width="1" stroke-dasharray="4 4"/>
+      <line x1="60" y1="95" x2="900" y2="95" stroke="rgba(15,23,42,.05)" stroke-width="1" stroke-dasharray="4 4"/>
+      <line x1="60" y1="160" x2="900" y2="160" stroke="rgba(15,23,42,.05)" stroke-width="1" stroke-dasharray="4 4"/>
+      <!-- Y labels -->
+      <text x="10" y="33" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui" text-anchor="start">Alto</text>
+      <text x="10" y="98" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">Medio</text>
+      <text x="10" y="163" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">Bajo</text>
+      <!-- Stage x positions: 95,215,335,455,575,695,815,900 (8 stages) -->
+      <!-- Scores→y: 65→76, 48→100, 62→81, 70→71, 22→138, 87→46, 76→66, 18→144 -->
+      <!-- Formula: y = 160 - score*1.3, clamped to 25-160 -->
+      <!-- Area fill positive -->
+      <path d="M95,76 C135,76 170,100 215,100 C258,100 292,81 335,81 C378,81 416,71 455,71 C495,71 535,138 575,138 C615,138 655,46 695,46 C735,46 773,66 815,66 C845,66 878,144 900,144 L900,160 L95,160 Z"
+            fill="url(#grad-pos)" opacity="0.7"/>
+      <!-- Pain zone fills -->
+      <path d="M455,95 C490,95 530,138 575,138 C615,138 650,95 680,95 L680,160 L455,160 Z" fill="url(#grad-pain)" opacity="0.8"/>
+      <path d="M815,95 C840,95 875,144 900,144 L900,160 L815,160 Z" fill="url(#grad-pain)" opacity="0.8"/>
+      <!-- Curve -->
+      <path id="curve-path" d="M95,76 C135,76 170,100 215,100 C258,100 292,81 335,81 C378,81 416,71 455,71 C495,71 535,138 575,138 C615,138 655,46 695,46 C735,46 773,66 815,66 C845,66 878,144 900,144"
+            fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round"/>
+      <!-- Stage dots (clickable) -->
+      <g class="curve-dot-group" id="curveDots">
+        <circle cx="95"  cy="76"  r="5" fill="#059669" style="cursor:pointer" onclick="sel(0)"/>
+        <circle cx="215" cy="100" r="5" fill="#b45309" style="cursor:pointer" onclick="sel(1)"/>
+        <circle cx="335" cy="81"  r="5" fill="#059669" style="cursor:pointer" onclick="sel(2)"/>
+        <circle cx="455" cy="71"  r="5" fill="#059669" style="cursor:pointer" onclick="sel(3)"/>
+        <circle cx="575" cy="138" r="7" fill="#dc2626" stroke="rgba(220,38,38,.2)" stroke-width="5" style="cursor:pointer" onclick="sel(4)"/>
+        <circle cx="695" cy="46"  r="5" fill="#059669" style="cursor:pointer" onclick="sel(5)"/>
+        <circle cx="815" cy="66"  r="5" fill="#059669" style="cursor:pointer" onclick="sel(6)"/>
+        <circle cx="900" cy="144" r="7" fill="#dc2626" stroke="rgba(220,38,38,.2)" stroke-width="5" style="cursor:pointer" onclick="sel(7)"/>
+      </g>
+      <!-- Pain callouts -->
+      <text x="575" y="156" text-anchor="middle" fill="rgba(220,38,38,.8)" font-size="8.5" font-family="DM Sans,system-ui" font-weight="500">▲ Brecha crítica</text>
+      <text x="900" y="160" text-anchor="middle" fill="rgba(220,38,38,.8)" font-size="8.5" font-family="DM Sans,system-ui" font-weight="500">▲ Brecha crítica</text>
+      <!-- X axis labels -->
+      <text x="95"  y="195" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">Descubrimiento</text>
+      <text x="215" y="195" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">1er contacto</text>
+      <text x="335" y="195" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">Llegada</text>
+      <text x="455" y="195" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">Registro</text>
+      <text x="575" y="195" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">Espera</text>
+      <text x="695" y="195" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">Atención</text>
+      <text x="815" y="195" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">Pago y cierre</text>
+      <text x="900" y="195" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="DM Sans,system-ui">Post-visita</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ── TIMELINE NAV ── -->
+<section class="timeline-section">
+  <div class="timeline-wrap" id="timeline"></div>
+</section>
+
+<!-- ── DETAIL CARD ── -->
+<section class="detail-section">
+  <div id="detail"></div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="ft-left">
+    <span class="ft-text">Confidencial — Uso exclusivo de Clínica Dental Clidente</span>
+    <div class="ft-divider"></div>
+    <span class="ft-text">MAE LVIII · ISEADE-FEPADE · 2026</span>
+  </div>
+  <div class="ft-right">Datos: visitas de campo 16, 19 y 23 de mayo 2026<br>Equipo consultor: Pareja A (Ricardo & Elías) · Pareja B (Jaime & Cecilia)</div>
+</footer>
+
+<script>
+const S=[
+{s:'g',name:'Descubrimiento',emo:'Curiosidad y necesidad percibida',
+ acts:['Escucha referencia de familiar o amigo cercano','Ve publicación orgánica en Facebook o Instagram','Siente dolor dental o tiene necesidad preventiva','Evalúa opciones disponibles en Santa Tecla y zona'],
+ tps:['Referido boca a boca — 67% de captación (era 90% históricamente)','Facebook e Instagram (publicación orgánica sin pauta pagada)','Convenio laboral: ASIS e IGS / Banco Agrícola','Red Chamilco — Dra. Vigil con 29 años de presencia comunitaria'],
+ resp:['Diego Marroquín (producción de contenido digital)','Dra. Olga Vigil (generadora de referidos desde Chamilco)'],
+ sys:['Facebook (uso al 100%, sin pauta pagada)','Instagram (en desarrollo para segmento joven)','TikTok (uso mínimo, sin estrategia editorial definida)'],
+ gaps:['Sin pauta publicitaria pagada en ninguna plataforma — solo alcance orgánico','~10 likes promedio por publicación — alcance mínimo sin inversión','Referido histórico bajó de 90% a 67% sin plan de compensación digital','TikTok sin calendario editorial ni persona dedicada a grabación','Sin segmentación de audiencia por edad, zona o tratamiento']},
+{s:'w',name:'Primer contacto',emo:'Ansiedad y expectativa moderada',
+ acts:['Escribe al WhatsApp de la clínica o llama directamente','Consulta disponibilidad, precios y doctores','Decide entre cita programada o visita directa (walk-in)','Algunos llegan sin contacto previo — decisión espontánea'],
+ tps:['WhatsApp Business (número principal de la clínica)','Llamada telefónica directa a recepción','Visita directa sin cita previa (walk-in frecuente)','Consulta por inbox en redes sociales (Diego responde)'],
+ resp:['Diego Marroquín (WhatsApp clínica y redes sociales)','Recepcionista (llamadas y atención walk-in)'],
+ sys:['WhatsApp Business (insignia verificada $23/mes, adquirida mayo 2026)','Google Calendar (agendamiento manual realizado por Diego)','FG Dental (consulta de disponibilidad de doctor y agenda)'],
+ gaps:['Sin sistema de agendamiento en línea — todo por WhatsApp o llamada','Protocolo seguimiento suspendido desde mayo 2026 (política de Meta)','Google Calendar no integrado con FG Dental — doble ingreso manual','Sin confirmación automática ni recordatorio previo a la cita','Diego: 80% tiempo en operaciones vs 20% en marketing']},
+{s:'g',name:'Llegada',emo:'Ansiosa pero receptiva al entorno clínico',
+ acts:['Llega al local en el 2° nivel del edificio','Algunos llegan antes de las 8:00 AM (observado: 7:56, 7:57, 7:59)','Se identifica con la recepcionista de turno','Observa sala de espera y pantalla de promociones'],
+ tps:['Fachada del local (2ª Calle Poniente y 2ª Av. Sur, Santa Tecla)','Acceso al 2° nivel','Sala de espera con pantalla digital de promociones','Recepcionista de turno (primer contacto presencial)'],
+ resp:['Recepcionista de turno (bienvenida y primer registro)','Personal de apoyo cuando la recepcionista se desplaza'],
+ sys:['FG Dental (consulta si el paciente ya tiene expediente previo)'],
+ gaps:['Sin señalización digital en fachada que indique horarios y servicios','Acceso en 2° nivel sin indicación visible de ascensor o rampa','Pantalla de sala sin contenido educativo ni de fidelización activa','Sin posibilidad de check-in digital previo a la llegada']},
+{s:'g',name:'Registro',emo:'Neutral y orientado en el proceso',
+ acts:['Proporciona datos personales en el mostrador','Indica motivo de visita o tratamiento en curso','Recibe categoría en el sistema: Nuevo, Continuidad o Leal','Aguarda asignación de doctor según tablero magnético de turno'],
+ tps:['Mostrador de recepción (hasta 2 recepcionistas simultáneas)','Hoja de entrada del sistema FG Dental','Tablero magnético de asignación por orden de llegada de doctores'],
+ resp:['Recepcionista (captura de datos en FG)','Asistente dental (coordina disponibilidad de la unidad clínica)'],
+ sys:['FG Dental (expediente, tratamiento, planes de pago, perfil)','Tablero magnético (orden de llegada de doctores: 1, 2, 3…)','Google Forms en tablet (marcador de asistencia del personal)'],
+ gaps:['~40% de registros de abril 2026 con campo "Medio de captación" en blanco','Sin captura de consentimiento de seguimiento digital (raíz del problema WhatsApp)','Categoría "Leal" sin campaña de reactivación activa vinculada','Antecedentes médicos registrados inconsistentemente (muchos "Ninguno")','Sin pre-registro digital — 4 pacientes esperando a las 8 AM (observado 23 mayo)']},
+{s:'p',name:'Espera',emo:'Tensión e incertidumbre creciente',
+ acts:['Espera en sala hasta que la unidad esté preparada por el asistente','Observa la pantalla de promociones de la clínica','Monitorea el tablero de recepción y a otros pacientes','En casos extremos, aguarda más de una hora sin ninguna actualización'],
+ tps:['Sillas de sala de espera','Pantalla digital (sin estrategia editorial definida)','Recepcionista (único punto de info sobre el estado del turno)','Tablero magnético visible parcialmente desde la sala'],
+ resp:['Asistente dental (prepara la unidad clínica)','Recepcionista (coordina el paso y actualiza estado en FG)'],
+ sys:['FG Dental (estado del registro: en espera / en unidad)','Tablero magnético (turno del doctor asignado)'],
+ gaps:['Rango de espera real: menos de 1 minuto hasta 6 horas 15 min (caso registrado en abril 2026)','Sin protocolo documentado para comunicar tiempo estimado de espera','Sin pantalla de turno dinámica tipo "su atención es la próxima"','Pantalla de sala sin contenido educativo ni testimonios de pacientes','Sin análisis de tiempos de espera por doctor, tratamiento u hora del día']},
+{s:'g',name:'Atención clínica',emo:'Ansiedad inicial que se convierte en alivio',
+ acts:['Es llamado por nombre cuando la unidad está lista','Recibe protocolo de bioseguridad (gorro, mascarilla, bata, guantes, babero)','Realiza enjuague bucal previo al procedimiento','Recibe tratamiento del doctor asignado','Escucha diagnóstico verbal y recibe receta en papel al finalizar'],
+ tps:['Unidad dental (7 activas: distribución 3+1+3, más 1 ortodoncia)','Odontólogo asignado por tablero de turno','Asistente dental (preparación y apoyo durante tratamiento)','Receta en papel con diagnóstico y plan de tratamiento'],
+ resp:['Odontólogo (diagnóstico clínico y tratamiento)','Asistente dental (preparación de unidad y apoyo operativo)'],
+ sys:['FG Dental (registro del tratamiento y expediente clínico)','7 unidades dentales activas en operación simultánea','Detector de caries — tecnología diferencial única en Centroamérica (declarado)','16 cámaras HD (2 externas, presencia en unidades, caja y recepción)'],
+ gaps:['Diagnóstico en papel — no se integra automáticamente al expediente FG','Detector de caries subutilizado sin protocolo de oferta al paciente','Sin encuesta de satisfacción durante o al finalizar la consulta','Tasa de garantía: 4.2% global (12% en prótesis) sin análisis de causa raíz','Receta en papel puede perderse — sin copia digital vinculada al expediente']},
+{s:'g',name:'Pago y cierre',emo:'Aliviado y satisfecho con la atención recibida',
+ acts:['Acompaña al doctor hasta la caja para el cierre de consulta','Paga con efectivo, tarjeta bancaria o plan de cuotas en FG','Recibe factura electrónica enviada por correo','Agenda próxima cita según indicación verbal del doctor','Puede adquirir tarjeta VIP ($10) o Clásica ($5.71) emitida en sitio'],
+ tps:['Módulo de caja','Factura electrónica enviada al correo del paciente','Tarjeta VIP (de color) o Clásica (blanca) emitida in-situ','Doctor (comunica fecha y motivo de próxima cita)','Datacard ID Works — impresora de tarjetas plásticas en la clínica'],
+ resp:['Cajera (cobro, registro en FG y factura electrónica)','Doctor (indica próxima cita al salir con el paciente)','Diego / Recepcionista (agenda en Google Calendar y FG)'],
+ sys:['FG Dental (cobro, tratamientos, planes de pago, historial)','Facturación electrónica (envío por correo al paciente)','Datacard ID Works (emisión de tarjetas de membresía personalizadas)','Google Calendar (registro de próxima cita por color de doctor)'],
+ gaps:['Próxima cita comunicada verbalmente — sin integración automática al sistema','Sin recordatorio automático — solo llamada manual posible','Tarjeta VIP/Clásica sin campaña activa ni beneficios visibles en sala','Sin estrategia de cross-sell de tratamientos complementarios en el cierre','Dos sistemas desconectados (FG + Google Calendar) — riesgo de pérdida de citas']},
+{s:'p',name:'Post-visita',emo:'Satisfecha, pero sin contacto activo de la clínica',
+ acts:['Espera el seguimiento de la clínica (generalmente no lo recibe)','Puede referir a familiares y amigos si la experiencia fue positiva','Regresa a la próxima cita si fue correctamente agendada','Para tratamientos largos: continuidad sin protocolo estandarizado'],
+ tps:['WhatsApp (protocolo SUSPENDIDO desde mayo 2026 por políticas de Meta)','Llamada telefónica (sustituto actual sin guión documentado)','Próxima cita agendada si se realizó en caja','Tarjeta de membresía (si fue adquirida)'],
+ resp:['Diego Marroquín (seguimiento de marketing y post-atención)','Recepcionista (recordatorio de cita vía llamada telefónica)'],
+ sys:['WhatsApp Business (SUSPENDIDO — cambio de políticas Meta, mayo 2026)','Llamada telefónica (modo actual sin guión ni registro en FG)','FG Dental (datos del paciente disponibles para seguimiento)'],
+ gaps:['Protocolo seguimiento 24h post-atención SUSPENDIDO sin alternativa estructurada','Sin encuesta de satisfacción formal (NPS u otra métrica)','Tarjeta fidelización sin campaña de retención activa ni historial vinculado','Sin protocolo de reactivación — FG cataloga como "activos" a todos los pacientes','El referido representa 67% de captación pero no existe programa formal de incentivo']}
+];
+
+let cur=0;
+const dc=s=>s==='g'?'dot-g':s==='w'?'dot-w':'dot-p';
+const bc=s=>s==='g'?'badge-g':s==='w'?'badge-w':'badge-p';
+const sc=s=>s==='g'?'stripe-g':s==='w'?'stripe-w':'stripe-p';
+const ec=s=>s==='g'?'emo-g':s==='w'?'emo-w':'emo-p';
+const edc=s=>s==='g'?'var(--green)':s==='w'?'var(--amber)':'var(--red)';
+const barC=s=>s==='g'?'bar-g':s==='w'?'bar-w':'bar-p';
+
+const svgArrowL=`<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>`;
+const svgArrowR=`<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>`;
+const svgUser=`<svg class="q-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+const svgTouch=`<svg class="q-icon" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`;
+const svgPeople=`<svg class="q-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`;
+const svgSys=`<svg class="q-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`;
+const svgWarn=`<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+
+function renderTL(){
+  document.getElementById('timeline').innerHTML=S.map((s,i)=>`
+    <button class="stage-btn${i===cur?' active':''}" onclick="sel(${i})" aria-label="Etapa ${i+1}: ${s.name}">
+      <div class="s-dot ${dc(s.s)}">${i+1}</div>
+      <span class="s-name">${s.name}</span>
+      <div class="s-bar ${barC(s.s)}"></div>
+    </button>`).join('');
+  // header dots
+  document.getElementById('hd-dots').innerHTML=S.map((_,i)=>`<span class="hd-dot${i===cur?' active':''}"></span>`).join('');
+  document.getElementById('hd-stage-txt').textContent=`Etapa ${cur+1} de ${S.length}`;
+  // highlight curve dot
+  const dots=document.querySelectorAll('#curveDots circle');
+  dots.forEach((d,i)=>{
+    if(i===cur){d.setAttribute('r',i===4||i===7?'9':'7');d.style.filter='drop-shadow(0 0 5px currentColor)'}
+    else{d.setAttribute('r',i===4||i===7?'7':'5');d.style.filter='none'}
+  });
+}
+
+function renderDetail(){
+  const s=S[cur];
+  document.getElementById('detail').innerHTML=`
+    <div class="d-card">
+      <div class="d-top-stripe ${sc(s.s)}"></div>
+      <div class="d-header">
+        <div class="d-header-left">
+          <div class="d-num-badge ${bc(s.s)}">${cur+1}</div>
+          <div class="d-title-area">
+            <div class="d-tag">Etapa ${cur+1} de ${S.length}</div>
+            <div class="d-title">${s.name}</div>
+            <div class="d-emo-chip ${ec(s.s)}">
+              <span class="emo-dot" style="background:${edc(s.s)}"></span>
+              ${s.emo}
+            </div>
+          </div>
+        </div>
+        <div class="d-header-right">
+          <div class="d-nav-pills">
+            <button class="nav-pill" onclick="nav(-1)" ${cur===0?'disabled':''}>
+              ${svgArrowL} Anterior
+            </button>
+            <button class="nav-pill" onclick="nav(1)" ${cur===S.length-1?'disabled':''}>
+              Siguiente ${svgArrowR}
+            </button>
+          </div>
+          <span class="d-counter">${cur+1} / ${S.length}</span>
+        </div>
+      </div>
+      <div class="d-body">
+        <div class="d-quadrant">
+          <div class="d-quad">
+            <div class="q-label">${svgUser}Acciones del paciente</div>
+            <ul class="q-list">${s.acts.map(a=>`<li>${a}</li>`).join('')}</ul>
+          </div>
+          <div class="d-quad">
+            <div class="q-label">${svgTouch}Puntos de contacto</div>
+            <div class="pills-wrap">${s.tps.map(t=>`<span class="pill pill-blue">${t}</span>`).join('')}</div>
+          </div>
+          <div class="d-quad">
+            <div class="q-label">${svgPeople}Responsables internos</div>
+            <ul class="q-list">${s.resp.map(r=>`<li>${r}</li>`).join('')}</ul>
+          </div>
+          <div class="d-quad">
+            <div class="q-label">${svgSys}Sistemas y herramientas</div>
+            <div class="pills-wrap">${s.sys.map(x=>`<span class="pill pill-teal">${x}</span>`).join('')}</div>
+          </div>
+        </div>
+      </div>
+      <div class="d-gaps-wrap">
+        <div class="gaps-header">
+          <div class="gaps-icon">${svgWarn}</div>
+          <span class="gaps-title">Brechas identificadas y oportunidades de mejora</span>
+        </div>
+        <div class="gaps-grid">
+          ${s.gaps.map(g=>`<div class="gap-item"><div class="gap-bullet"></div><span>${g}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function sel(i){cur=i;renderTL();renderDetail();document.querySelector('.detail-section').scrollIntoView({behavior:'smooth',block:'nearest'})}
+function nav(d){sel(Math.max(0,Math.min(S.length-1,cur+d)))}
+renderTL();renderDetail();
+</script>
+</body>
+</html>
