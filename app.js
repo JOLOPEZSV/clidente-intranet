@@ -723,9 +723,36 @@ function getSupabaseHeaders(extra = {}) {
 }
 
 async function supabaseRequest(path, options = {}) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+  const headers = getSupabaseHeaders(options.headers || {});
+
+  if (typeof fetch !== 'function') {
+    if (typeof XMLHttpRequest !== 'function') {
+      throw new Error('El navegador no expone fetch ni XMLHttpRequest para conectar con Supabase');
+    }
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(options.method || 'GET', url);
+      Object.entries(headers).forEach(([key, value]) => xhr.setRequestHeader(key, value));
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(new Error(`Supabase ${xhr.status}: ${xhr.responseText || ''}`));
+          return;
+        }
+        if (xhr.status === 204 || !xhr.responseText) {
+          resolve(null);
+          return;
+        }
+        resolve(JSON.parse(xhr.responseText));
+      };
+      xhr.onerror = () => reject(new Error('No se pudo conectar con Supabase'));
+      xhr.send(options.body || null);
+    });
+  }
+
+  const response = await fetch(url, {
     ...options,
-    headers: getSupabaseHeaders(options.headers || {}),
+    headers,
   });
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
