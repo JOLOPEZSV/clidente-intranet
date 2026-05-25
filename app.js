@@ -759,7 +759,8 @@ async function supabaseRequest(path, options = {}) {
     throw new Error(`Supabase ${response.status}: ${detail}`);
   }
   if (response.status === 204) return null;
-  return response.json();
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 function getIndicePayload(rowId, saved = getIndiceResponsablesSaved()) {
