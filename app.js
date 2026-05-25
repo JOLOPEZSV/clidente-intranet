@@ -46,9 +46,10 @@ function renderCartelera() {
     <div class="bulletin-card">
       <div class="bulletin-card-header"><i class="fas fa-calendar-check"></i> Próximas Actividades</div>
       <div class="bulletin-card-body">
-        <p>📅 <strong>Visitas de Campo 2 y 3</strong> – semana del 19 al 23 de mayo de 2026.<br>
+        <p>📅 <strong>Visita de Campo 3</strong> – realizada el sábado 23 de mayo de 2026.<br>
+        📅 <strong>Visita de Campo 4</strong> – realizada por Elías el sábado 23 de mayo de 2026.<br>
         📅 <strong>Reunión con Tutor #2</strong> – 26 de mayo de 2026.<br>
-        📅 <strong>Visita de cierre de brechas</strong> – semana del 26 al 30 de mayo.<br>
+        📅 <strong>Diagnóstico ambiental</strong> – Henry ya envió la información base.<br>
         📅 <strong>Entrega ISEADE</strong> – 1 de junio de 2026.</p>
       </div>
     </div>
@@ -66,11 +67,11 @@ function renderCartelera() {
   <!-- Alertas -->
   <div class="mp-alert">
     <span style="font-size:16px;flex-shrink:0">⚠️</span>
-    <div><strong>3 pendientes críticos sin comenzar:</strong> Diagnóstico Ambiental (4 secciones) · Referencias APA 7 · Anexo Metodológico de IA con URLs de prompts. Estos pueden bloquear la aprobación de ISEADE.</div>
+    <div><strong>2 pendientes críticos sin comenzar:</strong> Referencias APA 7 · Anexo Metodológico de IA con URLs de prompts. El diagnóstico ambiental ya tiene insumo de Henry y debe integrarse al informe.</div>
   </div>
   <div class="mp-info">
     <span style="font-size:16px;flex-shrink:0">💡</span>
-    <div><strong>Nuevo esta semana:</strong> Henry entregó estados financieros formales (CPA + Auditor Externo). Clidente tiene activos por $1,000,307. Ricardo ya puede redactar §VI.1 Finanzas.</div>
+    <div><strong>Nuevo esta semana:</strong> Henry entregó estados financieros formales y el diagnóstico ambiental base. Ricardo ya puede cerrar §VI.1 Finanzas y Elías puede integrar el diagnóstico ambiental.</div>
   </div>
 
   <!-- KPIs -->
@@ -78,7 +79,7 @@ function renderCartelera() {
     <div class="mp-kpi green"><div class="mp-kpi-label">Avance global</div><div class="mp-kpi-value">${diagnosticoDashboard.global}%</div><div class="mp-kpi-sub">${diagnosticoDashboard.completed}/${diagnosticoDashboard.total} actividades al 100%</div></div>
     <div class="mp-kpi red"><div class="mp-kpi-label">Días a entrega ISEADE</div><div class="mp-kpi-value">${getCountdownLabel(daysToIseade)}</div><div class="mp-kpi-sub">Lun 1 junio · anillado</div></div>
     <div class="mp-kpi amber"><div class="mp-kpi-label">Días al tutor Roberto</div><div class="mp-kpi-value">${getCountdownLabel(daysToTutor)}</div><div class="mp-kpi-sub">Mar 26 mayo · online</div></div>
-    <div class="mp-kpi blue"><div class="mp-kpi-label">Visitas realizadas</div><div class="mp-kpi-value">2/5</div><div class="mp-kpi-sub">Próxima: sáb 23 sin aviso</div></div>
+    <div class="mp-kpi blue"><div class="mp-kpi-label">Visitas realizadas</div><div class="mp-kpi-value">4/5</div><div class="mp-kpi-sub">Últimas: sáb 23 mayo</div></div>
   </div>
 
   <!-- Fila 1: Progreso + Cronograma -->
@@ -108,8 +109,8 @@ function renderCartelera() {
         <ul class="mp-tl">
           ${[
             ['#3B9EE0','MIÉ–VIE · 20–22 MAY','Redacción individual','Jaime → §III · Ricardo → §VI.1 Finanzas · Cecilia → §VI.1 Mercadeo · Elías → Diag. ambiental §1-2'],
-            ['#C47A15','SÁB · 23 MAY','Visita 3 — sin aviso (Jaime + Cecilia)','Llevar: ficha observación + Carta Aceptación (2 originales). Conteo pacientes, ticket promedio, journey.'],
-            ['#C47A15','LUN · 25 MAY','Visita 4 — Diag. ambiental (Ricardo + Elías)','Secciones 3-4 · costos fijos · facturas servicios básicos · fotografías residuos.'],
+            ['#0D8A6E','SÁB · 23 MAY','Visita 3 — sin aviso realizada','Observación real efectuada para conteo de pacientes, ticket promedio, journey y cierre de brechas.'],
+            ['#0D8A6E','SÁB · 23 MAY','Visita 4 — Diagnóstico ambiental realizada por Elías','Henry ya envió la información base del diagnóstico ambiental para integrar al informe.'],
             ['#C13030','MAR · 26 MAY — LÍMITE 1','Presentación al Tutor Roberto Castro','2-3 slides por consultor · Firma Carta de Aprobación del Tutor · Guardar URLs Claude para Anexo IA.'],
             ['#677089','MIÉ–VIE · 28–30 MAY','Integración final','§VII completa · Referencias APA 7 · Anexo IA · Revisión cruzada · Control de horas.'],
             ['#C13030','LUN · 1 JUN — LÍMITE 2','Entrega ISEADE (Jaime)','Físico anillado 9:30–18:30 + digital a vbeltran@iseade.edu.sv + sobre manila con 4 cartas sin perforar.'],
@@ -128,16 +129,16 @@ function renderCartelera() {
     <div class="card">
       <div class="card-header" style="display:flex;align-items:center">
         <div class="card-title"><i class="fas fa-exclamation-triangle" style="margin-right:.5rem;color:#C13030"></i>Pendientes Críticos</div>
-        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">6 sin comenzar</span>
+        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">5 por cerrar</span>
       </div>
       <div style="padding:1rem 1.1rem">
         ${[
-          ['no','Elías',  'Diagnóstico Ambiental — 4 secciones',                        'Henry llenó el formulario ✅. Nadie ha redactado el texto. Bloqueante para ISEADE.'],
+          ['warn','Elías',  'Diagnóstico Ambiental — integrar insumo de Henry',          'Henry ya envió la información base. Falta convertirla en texto del informe y recomendaciones.'],
           ['no','Todo',   'Referencias bibliográficas APA 7',                            'Sección completamente vacía. Mínimo 5-8 fuentes académicas.'],
           ['no','Jaime',  'Anexo IA — con URLs de cada conversación Claude',             'ISEADE exige el URL del prompt específico. Guardar links desde ahora.'],
           ['no','Jaime',  '§VII: Alcances + Limitaciones + Metodología + Cronograma',   '4 subsecciones obligatorias no redactadas aún.'],
           ['warn','Ricardo','§VI.1 Finanzas — cerrar con estados financieros',          'Ahora hay base documental (CPA + Auditor). Aclarar brecha ingresos formales vs operativos.'],
-          ['warn','Cecilia','Journey del paciente + mapa visual de procesos',           'Depende de observación real en Visita 3 (sáb 23).'],
+          ['warn','Cecilia','Journey del paciente + mapa visual de procesos',           'Usar la observación real levantada en la Visita 3 del sábado 23.'],
         ].map(([icon,who,title,sub]) => `
         <div class="mp-chk-item">
           <div class="mp-chk-icon mp-chk-${icon}">${icon==='no'?'✗':'!'}</div>
@@ -177,10 +178,10 @@ function renderCartelera() {
     <div style="padding:.85rem 1.1rem">
       <div class="mp-person-grid">
         ${[
-          ['#1A5FA8','Jaime O. López · Líder',        [['done','Carta Aceptación generada'],['todo','Redactar §III completa'],['todo','§VII: Alcances, Limitaciones, Metodología'],['todo','Visita 3 · sáb 23 (con Cecilia)'],['crit','Anexo IA — guardar URLs Claude desde hoy']]],
-          ['#8B44C4','Cecilia B. Chicas · Consultora', [['done','§VI.1 Mercadeo CRM — diagnóstico listo'],['todo','Completar análisis canales digitales'],['todo','Visita 3 · sáb 23 — métricas + journey'],['crit','Diagrama visual mapa de procesos']]],
-          ['#C47A15','Ricardo A. Palacios · Consultor',[['done','Datos financieros recibidos (EERR + Balance)'],['todo','Redactar §VI.1 Finanzas con estados formales'],['todo','Aclarar brecha ingresos formales vs operativos'],['todo','Visita 4 · lun 25 (con Elías)']]],
-          ['#0D8A6E','Elías J. Núñez · Consultor',    [['done','Análisis de insumos documentado'],['crit','Redactar Diag. Ambiental §1-2 (urgente)'],['todo','Visita 4 · lun 25 — §3-4 ambiental'],['todo','Journey del paciente completo']]],
+          ['#1A5FA8','Jaime O. López · Líder',        [['done','Carta Aceptación generada'],['todo','Redactar §III completa'],['todo','§VII: Alcances, Limitaciones, Metodología'],['done','Visita 3 realizada · sáb 23'],['crit','Anexo IA — guardar URLs Claude desde hoy']]],
+          ['#8B44C4','Cecilia B. Chicas · Consultora', [['done','§VI.1 Mercadeo CRM — diagnóstico listo'],['todo','Completar análisis canales digitales'],['done','Visita 3 realizada · métricas + journey'],['crit','Diagrama visual mapa de procesos']]],
+          ['#C47A15','Ricardo A. Palacios · Consultor',[['done','Datos financieros recibidos (EERR + Balance)'],['todo','Redactar §VI.1 Finanzas con estados formales'],['todo','Aclarar brecha ingresos formales vs operativos']]],
+          ['#0D8A6E','Elías J. Núñez · Consultor',    [['done','Análisis de insumos documentado'],['done','Visita 4 ambiental realizada · sáb 23'],['done','Henry envió diagnóstico ambiental base'],['todo','Integrar diagnóstico ambiental al informe']]],
         ].map(([color,name,tasks]) => `
         <div class="mp-person-card" style="border-top-color:${color}">
           <div class="mp-p-name" style="color:${color}">${name}</div>
@@ -292,10 +293,10 @@ function renderVisitas() {
     {
       n: 3,
       title: 'Observación sin previo aviso (Operación Real)',
-      date: 'Semana del 26–30 de mayo de 2026', duration: '2–3 horas',
-      attendees: 'Cecilia Chicas + Ricardo Palacios',
-      summary: 'Visita sin previo aviso, conforme al acuerdo con la propietaria, para observar la operación en condiciones reales. Objetivo: conteo real de pacientes y ticket promedio por procedimiento, análisis de métricas de redes sociales, y cierre de brechas de información pendiente.',
-      estado: 'pending',
+      date: '23 de mayo de 2026', duration: '2–3 horas',
+      attendees: 'Jaime López + Cecilia Chicas',
+      summary: 'Visita sin previo aviso realizada el sábado 23 de mayo para observar la operación en condiciones reales. Objetivo: conteo real de pacientes, ticket promedio por procedimiento, análisis de métricas de redes sociales, journey del paciente y cierre de brechas de información pendiente.',
+      estado: 'done',
       resources: [
         { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
         { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
@@ -303,11 +304,11 @@ function renderVisitas() {
     },
     {
       n: 4,
-      title: 'Por programar',
-      date: 'Por definir', duration: 'Por definir',
-      attendees: 'Por definir',
-      summary: 'Visita de campo pendiente de programación. Actualiza los detalles conforme se coordine con la empresa.',
-      estado: 'pending',
+      title: 'Diagnóstico Ambiental',
+      date: '23 de mayo de 2026', duration: 'Trabajo de campo',
+      attendees: 'Elías Núñez · Contacto: Henry Corcio',
+      summary: 'Visita ambiental realizada por Elías el sábado 23 de mayo. Henry ya envió la información base del diagnóstico ambiental, pendiente de integrar al informe y convertir en recomendaciones ambientales.',
+      estado: 'done',
       resources: [
         { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
         { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
@@ -1396,6 +1397,8 @@ const CRONOGRAMA_DEFAULT_TASKS = [
   { id: 'cr-004', grupo: 'Fase 1 - Diagnostico', actividad: 'Reunion 1 con Tutor Roberto', descripcion: 'Asignacion de roles por area y lineamientos de trabajo.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-05-12', fechaRealizada: '2026-05-12' },
   { id: 'cr-005', grupo: 'Fase 1 - Diagnostico', actividad: 'Visita de campo: organizacion y area comercial', descripcion: 'Validar organigrama, CRM, clientes, canales y area comercial.', responsable: 'CECILIA', avance: 90, fechaMeta: '2026-05-17', fechaRealizada: '2026-05-16' },
   { id: 'cr-006', grupo: 'Fase 1 - Diagnostico', actividad: 'Visita de campo: operaciones y finanzas', descripcion: 'Inventarios, procesos, journey del paciente y documentacion financiera.', responsable: 'RICARDO', avance: 80, fechaMeta: '2026-05-23', fechaRealizada: '2026-05-21' },
+  { id: 'cr-006b', grupo: 'Fase 1 - Diagnostico', actividad: 'Visita de campo 3: observacion sin aviso', descripcion: 'Visita realizada el sabado 23 de mayo para observar operacion real, conteo de pacientes, ticket promedio y journey del paciente.', responsable: 'JAIME, CECILIA', avance: 100, fechaMeta: '2026-05-23', fechaRealizada: '2026-05-23' },
+  { id: 'cr-006c', grupo: 'Fase 1 - Diagnostico', actividad: 'Visita de campo 4: diagnostico ambiental', descripcion: 'Visita realizada por Elias el sabado 23 de mayo. Henry envio la informacion base del diagnostico ambiental.', responsable: 'ELIAS', avance: 100, fechaMeta: '2026-05-23', fechaRealizada: '2026-05-23' },
   { id: 'cr-007', grupo: 'Fase 1 - Diagnostico', actividad: 'Entrega interna del diagnostico al tutor', descripcion: 'Version consolidada para revision del tutor, al menos 8 dias antes de la entrega ISEADE.', responsable: 'JAIME', avance: 65, fechaMeta: '2026-05-24', fechaRealizada: '' },
   { id: 'cr-008', grupo: 'Fase 1 - Diagnostico', actividad: 'Reunion 2 con Tutor Roberto', descripcion: 'Presentacion consolidada de elementos solicitados por integrante y revision de soportes.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-05-26', fechaRealizada: '' },
   { id: 'cr-009', grupo: 'Fase 1 - Diagnostico', actividad: 'Entrega ISEADE: diagnostico', descripcion: 'Entrega fisica anillada y digital del informe de diagnostico.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-06-01', fechaRealizada: '' },
