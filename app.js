@@ -4,12 +4,31 @@
 
 /* ── SECTION RENDERERS ─────────────────────────────────────── */
 
+function getLocalDateOnly(date = new Date()) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getDaysUntil(dateValue) {
+  const [year, month, day] = dateValue.split('-').map(Number);
+  const target = new Date(year, month - 1, day);
+  const diff = target - getLocalDateOnly();
+  return Math.max(0, Math.ceil(diff / 86400000));
+}
+
+function getCountdownLabel(days) {
+  if (days === 0) return 'Hoy';
+  if (days === 1) return '1';
+  return String(days);
+}
+
 function renderCartelera() {
   const days   = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const now    = new Date();
   const dateStr = `${days[now.getDay()]} ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
   const diagnosticoDashboard = getIndiceDashboardSummary();
+  const daysToIseade = getDaysUntil('2026-06-01');
+  const daysToTutor = getDaysUntil('2026-05-26');
 
   return `
   <h1 class="section-title">Cartelera</h1>
@@ -57,8 +76,8 @@ function renderCartelera() {
   <!-- KPIs -->
   <div class="mp-kpi-row">
     <div class="mp-kpi green"><div class="mp-kpi-label">Avance global</div><div class="mp-kpi-value">${diagnosticoDashboard.global}%</div><div class="mp-kpi-sub">${diagnosticoDashboard.completed}/${diagnosticoDashboard.total} actividades al 100%</div></div>
-    <div class="mp-kpi red"><div class="mp-kpi-label">Días a entrega ISEADE</div><div class="mp-kpi-value">12</div><div class="mp-kpi-sub">Lun 1 junio · anillado</div></div>
-    <div class="mp-kpi amber"><div class="mp-kpi-label">Días al tutor Roberto</div><div class="mp-kpi-value">6</div><div class="mp-kpi-sub">Mar 26 mayo · online</div></div>
+    <div class="mp-kpi red"><div class="mp-kpi-label">Días a entrega ISEADE</div><div class="mp-kpi-value">${getCountdownLabel(daysToIseade)}</div><div class="mp-kpi-sub">Lun 1 junio · anillado</div></div>
+    <div class="mp-kpi amber"><div class="mp-kpi-label">Días al tutor Roberto</div><div class="mp-kpi-value">${getCountdownLabel(daysToTutor)}</div><div class="mp-kpi-sub">Mar 26 mayo · online</div></div>
     <div class="mp-kpi blue"><div class="mp-kpi-label">Visitas realizadas</div><div class="mp-kpi-value">2/5</div><div class="mp-kpi-sub">Próxima: sáb 23 sin aviso</div></div>
   </div>
 
@@ -83,7 +102,7 @@ function renderCartelera() {
     <div class="card">
       <div class="card-header" style="display:flex;align-items:center">
         <div class="card-title"><i class="fas fa-clock" style="margin-right:.5rem"></i>Cronograma Crítico</div>
-        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">12 días</span>
+        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">${daysToIseade === 0 ? 'Hoy' : `${daysToIseade} días`}</span>
       </div>
       <div style="padding:1rem 1.1rem">
         <ul class="mp-tl">
