@@ -1417,7 +1417,27 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+function addCronogramaDays(dateValue, days) {
+  if (!dateValue) return '';
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  date.setDate(date.getDate() + Math.max(0, (Number(days) || 1) - 1));
+  return date.toISOString().slice(0, 10);
+}
+
+function diffCronogramaDays(startValue, endValue) {
+  if (!startValue || !endValue) return 1;
+  const start = new Date(`${startValue}T00:00:00`);
+  const end = new Date(`${endValue}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+  return Math.max(1, Math.round((end - start) / 86400000) + 1);
+}
+
 function normalizeCronogramaTask(task = {}, index = 0) {
+  const fechaInicio = task.fechaInicio || task.fecha_inicio || task.fechaMeta || task.fecha_meta || '';
+  const fechaFinOriginal = task.fechaFin || task.fecha_fin || task.fechaRealizada || task.fecha_realizada || '';
+  const dias = Math.max(1, Number(task.dias) || diffCronogramaDays(fechaInicio, fechaFinOriginal));
+  const fechaFin = fechaInicio ? addCronogramaDays(fechaInicio, dias) : fechaFinOriginal;
   return {
     id: task.id || `cr-${Date.now()}-${index}`,
     grupo: task.grupo || 'Fase 1 - Diagnostico',
@@ -1425,8 +1445,11 @@ function normalizeCronogramaTask(task = {}, index = 0) {
     descripcion: task.descripcion || '',
     responsable: task.responsable || 'TODOS',
     avance: Math.max(0, Math.min(100, Number(task.avance) || 0)),
-    fechaMeta: task.fechaMeta || task.fecha_meta || '',
-    fechaRealizada: task.fechaRealizada || task.fecha_realizada || '',
+    dias,
+    fechaInicio,
+    fechaFin,
+    fechaMeta: fechaInicio,
+    fechaRealizada: fechaFin,
     documentos: task.documentos || '',
   };
 }
@@ -1465,6 +1488,9 @@ function getCronogramaPayload(tasks) {
     descripcion: task.descripcion,
     responsable: task.responsable,
     avance: task.avance,
+    dias: task.dias,
+    fecha_inicio: task.fechaInicio || null,
+    fecha_fin: task.fechaFin || null,
     fecha_meta: task.fechaMeta || null,
     fecha_realizada: task.fechaRealizada || null,
     documentos: task.documentos || '',
@@ -1483,6 +1509,9 @@ function getCronogramaTasksFromSupabaseRows(rows = []) {
       descripcion: row.descripcion,
       responsable: row.responsable,
       avance: row.avance,
+      dias: row.dias,
+      fechaInicio: row.fecha_inicio,
+      fechaFin: row.fecha_fin,
       fechaMeta: row.fecha_meta,
       fechaRealizada: row.fecha_realizada,
       documentos: row.documentos,
@@ -1517,11 +1546,23 @@ async function deleteCronogramaRemoteIds(ids) {
 async function saveCronogramaToSupabase(tasks) {
   const normalized = normalizeCronogramaTasks(tasks);
   const payload = getCronogramaPayload(normalized);
-  await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?on_conflict=id`, {
-    method: 'POST',
-    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(payload),
-  });
+  try {
+    await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?on_conflict=id`, {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    if (!String(error.message || '').includes('dias') && !String(error.message || '').includes('fecha_inicio') && !String(error.message || '').includes('fecha_fin')) {
+      throw error;
+    }
+    const legacyPayload = payload.map(({ dias, fecha_inicio, fecha_fin, ...row }) => row);
+    await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?on_conflict=id`, {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(legacyPayload),
+    });
+  }
 
   const existing = await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?select=id`);
   const currentIds = new Set(normalized.map(task => task.id));
@@ -1567,8 +1608,9 @@ function renderCronograma() {
       <div>Descripcion</div>
       <div>Responsable</div>
       <div>Avance</div>
-      <div>Fecha meta</div>
-      <div>Fecha realizada</div>
+      <div>Fecha inicio</div>
+      <div>Días</div>
+      <div>Fecha fin</div>
       <div>Documentos</div>
       <div>Estado</div>
       <div>Gantt</div>
@@ -1576,7 +1618,7 @@ function renderCronograma() {
     </div>
     ${tasks.map((task, index) => {
       const [status, label] = getCronogramaStatus(task);
-      const left = getGanttLeft(task.fechaMeta);
+      const left = getGanttLeft(task.fechaInicio);
       const width = Math.max(3, Math.min(100 - left, Number(task.avance) || 3));
       const showGroup = index === 0 || task.grupo !== tasks[index - 1]?.grupo;
       return `
@@ -1592,8 +1634,9 @@ function renderCronograma() {
           ${CRONOGRAMA_RESPONSABLES.map(name => `<option value="${name}"${normalizeResponsibleList(task.responsable).includes(name) ? ' selected' : ''}>${name}</option>`).join('')}
         </select>
         <label class="project-percent"><input data-field="avance" type="number" min="0" max="100" step="1" value="${Number(task.avance) || 0}"><span>%</span></label>
-        <input data-field="fechaMeta" type="date" value="${task.fechaMeta || ''}">
-        <input data-field="fechaRealizada" type="date" value="${task.fechaRealizada || ''}">
+        <input data-field="fechaInicio" type="date" value="${task.fechaInicio || ''}">
+        <input data-field="dias" type="number" min="1" step="1" value="${Number(task.dias) || 1}">
+        <input data-field="fechaFin" type="date" value="${task.fechaFin || ''}" readonly>
         <textarea data-field="documentos" rows="2" placeholder="Pega links de Drive, PDFs o notas de soporte">${escapeHtml(task.documentos || '')}</textarea>
         <span class="status-badge status-${status}">${label}</span>
         <div class="project-gantt-cell">
@@ -1801,6 +1844,9 @@ function readCronogramaFromDom() {
   return Array.from(document.querySelectorAll('.project-grid-row')).map(row => {
     const field = name => row.querySelector(`[data-field="${name}"]`);
     const responsables = Array.from(field('responsable')?.selectedOptions || []).map(option => option.value);
+    const fechaInicio = field('fechaInicio')?.value || '';
+    const dias = Math.max(1, Number(field('dias')?.value) || 1);
+    const fechaFin = addCronogramaDays(fechaInicio, dias);
     return {
       id: row.dataset.taskId,
       grupo: field('grupo')?.value || 'Fase 1 - Diagnostico',
@@ -1808,8 +1854,11 @@ function readCronogramaFromDom() {
       descripcion: field('descripcion')?.value.trim() || '',
       responsable: (responsables.length ? responsables : ['TODOS']).join(', '),
       avance: Math.max(0, Math.min(100, Number(field('avance')?.value) || 0)),
-      fechaMeta: field('fechaMeta')?.value || '',
-      fechaRealizada: field('fechaRealizada')?.value || '',
+      dias,
+      fechaInicio,
+      fechaFin,
+      fechaMeta: fechaInicio,
+      fechaRealizada: fechaFin,
       documentos: field('documentos')?.value.trim() || '',
     };
   });
@@ -1841,6 +1890,9 @@ function createBlankCronogramaTask() {
     descripcion: '',
     responsable: 'TODOS',
     avance: 0,
+    dias: 1,
+    fechaInicio: '',
+    fechaFin: '',
     fechaMeta: '',
     fechaRealizada: '',
     documentos: '',
@@ -1854,7 +1906,7 @@ function exportCronogramaExcel(tasks) {
   const phaseRows = Object.entries(groups).map(([phase, phaseTasks]) => {
     const phaseSummary = getCronogramaSummary(phaseTasks);
     const nextDate = phaseTasks
-      .map(task => task.fechaMeta)
+      .map(task => task.fechaInicio)
       .filter(Boolean)
       .sort()[0] || '';
     return `
@@ -1872,13 +1924,13 @@ function exportCronogramaExcel(tasks) {
   const upcomingRows = tasks
     .filter(task => getCronogramaStatus(task)[0] !== 'done')
     .slice()
-    .sort((a, b) => String(a.fechaMeta || '9999-12-31').localeCompare(String(b.fechaMeta || '9999-12-31')))
+    .sort((a, b) => String(a.fechaInicio || '9999-12-31').localeCompare(String(b.fechaInicio || '9999-12-31')))
     .slice(0, 8)
     .map(task => {
       const [, status] = getCronogramaStatus(task);
       return `
       <tr>
-        <td>${formatCronogramaDate(task.fechaMeta)}</td>
+        <td>${formatCronogramaDate(task.fechaInicio)}</td>
         <td>${escapeHtml(task.grupo || '')}</td>
         <td>${escapeHtml(task.actividad || '')}</td>
         <td class="center">${escapeHtml(task.responsable || '')}</td>
@@ -1898,8 +1950,9 @@ function exportCronogramaExcel(tasks) {
         <td>${escapeHtml(task.descripcion || '')}</td>
         <td class="center">${escapeHtml(task.responsable || '')}</td>
         <td class="center">${Number(task.avance) || 0}%</td>
-        <td>${formatCronogramaDate(task.fechaMeta)}</td>
-        <td>${formatCronogramaDate(task.fechaRealizada)}</td>
+        <td>${formatCronogramaDate(task.fechaInicio)}</td>
+        <td class="center">${Number(task.dias) || 1}</td>
+        <td>${formatCronogramaDate(task.fechaFin)}</td>
         <td class="${statusClass}">${status}</td>
         <td>${escapeHtml(task.documentos || 'Sin documentos registrados')}</td>
       </tr>`;
@@ -1959,13 +2012,13 @@ function exportCronogramaExcel(tasks) {
       <tr><td colspan="7"></td></tr>
       <tr><td class="section" colspan="7">Avance por fase</td></tr>
       <tr>
-        <th>Fase</th><th>Actividades</th><th>Avance promedio</th><th>Completadas</th><th>En progreso</th><th>Pendientes</th><th>Primera fecha meta</th>
+        <th>Fase</th><th>Actividades</th><th>Avance promedio</th><th>Completadas</th><th>En progreso</th><th>Pendientes</th><th>Primera fecha inicio</th>
       </tr>
       ${phaseRows}
       <tr><td colspan="7"></td></tr>
       <tr><td class="section" colspan="7">Proximos hitos pendientes</td></tr>
       <tr>
-        <th>Fecha meta</th><th>Fase</th><th>Actividad</th><th>Responsable</th><th>Avance</th><th colspan="2">Estado</th>
+        <th>Fecha inicio</th><th>Fase</th><th>Actividad</th><th>Responsable</th><th>Avance</th><th colspan="2">Estado</th>
       </tr>
       ${upcomingRows || '<tr><td colspan="7" class="center">No hay hitos pendientes registrados.</td></tr>'}
     </table>
@@ -1973,9 +2026,9 @@ function exportCronogramaExcel(tasks) {
     <br style="mso-special-character:line-break;page-break-before:always">
 
     <table>
-      <tr><td class="title" colspan="10">Detalle del Cronograma</td></tr>
+      <tr><td class="title" colspan="11">Detalle del Cronograma</td></tr>
       <tr>
-        <th>N</th><th>Fase</th><th>Actividad</th><th>Descripcion</th><th>Responsable</th><th>Avance</th><th>Fecha meta</th><th>Fecha realizada</th><th>Estado</th><th>Documentos</th>
+        <th>N</th><th>Fase</th><th>Actividad</th><th>Descripcion</th><th>Responsable</th><th>Avance</th><th>Fecha inicio</th><th>Dias</th><th>Fecha fin</th><th>Estado</th><th>Documentos</th>
       </tr>
       ${detailRows}
     </table>
@@ -2033,8 +2086,9 @@ function exportCronogramaWord(tasks) {
           <td><strong>${escapeHtml(task.actividad)}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
           <td class="center">${escapeHtml(task.responsable || '')}</td>
           <td class="center"><strong>${Number(task.avance) || 0}%</strong></td>
-          <td>${formatCronogramaDate(task.fechaMeta)}</td>
-          <td>${formatCronogramaDate(task.fechaRealizada)}</td>
+          <td>${formatCronogramaDate(task.fechaInicio)}</td>
+          <td class="center">${Number(task.dias) || 1}</td>
+          <td>${formatCronogramaDate(task.fechaFin)}</td>
           <td class="center">${status}</td>
           <td>${documents}</td>
         </tr>`;
@@ -2050,8 +2104,9 @@ function exportCronogramaWord(tasks) {
             <th style="width:27%">Actividad y descripcion</th>
             <th style="width:11%">Responsable</th>
             <th style="width:9%">Avance</th>
-            <th style="width:13%">Fecha meta</th>
-            <th style="width:13%">Fecha realizada</th>
+            <th style="width:12%">Fecha inicio</th>
+            <th style="width:7%">Dias</th>
+            <th style="width:12%">Fecha fin</th>
             <th style="width:10%">Estado</th>
             <th style="width:12%">Documentos</th>
           </tr>
