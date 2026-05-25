@@ -605,6 +605,9 @@ function renderMetodologia() {
 }
 
 const INDICE_RESPONSABLES_STORAGE_KEY = 'clidente_indice_responsables_v1';
+const SUPABASE_URL = 'https://lgoevspmiuyvlttmuyuz.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Wk0gGB0ks4HiqHyJ-AvTqw_-LoL4oZg';
+const SUPABASE_INDICE_TABLE = 'indice_responsables';
 const INDICE_RESPONSABLE_OPTIONS = ['JAIME', 'CECILIA', 'RICARDO', 'ELIAS', 'TODOS'];
 const INDICE_RESPONSABLES_ROWS = [
   { type: 'section', title: 'DOCUMENTOS DE PRESENTACION' },
@@ -688,6 +691,101 @@ function getIndiceResponsablesSaved() {
   } catch {
     return {};
   }
+}
+
+function saveIndiceResponsablesLocal(saved) {
+  if (Object.keys(saved).length) {
+    localStorage.setItem(INDICE_RESPONSABLES_STORAGE_KEY, JSON.stringify(saved));
+  } else {
+    localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
+  }
+}
+
+function getIndiceDataRows() {
+  return INDICE_RESPONSABLES_ROWS.filter(row => row.type !== 'section');
+}
+
+function getIndiceRowId(row) {
+  return `${row.code}|${row.item}`;
+}
+
+function getIndiceRowById(rowId) {
+  return INDICE_RESPONSABLES_BY_ID[rowId];
+}
+
+function getSupabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_PUBLISHABLE_KEY,
+    Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+    'Content-Type': 'application/json',
+    ...extra,
+  };
+}
+
+async function supabaseRequest(path, options = {}) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: getSupabaseHeaders(options.headers || {}),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Supabase ${response.status}: ${detail}`);
+  }
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+function getIndicePayload(rowId, saved = getIndiceResponsablesSaved()) {
+  const row = getIndiceRowById(rowId);
+  if (!row) return null;
+  return {
+    row_id: rowId,
+    section_code: row.code,
+    item_text: row.item,
+    responsable: saved[rowId] || row.responsible,
+    avance: Math.max(0, Math.min(100, Number(saved[`avance|${rowId}`]) || 0)),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+async function saveIndiceRowToSupabase(rowId) {
+  const payload = getIndicePayload(rowId);
+  if (!payload) return;
+  await supabaseRequest(`${SUPABASE_INDICE_TABLE}?on_conflict=row_id`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function seedIndiceSupabaseIfEmpty() {
+  const existing = await supabaseRequest(`${SUPABASE_INDICE_TABLE}?select=row_id&limit=1`);
+  if (Array.isArray(existing) && existing.length) return;
+  const saved = getIndiceResponsablesSaved();
+  const payload = getIndiceDataRows().map(row => getIndicePayload(getIndiceRowId(row), saved)).filter(Boolean);
+  if (!payload.length) return;
+  await supabaseRequest(`${SUPABASE_INDICE_TABLE}?on_conflict=row_id`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function loadIndiceFromSupabase() {
+  await seedIndiceSupabaseIfEmpty();
+  const rows = await supabaseRequest(`${SUPABASE_INDICE_TABLE}?select=row_id,responsable,avance`);
+  const saved = {};
+  (rows || []).forEach(row => {
+    const official = getIndiceRowById(row.row_id);
+    if (!official) return;
+    if (row.responsable && !sameResponsibleList(row.responsable, official.responsible)) {
+      saved[row.row_id] = row.responsable;
+    }
+    const avance = Math.max(0, Math.min(100, Number(row.avance) || 0));
+    if (avance > 0) saved[`avance|${row.row_id}`] = avance;
+  });
+  saveIndiceResponsablesLocal(saved);
+  return saved;
 }
 
 function getIndiceDashboardSummary() {
@@ -802,12 +900,9 @@ function renderIndiceResponsables() {
         <p class="card-subtitle">Asignación editable de responsables por sección del informe oficial ISEADE.</p>
       </div>
       <div class="indice-actions">
-        <button class="btn-resource" id="indiceExportChanges" type="button"><i class="fas fa-file-export"></i> Exportar cambios</button>
-        <button class="btn-resource" id="indiceImportChanges" type="button"><i class="fas fa-file-import"></i> Importar cambios</button>
         <button class="btn-resource indice-reset-btn" id="indiceResetResponsables" type="button">
           <i class="fas fa-rotate-left"></i> Restaurar responsables oficiales
         </button>
-        <input id="indiceImportFile" type="file" accept="application/json,.json" hidden>
       </div>
     </div>
 
@@ -816,13 +911,13 @@ function renderIndiceResponsables() {
     </div>
 
     <div class="indice-save-status" id="indiceSaveStatus">
-      <i class="fas fa-circle-check"></i> Cambios guardados solo en este navegador
+      <i class="fas fa-spinner fa-spin"></i> Conectando con Supabase...
     </div>
 
     <div class="indice-sync-note">
       <i class="fas fa-circle-info"></i>
       <div>
-        <strong>Como compartir avances:</strong> cuando termines de trabajar, presiona <b>Exportar cambios</b> y envia el archivo al equipo. Antes de que Ricardo, Jaime, Cecilia o Elias sigan trabajando, deben presionar <b>Importar cambios</b> y cargar el ultimo archivo recibido. Asi todos parten de la misma version.
+        <strong>Sincronizacion del equipo:</strong> cada cambio en Avance o Responsable se guarda en Supabase. Si Jaime, Ricardo, Cecilia o Elias abren esta seccion, veran la ultima version registrada por el equipo.
       </div>
     </div>
 
@@ -1435,9 +1530,46 @@ function initIndiceResponsables() {
   if (!selects.length && !avances.length) return;
 
   const status = document.getElementById('indiceSaveStatus');
-  const updateStatus = text => {
-    if (status) status.innerHTML = `<i class="fas fa-circle-check"></i> ${text}`;
+  const updateStatus = (text, icon = 'circle-check') => {
+    if (status) status.innerHTML = `<i class="fas fa-${icon}"></i> ${text}`;
   };
+  const updateStatusError = text => {
+    if (status) status.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${text}`;
+  };
+
+  const applySavedToDom = saved => {
+    getIndiceDataRows().forEach(row => {
+      const rowId = getIndiceRowId(row);
+      document.querySelectorAll(`.indice-responsable-select[data-row-id="${CSS.escape(rowId)}"]`).forEach(select => {
+        select.value = saved[rowId] || row.responsible;
+      });
+      const avance = Number(saved[`avance|${rowId}`]) || 0;
+      document.querySelectorAll(`.indice-avance-input[data-row-id="${CSS.escape(rowId)}"]`).forEach(input => {
+        input.value = avance;
+      });
+    });
+  };
+
+  const saveLocalAndRemote = async rowId => {
+    updateStatus('Guardando en Supabase...', 'spinner fa-spin');
+    try {
+      await saveIndiceRowToSupabase(rowId);
+      updateStatus('Cambios sincronizados en Supabase');
+    } catch (error) {
+      console.error(error);
+      updateStatusError('Guardado local. Revisa que la tabla de Supabase exista y tenga politicas RLS.');
+    }
+  };
+
+  loadIndiceFromSupabase()
+    .then(saved => {
+      applySavedToDom(saved);
+      updateStatus('Datos cargados desde Supabase');
+    })
+    .catch(error => {
+      console.error(error);
+      updateStatusError('Sin conexion a Supabase. Usando respaldo local del navegador.');
+    });
 
   selects.forEach(select => {
     select.addEventListener('change', () => {
@@ -1451,15 +1583,11 @@ function initIndiceResponsables() {
         saved[rowId] = select.value;
       }
 
-      if (Object.keys(saved).length) {
-        localStorage.setItem(INDICE_RESPONSABLES_STORAGE_KEY, JSON.stringify(saved));
-      } else {
-        localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
-      }
+      saveIndiceResponsablesLocal(saved);
       document.querySelectorAll(`.indice-responsable-select[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
         if (peer !== select) peer.value = select.value;
       });
-      updateStatus('Cambios guardados solo en este navegador');
+      saveLocalAndRemote(rowId);
     });
   });
 
@@ -1476,66 +1604,36 @@ function initIndiceResponsables() {
         saved[`avance|${rowId}`] = value;
       }
 
-      if (Object.keys(saved).length) {
-        localStorage.setItem(INDICE_RESPONSABLES_STORAGE_KEY, JSON.stringify(saved));
-      } else {
-        localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
-      }
-
+      saveIndiceResponsablesLocal(saved);
       document.querySelectorAll(`.indice-avance-input[data-row-id="${CSS.escape(rowId)}"]`).forEach(peer => {
         if (peer !== input) peer.value = value;
       });
-      updateStatus('Cambios guardados solo en este navegador');
+      saveLocalAndRemote(rowId);
     });
   });
 
-  const exportBtn = document.getElementById('indiceExportChanges');
-  if (exportBtn) {
-    exportBtn.addEventListener('click', () => {
-      const payload = {
-        app: 'clidente-indice-responsables',
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        data: getIndiceResponsablesSaved(),
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'clidente-indice-responsables-cambios.json';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(link.href);
-      updateStatus('Archivo de cambios exportado');
-    });
-  }
-
-  const importBtn = document.getElementById('indiceImportChanges');
-  const importFile = document.getElementById('indiceImportFile');
-  if (importBtn && importFile) {
-    importBtn.addEventListener('click', () => importFile.click());
-    importFile.addEventListener('change', () => {
-      const file = importFile.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const parsed = JSON.parse(String(reader.result || '{}'));
-          const data = parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed;
-          localStorage.setItem(INDICE_RESPONSABLES_STORAGE_KEY, JSON.stringify(data));
-          navigate('equipo');
-        } catch {
-          updateStatus('No se pudo importar el archivo de cambios');
-        }
-      };
-      reader.readAsText(file);
-    });
-  }
-
   const reset = document.getElementById('indiceResetResponsables');
   if (reset) {
-    reset.addEventListener('click', () => {
+    reset.addEventListener('click', async () => {
       localStorage.removeItem(INDICE_RESPONSABLES_STORAGE_KEY);
+      updateStatus('Restaurando valores oficiales...', 'spinner fa-spin');
+      try {
+        const payload = getIndiceDataRows().map(row => ({
+          row_id: getIndiceRowId(row),
+          section_code: row.code,
+          item_text: row.item,
+          responsable: row.responsible,
+          avance: 0,
+          updated_at: new Date().toISOString(),
+        }));
+        await supabaseRequest(`${SUPABASE_INDICE_TABLE}?on_conflict=row_id`, {
+          method: 'POST',
+          headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify(payload),
+        });
+      } catch (error) {
+        console.error(error);
+      }
       navigate('equipo');
     });
   }
