@@ -608,6 +608,7 @@ const INDICE_RESPONSABLES_STORAGE_KEY = 'clidente_indice_responsables_v1';
 const SUPABASE_URL = 'https://lgoevspmiuyvlttmuyuz.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Wk0gGB0ks4HiqHyJ-AvTqw_-LoL4oZg';
 const SUPABASE_INDICE_TABLE = 'indice_responsables';
+const SUPABASE_CRONOGRAMA_TABLE = 'cronograma_actividades';
 const INDICE_RESPONSABLE_OPTIONS = ['JAIME', 'CECILIA', 'RICARDO', 'ELIAS', 'TODOS'];
 const INDICE_RESPONSABLES_ROWS = [
   { type: 'section', title: 'DOCUMENTOS DE PRESENTACION' },
@@ -1386,17 +1387,123 @@ const CRONOGRAMA_DEFAULT_TASKS = [
   { id: 'cr-014', grupo: 'Post-correcciones', actividad: 'Informe final ajustado y empastado', descripcion: 'Entrega posterior a correcciones del jurado.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-09-18', fechaRealizada: '' },
 ];
 
+let cronogramaRemoteLoadSignature = '';
+let cronogramaRemoteLoadPending = false;
+
 function escapeHtml(value) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function normalizeCronogramaTask(task = {}, index = 0) {
+  return {
+    id: task.id || `cr-${Date.now()}-${index}`,
+    grupo: task.grupo || 'Fase 1 - Diagnostico',
+    actividad: task.actividad || 'Nueva actividad',
+    descripcion: task.descripcion || '',
+    responsable: task.responsable || 'TODOS',
+    avance: Math.max(0, Math.min(100, Number(task.avance) || 0)),
+    fechaMeta: task.fechaMeta || task.fecha_meta || '',
+    fechaRealizada: task.fechaRealizada || task.fecha_realizada || '',
+    documentos: task.documentos || '',
+  };
+}
+
+function normalizeCronogramaTasks(tasks) {
+  return (Array.isArray(tasks) ? tasks : CRONOGRAMA_DEFAULT_TASKS).map(normalizeCronogramaTask);
 }
 
 function getCronogramaTasks() {
   try {
     const saved = JSON.parse(localStorage.getItem(CRONOGRAMA_STORAGE_KEY));
-    return Array.isArray(saved) && saved.length ? saved : CRONOGRAMA_DEFAULT_TASKS;
+    return Array.isArray(saved) && saved.length ? normalizeCronogramaTasks(saved) : normalizeCronogramaTasks(CRONOGRAMA_DEFAULT_TASKS);
   } catch {
-    return CRONOGRAMA_DEFAULT_TASKS;
+    return normalizeCronogramaTasks(CRONOGRAMA_DEFAULT_TASKS);
   }
+}
+
+function saveCronogramaTasksLocal(tasks) {
+  localStorage.setItem(CRONOGRAMA_STORAGE_KEY, JSON.stringify(normalizeCronogramaTasks(tasks)));
+}
+
+function setCronogramaStatus(text, icon = 'circle-check', state = 'ok') {
+  const status = document.getElementById('cronogramaSaveStatus');
+  if (!status) return;
+  status.classList.toggle('is-working', state === 'working');
+  status.classList.toggle('is-error', state === 'error');
+  status.innerHTML = `<i class="fas fa-${icon}"></i> ${text}`;
+}
+
+function getCronogramaPayload(tasks) {
+  return normalizeCronogramaTasks(tasks).map((task, index) => ({
+    id: task.id,
+    sort_order: index,
+    grupo: task.grupo,
+    actividad: task.actividad,
+    descripcion: task.descripcion,
+    responsable: task.responsable,
+    avance: task.avance,
+    fecha_meta: task.fechaMeta || null,
+    fecha_realizada: task.fechaRealizada || null,
+    documentos: task.documentos || '',
+    updated_at: new Date().toISOString(),
+  }));
+}
+
+function getCronogramaTasksFromSupabaseRows(rows = []) {
+  return rows
+    .slice()
+    .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0))
+    .map((row, index) => normalizeCronogramaTask({
+      id: row.id,
+      grupo: row.grupo,
+      actividad: row.actividad,
+      descripcion: row.descripcion,
+      responsable: row.responsable,
+      avance: row.avance,
+      fechaMeta: row.fecha_meta,
+      fechaRealizada: row.fecha_realizada,
+      documentos: row.documentos,
+    }, index));
+}
+
+async function seedCronogramaSupabaseIfEmpty() {
+  const existing = await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?select=id&limit=1`);
+  if (Array.isArray(existing) && existing.length) return;
+  await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?on_conflict=id`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(getCronogramaPayload(getCronogramaTasks())),
+  });
+}
+
+async function loadCronogramaFromSupabase() {
+  await seedCronogramaSupabaseIfEmpty();
+  const rows = await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?select=*&order=sort_order.asc`);
+  const tasks = getCronogramaTasksFromSupabaseRows(rows || []);
+  saveCronogramaTasksLocal(tasks.length ? tasks : CRONOGRAMA_DEFAULT_TASKS);
+  return tasks.length ? tasks : normalizeCronogramaTasks(CRONOGRAMA_DEFAULT_TASKS);
+}
+
+async function deleteCronogramaRemoteIds(ids) {
+  await Promise.all(ids.map(id => supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?id=eq.${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  })));
+}
+
+async function saveCronogramaToSupabase(tasks) {
+  const normalized = normalizeCronogramaTasks(tasks);
+  const payload = getCronogramaPayload(normalized);
+  await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?on_conflict=id`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(payload),
+  });
+
+  const existing = await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?select=id`);
+  const currentIds = new Set(normalized.map(task => task.id));
+  const staleIds = (existing || []).map(row => row.id).filter(id => !currentIds.has(id));
+  if (staleIds.length) await deleteCronogramaRemoteIds(staleIds);
 }
 
 function getCronogramaStatus(task) {
@@ -1423,7 +1530,7 @@ function renderCronograma() {
     <button class="btn-resource" id="cronogramaExportExcel" type="button"><i class="fas fa-file-excel"></i> Exportar Excel ejecutivo</button>
     <button class="btn-resource" id="cronogramaExportWord" type="button"><i class="fas fa-file-word"></i> Exportar a Word</button>
     <button class="btn-resource project-reset-btn" id="cronogramaReset" type="button"><i class="fas fa-rotate-left"></i> Restaurar base</button>
-    <span class="project-save-status" id="cronogramaSaveStatus"><i class="fas fa-circle-check"></i> Cambios guardados en este navegador</span>
+    <span class="project-save-status" id="cronogramaSaveStatus"><i class="fas fa-circle-check"></i> Cargando cronograma desde Supabase</span>
   </div>
 
   <div class="project-top-scroll" id="projectTopScroll" aria-hidden="true">
@@ -1686,9 +1793,20 @@ function readCronogramaFromDom() {
 }
 
 function saveCronogramaTasks(tasks) {
-  localStorage.setItem(CRONOGRAMA_STORAGE_KEY, JSON.stringify(tasks));
-  const status = document.getElementById('cronogramaSaveStatus');
-  if (status) status.innerHTML = '<i class="fas fa-circle-check"></i> Cambios guardados en este navegador';
+  const normalized = normalizeCronogramaTasks(tasks);
+  saveCronogramaTasksLocal(normalized);
+  setCronogramaStatus('Guardando cronograma en Supabase...', 'spinner fa-spin', 'working');
+  return saveCronogramaToSupabase(normalized)
+    .then(() => {
+      cronogramaRemoteLoadSignature = JSON.stringify(normalized);
+      setCronogramaStatus('Cambios sincronizados en Supabase');
+      return normalized;
+    })
+    .catch(error => {
+      console.error(error);
+      setCronogramaStatus('Guardado local. Revisa que la tabla cronograma_actividades exista y tenga politicas RLS.', 'triangle-exclamation', 'error');
+      return normalized;
+    });
 }
 
 function createBlankCronogramaTask() {
@@ -1962,7 +2080,7 @@ function exportCronogramaWord(tasks) {
         </tr>
       </table>
       ${phaseSections}
-      <p class="footer">Fuente: Portal TDG - CLIDENTE. Este cronograma se genera con la version editable guardada en este navegador.</p>
+      <p class="footer">Fuente: Portal TDG - CLIDENTE. Este cronograma se genera con la version editable sincronizada en Supabase.</p>
     </div>
   </body>
   </html>`;
@@ -1988,21 +2106,48 @@ function initCronogramaProject() {
     card.addEventListener('scroll', () => { topScroll.scrollLeft = card.scrollLeft; });
   }
 
+  const loadRemoteCronograma = async () => {
+    const currentSignature = JSON.stringify(normalizeCronogramaTasks(readCronogramaFromDom()));
+    if (currentSignature && currentSignature === cronogramaRemoteLoadSignature) {
+      setCronogramaStatus('Datos del cronograma cargados desde Supabase');
+      return;
+    }
+    if (cronogramaRemoteLoadPending) return;
+    cronogramaRemoteLoadPending = true;
+    try {
+      setCronogramaStatus('Cargando cronograma desde Supabase...', 'spinner fa-spin', 'working');
+      const remoteTasks = await loadCronogramaFromSupabase();
+      const remoteSignature = JSON.stringify(remoteTasks);
+      cronogramaRemoteLoadSignature = remoteSignature;
+      if (remoteSignature !== currentSignature) {
+        navigate('cronograma');
+        return;
+      }
+      setCronogramaStatus('Datos del cronograma cargados desde Supabase');
+    } catch (error) {
+      console.error(error);
+      setCronogramaStatus('Guardado local. Revisa que la tabla cronograma_actividades exista y tenga politicas RLS.', 'triangle-exclamation', 'error');
+    } finally {
+      cronogramaRemoteLoadPending = false;
+    }
+  };
+
+  loadRemoteCronograma();
+
   const rerender = tasks => {
-    saveCronogramaTasks(tasks);
-    navigate('cronograma');
+    saveCronogramaTasks(tasks).then(() => navigate('cronograma'));
   };
 
   card.addEventListener('change', event => {
     if (!event.target.matches('[data-field]')) return;
     const tasks = readCronogramaFromDom();
-    saveCronogramaTasks(tasks);
-    navigate('cronograma');
+    saveCronogramaTasks(tasks).then(() => navigate('cronograma'));
   });
 
   card.addEventListener('input', event => {
     if (!event.target.matches('textarea')) return;
-    saveCronogramaTasks(readCronogramaFromDom());
+    saveCronogramaTasksLocal(readCronogramaFromDom());
+    setCronogramaStatus('Edicion local temporal. Al salir del campo se sincroniza en Supabase.', 'pen-to-square', 'working');
   });
 
   card.addEventListener('click', event => {
@@ -2044,8 +2189,9 @@ function initCronogramaProject() {
   const reset = document.getElementById('cronogramaReset');
   if (reset) {
     reset.addEventListener('click', () => {
+      if (!window.confirm('Seguro que deseas restaurar el cronograma base para todo el equipo?')) return;
       localStorage.removeItem(CRONOGRAMA_STORAGE_KEY);
-      navigate('cronograma');
+      saveCronogramaTasks(CRONOGRAMA_DEFAULT_TASKS).then(() => navigate('cronograma'));
     });
   }
 

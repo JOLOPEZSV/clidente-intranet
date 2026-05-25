@@ -1015,10 +1015,44 @@ img { max-width: 100%; }
   color: var(--text-muted);
 }
 .project-save-status {
-  color: #166534;
-  font-size: .78rem;
-  font-weight: 700;
+  align-items: center;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  box-shadow: 0 8px 18px rgba(22, 101, 52, .12);
+  color: #14532d;
+  display: inline-flex;
+  font-size: .9rem;
+  font-weight: 900;
+  gap: .45rem;
   margin-left: auto;
+  padding: .58rem .85rem;
+}
+.project-save-status i {
+  align-items: center;
+  background: #166534;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+.project-save-status.is-working {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #123d73;
+}
+.project-save-status.is-working i {
+  background: var(--blue);
+}
+.project-save-status.is-error {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #14532d;
+}
+.project-save-status.is-error i {
+  background: #166534;
 }
 .project-card {
   background: #fff;
