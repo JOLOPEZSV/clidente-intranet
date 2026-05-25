@@ -1425,6 +1425,10 @@ function addCronogramaDays(dateValue, days) {
   return date.toISOString().slice(0, 10);
 }
 
+function getCronogramaDaysFromHours(hours) {
+  return Math.max(1, Math.ceil((Number(hours) || 1) / 8));
+}
+
 function diffCronogramaDays(startValue, endValue) {
   if (!startValue || !endValue) return 1;
   const start = new Date(`${startValue}T00:00:00`);
@@ -1436,7 +1440,9 @@ function diffCronogramaDays(startValue, endValue) {
 function normalizeCronogramaTask(task = {}, index = 0) {
   const fechaInicio = task.fechaInicio || task.fecha_inicio || task.fechaMeta || task.fecha_meta || '';
   const fechaFinOriginal = task.fechaFin || task.fecha_fin || task.fechaRealizada || task.fecha_realizada || '';
-  const dias = Math.max(1, Number(task.dias) || diffCronogramaDays(fechaInicio, fechaFinOriginal));
+  const legacyDays = Math.max(1, Number(task.dias) || diffCronogramaDays(fechaInicio, fechaFinOriginal));
+  const horas = Math.max(1, Number(task.horas) || Number(task.hours) || (legacyDays * 8));
+  const dias = getCronogramaDaysFromHours(horas);
   const fechaFin = fechaInicio ? addCronogramaDays(fechaInicio, dias) : fechaFinOriginal;
   return {
     id: task.id || `cr-${Date.now()}-${index}`,
@@ -1445,6 +1451,7 @@ function normalizeCronogramaTask(task = {}, index = 0) {
     descripcion: task.descripcion || '',
     responsable: task.responsable || 'TODOS',
     avance: Math.max(0, Math.min(100, Number(task.avance) || 0)),
+    horas,
     dias,
     fechaInicio,
     fechaFin,
@@ -1488,6 +1495,7 @@ function getCronogramaPayload(tasks) {
     descripcion: task.descripcion,
     responsable: task.responsable,
     avance: task.avance,
+    horas: task.horas,
     dias: task.dias,
     fecha_inicio: task.fechaInicio || null,
     fecha_fin: task.fechaFin || null,
@@ -1509,6 +1517,7 @@ function getCronogramaTasksFromSupabaseRows(rows = []) {
       descripcion: row.descripcion,
       responsable: row.responsable,
       avance: row.avance,
+      horas: row.horas,
       dias: row.dias,
       fechaInicio: row.fecha_inicio,
       fechaFin: row.fecha_fin,
@@ -1553,10 +1562,10 @@ async function saveCronogramaToSupabase(tasks) {
       body: JSON.stringify(payload),
     });
   } catch (error) {
-    if (!String(error.message || '').includes('dias') && !String(error.message || '').includes('fecha_inicio') && !String(error.message || '').includes('fecha_fin')) {
+    if (!String(error.message || '').includes('horas') && !String(error.message || '').includes('dias') && !String(error.message || '').includes('fecha_inicio') && !String(error.message || '').includes('fecha_fin')) {
       throw error;
     }
-    const legacyPayload = payload.map(({ dias, fecha_inicio, fecha_fin, ...row }) => row);
+    const legacyPayload = payload.map(({ horas, dias, fecha_inicio, fecha_fin, ...row }) => row);
     await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?on_conflict=id`, {
       method: 'POST',
       headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
@@ -1588,7 +1597,7 @@ function renderCronograma() {
 
   return `
   <h1 class="section-title">Cronograma de la Consultoria</h1>
-  <p class="cronograma-intro">Cronograma editable tipo Microsoft Project para registrar actividades, responsables, avance, fechas y documentos de soporte. El tutor solicito entregas internas al menos 8 dias antes de las fechas ISEADE.</p>
+  <p class="cronograma-intro">Cronograma editable tipo Microsoft Project para registrar actividades, responsables, avance, horas, fechas y documentos de soporte. La fecha fin se calcula automaticamente usando 8 horas como 1 dia de trabajo.</p>
 
   <div class="project-toolbar">
     <button class="btn-resource" id="cronogramaExportExcel" type="button"><i class="fas fa-file-excel"></i> Exportar Excel ejecutivo</button>
@@ -1609,7 +1618,7 @@ function renderCronograma() {
       <div>Responsable</div>
       <div>Avance</div>
       <div>Fecha inicio</div>
-      <div>Días</div>
+      <div>Horas</div>
       <div>Fecha fin</div>
       <div>Documentos</div>
       <div>Estado</div>
@@ -1635,7 +1644,7 @@ function renderCronograma() {
         </select>
         <label class="project-percent"><input data-field="avance" type="number" min="0" max="100" step="1" value="${Number(task.avance) || 0}"><span>%</span></label>
         <input data-field="fechaInicio" type="date" value="${task.fechaInicio || ''}">
-        <input data-field="dias" type="number" min="1" step="1" value="${Number(task.dias) || 1}">
+        <input data-field="horas" type="number" min="1" step="1" value="${Number(task.horas) || 8}">
         <input data-field="fechaFin" type="date" value="${task.fechaFin || ''}" readonly>
         <textarea data-field="documentos" rows="2" placeholder="Pega links de Drive, PDFs o notas de soporte">${escapeHtml(task.documentos || '')}</textarea>
         <span class="status-badge status-${status}">${label}</span>
@@ -1845,7 +1854,8 @@ function readCronogramaFromDom() {
     const field = name => row.querySelector(`[data-field="${name}"]`);
     const responsables = Array.from(field('responsable')?.selectedOptions || []).map(option => option.value);
     const fechaInicio = field('fechaInicio')?.value || '';
-    const dias = Math.max(1, Number(field('dias')?.value) || 1);
+    const horas = Math.max(1, Number(field('horas')?.value) || 8);
+    const dias = getCronogramaDaysFromHours(horas);
     const fechaFin = addCronogramaDays(fechaInicio, dias);
     return {
       id: row.dataset.taskId,
@@ -1854,6 +1864,7 @@ function readCronogramaFromDom() {
       descripcion: field('descripcion')?.value.trim() || '',
       responsable: (responsables.length ? responsables : ['TODOS']).join(', '),
       avance: Math.max(0, Math.min(100, Number(field('avance')?.value) || 0)),
+      horas,
       dias,
       fechaInicio,
       fechaFin,
@@ -1890,6 +1901,7 @@ function createBlankCronogramaTask() {
     descripcion: '',
     responsable: 'TODOS',
     avance: 0,
+    horas: 8,
     dias: 1,
     fechaInicio: '',
     fechaFin: '',
@@ -1951,7 +1963,7 @@ function exportCronogramaExcel(tasks) {
         <td class="center">${escapeHtml(task.responsable || '')}</td>
         <td class="center">${Number(task.avance) || 0}%</td>
         <td>${formatCronogramaDate(task.fechaInicio)}</td>
-        <td class="center">${Number(task.dias) || 1}</td>
+        <td class="center">${Number(task.horas) || 8}</td>
         <td>${formatCronogramaDate(task.fechaFin)}</td>
         <td class="${statusClass}">${status}</td>
         <td>${escapeHtml(task.documentos || 'Sin documentos registrados')}</td>
@@ -2028,7 +2040,7 @@ function exportCronogramaExcel(tasks) {
     <table>
       <tr><td class="title" colspan="11">Detalle del Cronograma</td></tr>
       <tr>
-        <th>N</th><th>Fase</th><th>Actividad</th><th>Descripcion</th><th>Responsable</th><th>Avance</th><th>Fecha inicio</th><th>Dias</th><th>Fecha fin</th><th>Estado</th><th>Documentos</th>
+        <th>N</th><th>Fase</th><th>Actividad</th><th>Descripcion</th><th>Responsable</th><th>Avance</th><th>Fecha inicio</th><th>Horas</th><th>Fecha fin</th><th>Estado</th><th>Documentos</th>
       </tr>
       ${detailRows}
     </table>
@@ -2087,7 +2099,7 @@ function exportCronogramaWord(tasks) {
           <td class="center">${escapeHtml(task.responsable || '')}</td>
           <td class="center"><strong>${Number(task.avance) || 0}%</strong></td>
           <td>${formatCronogramaDate(task.fechaInicio)}</td>
-          <td class="center">${Number(task.dias) || 1}</td>
+          <td class="center">${Number(task.horas) || 8}</td>
           <td>${formatCronogramaDate(task.fechaFin)}</td>
           <td class="center">${status}</td>
           <td>${documents}</td>
@@ -2105,7 +2117,7 @@ function exportCronogramaWord(tasks) {
             <th style="width:11%">Responsable</th>
             <th style="width:9%">Avance</th>
             <th style="width:12%">Fecha inicio</th>
-            <th style="width:7%">Dias</th>
+            <th style="width:7%">Horas</th>
             <th style="width:12%">Fecha fin</th>
             <th style="width:10%">Estado</th>
             <th style="width:12%">Documentos</th>
