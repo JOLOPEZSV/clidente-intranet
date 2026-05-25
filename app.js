@@ -1389,6 +1389,7 @@ const CRONOGRAMA_DEFAULT_TASKS = [
 
 let cronogramaRemoteLoadSignature = '';
 let cronogramaRemoteLoadPending = false;
+let cronogramaJustSaved = false;
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1799,6 +1800,7 @@ function saveCronogramaTasks(tasks) {
   return saveCronogramaToSupabase(normalized)
     .then(() => {
       cronogramaRemoteLoadSignature = JSON.stringify(normalized);
+      cronogramaJustSaved = true;
       setCronogramaStatus('Cambios sincronizados en Supabase');
       return normalized;
     })
@@ -2109,7 +2111,8 @@ function initCronogramaProject() {
   const loadRemoteCronograma = async () => {
     const currentSignature = JSON.stringify(normalizeCronogramaTasks(readCronogramaFromDom()));
     if (currentSignature && currentSignature === cronogramaRemoteLoadSignature) {
-      setCronogramaStatus('Datos del cronograma cargados desde Supabase');
+      setCronogramaStatus(cronogramaJustSaved ? 'Cambios sincronizados en Supabase' : 'Datos del cronograma cargados desde Supabase');
+      cronogramaJustSaved = false;
       return;
     }
     if (cronogramaRemoteLoadPending) return;
@@ -2123,7 +2126,8 @@ function initCronogramaProject() {
         navigate('cronograma');
         return;
       }
-      setCronogramaStatus('Datos del cronograma cargados desde Supabase');
+      setCronogramaStatus(cronogramaJustSaved ? 'Cambios sincronizados en Supabase' : 'Datos del cronograma cargados desde Supabase');
+      cronogramaJustSaved = false;
     } catch (error) {
       console.error(error);
       setCronogramaStatus('Guardado local. Revisa que la tabla cronograma_actividades exista y tenga politicas RLS.', 'triangle-exclamation', 'error');
