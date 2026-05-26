@@ -1078,8 +1078,8 @@ img { max-width: 100%; }
 }
 .project-grid {
   display: grid;
-  grid-template-columns: 44px 160px minmax(190px, 1.2fr) minmax(220px, 1.35fr) 122px 94px 138px 78px 138px minmax(190px, 1fr) 112px minmax(190px, 1fr) 92px;
-  min-width: 1810px;
+  grid-template-columns: 44px 160px minmax(190px, 1.2fr) minmax(220px, 1.35fr) 122px 94px 86px 138px 78px 138px minmax(190px, 1fr) 112px minmax(190px, 1fr) 92px;
+  min-width: 1900px;
 }
 .project-grid-header {
   background: var(--blue);
@@ -1127,7 +1127,7 @@ img { max-width: 100%; }
   font-size: .78rem;
   font-weight: 900;
   letter-spacing: .04em;
-  min-width: 1720px;
+  min-width: 1900px;
   padding: .55rem .75rem;
   text-transform: uppercase;
 }
@@ -1487,7 +1487,7 @@ img { max-width: 100%; }
   .project-toolbar { align-items: stretch; flex-direction: column; }
   .project-save-status { margin-left: 0; text-align: center; }
   .project-grid,
-  .project-group-row { min-width: 1540px; }
+  .project-group-row { min-width: 1900px; }
   .project-card,
   .project-top-scroll { max-width: calc(100vw - 2.5rem); }
   .tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: .2rem; }

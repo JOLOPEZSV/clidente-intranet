@@ -1448,6 +1448,7 @@ function normalizeCronogramaTask(task = {}, index = 0) {
   return {
     id: task.id || `cr-${Date.now()}-${index}`,
     grupo: task.grupo || 'Fase 1 - Diagnostico',
+    semana: task.semana || task.week || '',
     actividad: task.actividad || 'Nueva actividad',
     descripcion: task.descripcion || '',
     responsable: task.responsable || 'TODOS',
@@ -1492,6 +1493,7 @@ function getCronogramaPayload(tasks) {
     id: task.id,
     sort_order: index,
     grupo: task.grupo,
+    semana: task.semana || '',
     actividad: task.actividad,
     descripcion: task.descripcion,
     responsable: task.responsable,
@@ -1514,6 +1516,7 @@ function getCronogramaTasksFromSupabaseRows(rows = []) {
     .map((row, index) => normalizeCronogramaTask({
       id: row.id,
       grupo: row.grupo,
+      semana: row.semana,
       actividad: row.actividad,
       descripcion: row.descripcion,
       responsable: row.responsable,
@@ -1563,10 +1566,10 @@ async function saveCronogramaToSupabase(tasks) {
       body: JSON.stringify(payload),
     });
   } catch (error) {
-    if (!String(error.message || '').includes('horas') && !String(error.message || '').includes('dias') && !String(error.message || '').includes('fecha_inicio') && !String(error.message || '').includes('fecha_fin')) {
+    if (!String(error.message || '').includes('semana') && !String(error.message || '').includes('horas') && !String(error.message || '').includes('dias') && !String(error.message || '').includes('fecha_inicio') && !String(error.message || '').includes('fecha_fin')) {
       throw error;
     }
-    const legacyPayload = payload.map(({ horas, dias, fecha_inicio, fecha_fin, ...row }) => row);
+    const legacyPayload = payload.map(({ semana, horas, dias, fecha_inicio, fecha_fin, ...row }) => row);
     await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?on_conflict=id`, {
       method: 'POST',
       headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
@@ -1618,6 +1621,7 @@ function renderCronograma() {
       <div>Entregable / Hito</div>
       <div>Responsable</div>
       <div>Avance</div>
+      <div>Semana</div>
       <div>Fecha inicio</div>
       <div>Horas</div>
       <div>Fecha fin</div>
@@ -1644,6 +1648,7 @@ function renderCronograma() {
           ${CRONOGRAMA_RESPONSABLES.map(name => `<option value="${name}"${normalizeResponsibleList(task.responsable).includes(name) ? ' selected' : ''}>${name}</option>`).join('')}
         </select>
         <label class="project-percent"><input data-field="avance" type="number" min="0" max="100" step="1" value="${Number(task.avance) || 0}"><span>%</span></label>
+        <input data-field="semana" type="text" value="${escapeHtml(task.semana || '')}" placeholder="1-2">
         <input data-field="fechaInicio" type="date" value="${task.fechaInicio || ''}">
         <input data-field="horas" type="number" min="0" step="1" value="${Number(task.horas) || 0}">
         <input data-field="fechaFin" type="date" value="${task.fechaFin || ''}" readonly>
@@ -1865,6 +1870,7 @@ function readCronogramaFromDom() {
       descripcion: field('descripcion')?.value.trim() || '',
       responsable: (responsables.length ? responsables : ['TODOS']).join(', '),
       avance: Math.max(0, Math.min(100, Number(field('avance')?.value) || 0)),
+      semana: field('semana')?.value.trim() || '',
       horas,
       dias,
       fechaInicio,
@@ -1902,6 +1908,7 @@ function createBlankCronogramaTask() {
     descripcion: '',
     responsable: 'TODOS',
     avance: 0,
+    semana: '',
     horas: 8,
     dias: 1,
     fechaInicio: '',
@@ -1963,6 +1970,7 @@ function exportCronogramaExcel(tasks) {
         <td>${escapeHtml(task.descripcion || '')}</td>
         <td class="center">${escapeHtml(task.responsable || '')}</td>
         <td class="center">${Number(task.avance) || 0}%</td>
+        <td class="center">${escapeHtml(task.semana || '')}</td>
         <td>${formatCronogramaDate(task.fechaInicio)}</td>
         <td class="center">${Number(task.horas) || 0}</td>
         <td>${formatCronogramaDate(task.fechaFin)}</td>
@@ -2039,9 +2047,9 @@ function exportCronogramaExcel(tasks) {
     <br style="mso-special-character:line-break;page-break-before:always">
 
     <table>
-      <tr><td class="title" colspan="11">Detalle del Cronograma</td></tr>
+      <tr><td class="title" colspan="12">Detalle del Cronograma</td></tr>
       <tr>
-        <th>N</th><th>Fase</th><th>Actividad</th><th>Entregable / Hito</th><th>Responsable</th><th>Avance</th><th>Fecha inicio</th><th>Horas</th><th>Fecha fin</th><th>Estado</th><th>Documentos</th>
+        <th>N</th><th>Fase</th><th>Actividad</th><th>Entregable / Hito</th><th>Responsable</th><th>Avance</th><th>Semana</th><th>Fecha inicio</th><th>Horas</th><th>Fecha fin</th><th>Estado</th><th>Documentos</th>
       </tr>
       ${detailRows}
     </table>
@@ -2099,6 +2107,7 @@ function exportCronogramaWord(tasks) {
           <td><strong>${escapeHtml(task.actividad)}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
           <td class="center">${escapeHtml(task.responsable || '')}</td>
           <td class="center"><strong>${Number(task.avance) || 0}%</strong></td>
+          <td class="center">${escapeHtml(task.semana || '')}</td>
           <td>${formatCronogramaDate(task.fechaInicio)}</td>
           <td class="center">${Number(task.horas) || 0}</td>
           <td>${formatCronogramaDate(task.fechaFin)}</td>
@@ -2114,9 +2123,10 @@ function exportCronogramaWord(tasks) {
         <thead>
           <tr>
             <th style="width:5%">N</th>
-            <th style="width:27%">Actividad y entregable / hito</th>
+            <th style="width:25%">Actividad y entregable / hito</th>
             <th style="width:11%">Responsable</th>
             <th style="width:9%">Avance</th>
+            <th style="width:7%">Semana</th>
             <th style="width:12%">Fecha inicio</th>
             <th style="width:7%">Horas</th>
             <th style="width:12%">Fecha fin</th>
