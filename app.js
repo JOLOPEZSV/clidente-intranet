@@ -478,13 +478,6 @@ function renderDiagnostico() {
     </div>
     <div class="pdf-generation-status" id="pdfGenerationStatus" aria-live="polite"></div>
 
-    <iframe
-      class="collaborative-doc-frame"
-      src="${collaborativeDocUrl}"
-      title="Documento colaborativo del diagnóstico organizacional"
-      loading="lazy"
-      allow="clipboard-read; clipboard-write; fullscreen"
-    ></iframe>
   </div>
 
   <div class="resource-group card journey-map-card">
@@ -531,7 +524,8 @@ function renderDiagnostico() {
     </div>
   </div>
 
-  ${renderDiagnosticoEntregables()}`;
+  ${renderDiagnosticoEntregables()}
+  ${renderIndiceResponsables()}`;
 }
 
 function renderMarcoTeorico() {
@@ -1176,8 +1170,7 @@ function renderEquipo() {
         </div>
       </div>
     </div>
-  </div>
-  ${renderIndiceResponsables()}`;
+  </div>`;
 }
 
 function renderFases() {
