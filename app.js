@@ -534,25 +534,7 @@ function renderDiagnostico() {
     </div>
   </div>
 
-  <div class="resource-group card">
-    <div class="card-title"><i class="fas fa-file-circle-check" style="margin-right:.5rem;color:#166534"></i>Documentos a Entregar al Finalizar el Diagnóstico</div>
-    <p class="resource-group-subtitle" style="margin-bottom:1.25rem">Según lineamientos ISEADE. <strong>Fecha de entrega: 1 de junio de 2026.</strong></p>
-    <div style="display:flex;flex-direction:column;gap:.5rem">
-      ${[
-        'Informe de Diagnóstico',
-        'Carta de Confidencialidad (firmada)',
-        'Carta de Aceptación del Diagnóstico emitida por la organización',
-        'Carta del Tutor avalando el Diagnóstico',
-        'Reporte de horas efectivas dedicadas por cada integrante del equipo',
-      ].map((item, i) => `
-      <label style="display:flex;align-items:flex-start;gap:.6rem;padding:.65rem .75rem;border-radius:8px;border:1px solid var(--border);background:#f0fdf4;cursor:pointer;font-size:.85rem;color:var(--text);line-height:1.4;transition:background .15s"
-             onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
-        <input type="checkbox" id="ent-item-${i}" style="margin-top:.1rem;accent-color:#166534;flex-shrink:0;width:16px;height:16px"
-               onchange="document.getElementById('ent-label-${i}').style.textDecoration=this.checked?'line-through':'none';document.getElementById('ent-label-${i}').style.color=this.checked?'#9ca3af':'var(--text)'">
-        <span id="ent-label-${i}">${item}</span>
-      </label>`).join('')}
-    </div>
-  </div>`;
+  ${renderDiagnosticoEntregables()}`;
 }
 
 function renderMarcoTeorico() {
@@ -631,6 +613,15 @@ const SUPABASE_URL = 'https://lgoevspmiuyvlttmuyuz.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Wk0gGB0ks4HiqHyJ-AvTqw_-LoL4oZg';
 const SUPABASE_INDICE_TABLE = 'indice_responsables';
 const SUPABASE_CRONOGRAMA_TABLE = 'cronograma_actividades';
+const SUPABASE_DIAGNOSTICO_ENTREGABLES_TABLE = 'diagnostico_entregables';
+const DIAGNOSTICO_ENTREGABLES_STORAGE_KEY = 'clidente_diagnostico_entregables_v1';
+const DIAGNOSTICO_ENTREGABLES = [
+  { id: 'informe-diagnostico', item: 'Informe de Diagnostico', avance: 0 },
+  { id: 'carta-confidencialidad', item: 'Carta de Confidencialidad (firmada)', avance: 100 },
+  { id: 'carta-aceptacion', item: 'Carta de Aceptacion del Diagnostico emitida por la organizacion', avance: 0 },
+  { id: 'carta-tutor', item: 'Carta del Tutor avalando el Diagnostico', avance: 0 },
+  { id: 'reporte-horas', item: 'Reporte de horas efectivas dedicadas por cada integrante del equipo', avance: 100 },
+];
 const INDICE_RESPONSABLE_OPTIONS = ['JAIME', 'CECILIA', 'RICARDO', 'ELIAS', 'TODOS'];
 const INDICE_RESPONSABLES_ROWS = [
   { type: 'section', title: 'DOCUMENTOS DE PRESENTACION' },
@@ -784,6 +775,115 @@ async function supabaseRequest(path, options = {}) {
   if (response.status === 204) return null;
   const text = await response.text();
   return text ? JSON.parse(text) : null;
+}
+
+function getDiagnosticoEntregablesSaved() {
+  try {
+    return JSON.parse(localStorage.getItem(DIAGNOSTICO_ENTREGABLES_STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDiagnosticoEntregablesLocal(saved) {
+  localStorage.setItem(DIAGNOSTICO_ENTREGABLES_STORAGE_KEY, JSON.stringify(saved || {}));
+}
+
+function getDiagnosticoEntregableData() {
+  const saved = getDiagnosticoEntregablesSaved();
+  return DIAGNOSTICO_ENTREGABLES.map((item, index) => ({
+    ...item,
+    sort_order: index,
+    avance: Math.max(0, Math.min(100, Number(saved[item.id] ?? item.avance) || 0)),
+  }));
+}
+
+async function seedDiagnosticoEntregablesIfEmpty() {
+  const existing = await supabaseRequest(`${SUPABASE_DIAGNOSTICO_ENTREGABLES_TABLE}?select=id&limit=1`);
+  if (Array.isArray(existing) && existing.length) return;
+  const payload = getDiagnosticoEntregableData().map(item => ({
+    id: item.id,
+    sort_order: item.sort_order,
+    item_text: item.item,
+    avance: item.avance,
+    updated_at: new Date().toISOString(),
+  }));
+  await supabaseRequest(`${SUPABASE_DIAGNOSTICO_ENTREGABLES_TABLE}?on_conflict=id`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function loadDiagnosticoEntregablesFromSupabase() {
+  await seedDiagnosticoEntregablesIfEmpty();
+  const rows = await supabaseRequest(`${SUPABASE_DIAGNOSTICO_ENTREGABLES_TABLE}?select=id,avance&order=sort_order.asc`);
+  const saved = {};
+  (rows || []).forEach(row => {
+    if (DIAGNOSTICO_ENTREGABLES.some(item => item.id === row.id)) {
+      saved[row.id] = Math.max(0, Math.min(100, Number(row.avance) || 0));
+    }
+  });
+  saveDiagnosticoEntregablesLocal(saved);
+  return saved;
+}
+
+async function saveDiagnosticoEntregableToSupabase(id, avance) {
+  const item = DIAGNOSTICO_ENTREGABLES.find(entry => entry.id === id);
+  if (!item) return;
+  const payload = {
+    id,
+    sort_order: DIAGNOSTICO_ENTREGABLES.findIndex(entry => entry.id === id),
+    item_text: item.item,
+    avance: Math.max(0, Math.min(100, Number(avance) || 0)),
+    updated_at: new Date().toISOString(),
+  };
+  await supabaseRequest(`${SUPABASE_DIAGNOSTICO_ENTREGABLES_TABLE}?on_conflict=id`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(payload),
+  });
+}
+
+function renderDiagnosticoEntregables() {
+  const items = getDiagnosticoEntregableData();
+  return `
+  <div class="resource-group card diagnostico-entregables-card">
+    <div class="indice-header">
+      <div>
+        <div class="card-title"><i class="fas fa-file-circle-check" style="margin-right:.5rem;color:#166534"></i>Documentos a Entregar al Finalizar el Diagnostico</div>
+        <p class="resource-group-subtitle" style="margin-bottom:0">Segun lineamientos ISEADE. <strong>Fecha de entrega: 1 de junio de 2026.</strong></p>
+      </div>
+      <span class="project-save-status" id="diagnosticoEntregablesStatus"><i class="fas fa-circle-check"></i> Cargando entregables desde Supabase</span>
+    </div>
+    <div style="margin-top:1rem;overflow-x:auto">
+      <table class="indice-table" style="min-width:680px">
+        <thead>
+          <tr>
+            <th style="width:70%">Documento</th>
+            <th style="width:30%">Avance</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => `
+          <tr class="${item.avance >= 100 ? 'is-complete' : ''}">
+            <td>
+              <span style="display:inline-flex;align-items:center;gap:.55rem">
+                <i class="fas ${item.avance >= 100 ? 'fa-circle-check' : 'fa-circle'}" style="color:${item.avance >= 100 ? '#166534' : '#94a3b8'}"></i>
+                <span style="${item.avance >= 100 ? 'text-decoration:line-through;color:#7a8799' : ''}">${escapeHtml(item.item)}</span>
+              </span>
+            </td>
+            <td>
+              <label class="indice-avance-control">
+                <input class="diagnostico-entregable-avance" data-id="${item.id}" type="number" min="0" max="100" step="1" value="${item.avance}">
+                <span>%</span>
+              </label>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
 }
 
 function getIndicePayload(rowId, saved = getIndiceResponsablesSaved()) {
@@ -1708,6 +1808,7 @@ function navigate(sectionId) {
   initTabs();
   initIndiceResponsables();
   initDiagnosticPdfButton();
+  initDiagnosticoEntregables();
   initCronogramaProject();
 
   // Animate progress bars
@@ -2344,6 +2445,61 @@ function initDiagnosticPdfButton() {
         status.innerHTML = '<i class="fas fa-circle-info"></i> Si la descarga no inició, Microsoft no autorizó la conversión directa desde este portal. El documento sigue seguro en OneDrive.';
       }
     }, 4500);
+  });
+}
+
+function initDiagnosticoEntregables() {
+  const inputs = document.querySelectorAll('.diagnostico-entregable-avance');
+  if (!inputs.length) return;
+
+  const status = document.getElementById('diagnosticoEntregablesStatus');
+  const setStatus = (text, icon = 'circle-check', state = '') => {
+    if (!status) return;
+    status.classList.toggle('is-error', state === 'error');
+    status.classList.toggle('is-working', state === 'working');
+    status.innerHTML = `<i class="fas fa-${icon}"></i> ${text}`;
+  };
+
+  const refreshFromSupabase = async () => {
+    try {
+      setStatus('Cargando entregables desde Supabase...', 'spinner fa-spin', 'working');
+      await loadDiagnosticoEntregablesFromSupabase();
+      setStatus('Datos cargados desde Supabase');
+      document.body.dataset.diagnosticoEntregablesLoaded = '1';
+      navigate('diagnostico');
+    } catch (error) {
+      console.error(error);
+      setStatus('Guardado local. Revisa que la tabla diagnostico_entregables exista y tenga politicas RLS.', 'triangle-exclamation', 'error');
+    }
+  };
+
+  if (!document.body.dataset.diagnosticoEntregablesLoaded) {
+    refreshFromSupabase();
+  } else {
+    const savedText = document.body.dataset.diagnosticoEntregablesSaved === '1' ? 'Cambios sincronizados en Supabase' : 'Datos cargados desde Supabase';
+    document.body.dataset.diagnosticoEntregablesSaved = '';
+    setStatus(savedText);
+  }
+
+  inputs.forEach(input => {
+    input.addEventListener('change', async () => {
+      const id = input.dataset.id;
+      const value = Math.max(0, Math.min(100, Number(input.value) || 0));
+      input.value = value;
+      const saved = getDiagnosticoEntregablesSaved();
+      saved[id] = value;
+      saveDiagnosticoEntregablesLocal(saved);
+      setStatus('Guardando avance en Supabase...', 'spinner fa-spin', 'working');
+      try {
+        await saveDiagnosticoEntregableToSupabase(id, value);
+        setStatus('Cambios sincronizados en Supabase');
+        document.body.dataset.diagnosticoEntregablesSaved = '1';
+        navigate('diagnostico');
+      } catch (error) {
+        console.error(error);
+        setStatus('Guardado local. Revisa que la tabla diagnostico_entregables exista y tenga politicas RLS.', 'triangle-exclamation', 'error');
+      }
+    });
   });
 }
 
