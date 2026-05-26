@@ -1426,7 +1426,7 @@ function addCronogramaDays(dateValue, days) {
 }
 
 function getCronogramaDaysFromHours(hours) {
-  return Math.max(1, Math.ceil((Number(hours) || 1) / 8));
+  return Math.max(1, Math.ceil((Number(hours) || 0) / 8));
 }
 
 function diffCronogramaDays(startValue, endValue) {
@@ -1441,7 +1441,8 @@ function normalizeCronogramaTask(task = {}, index = 0) {
   const fechaInicio = task.fechaInicio || task.fecha_inicio || task.fechaMeta || task.fecha_meta || '';
   const fechaFinOriginal = task.fechaFin || task.fecha_fin || task.fechaRealizada || task.fecha_realizada || '';
   const legacyDays = Math.max(1, Number(task.dias) || diffCronogramaDays(fechaInicio, fechaFinOriginal));
-  const horas = Math.max(1, Number(task.horas) || Number(task.hours) || (legacyDays * 8));
+  const horasValue = task.horas ?? task.hours;
+  const horas = Math.max(0, horasValue === undefined || horasValue === null || horasValue === '' ? (legacyDays * 8) : Number(horasValue));
   const dias = getCronogramaDaysFromHours(horas);
   const fechaFin = fechaInicio ? addCronogramaDays(fechaInicio, dias) : fechaFinOriginal;
   return {
@@ -1614,7 +1615,7 @@ function renderCronograma() {
       <div>#</div>
       <div>Fase</div>
       <div>Actividad</div>
-      <div>Descripcion</div>
+      <div>Entregable / Hito</div>
       <div>Responsable</div>
       <div>Avance</div>
       <div>Fecha inicio</div>
@@ -1644,7 +1645,7 @@ function renderCronograma() {
         </select>
         <label class="project-percent"><input data-field="avance" type="number" min="0" max="100" step="1" value="${Number(task.avance) || 0}"><span>%</span></label>
         <input data-field="fechaInicio" type="date" value="${task.fechaInicio || ''}">
-        <input data-field="horas" type="number" min="1" step="1" value="${Number(task.horas) || 8}">
+        <input data-field="horas" type="number" min="0" step="1" value="${Number(task.horas) || 0}">
         <input data-field="fechaFin" type="date" value="${task.fechaFin || ''}" readonly>
         <textarea data-field="documentos" rows="2" placeholder="Pega links de Drive, PDFs o notas de soporte">${escapeHtml(task.documentos || '')}</textarea>
         <span class="status-badge status-${status}">${label}</span>
@@ -1854,7 +1855,7 @@ function readCronogramaFromDom() {
     const field = name => row.querySelector(`[data-field="${name}"]`);
     const responsables = Array.from(field('responsable')?.selectedOptions || []).map(option => option.value);
     const fechaInicio = field('fechaInicio')?.value || '';
-    const horas = Math.max(1, Number(field('horas')?.value) || 8);
+    const horas = Math.max(0, Number(field('horas')?.value) || 0);
     const dias = getCronogramaDaysFromHours(horas);
     const fechaFin = addCronogramaDays(fechaInicio, dias);
     return {
@@ -1963,7 +1964,7 @@ function exportCronogramaExcel(tasks) {
         <td class="center">${escapeHtml(task.responsable || '')}</td>
         <td class="center">${Number(task.avance) || 0}%</td>
         <td>${formatCronogramaDate(task.fechaInicio)}</td>
-        <td class="center">${Number(task.horas) || 8}</td>
+        <td class="center">${Number(task.horas) || 0}</td>
         <td>${formatCronogramaDate(task.fechaFin)}</td>
         <td class="${statusClass}">${status}</td>
         <td>${escapeHtml(task.documentos || 'Sin documentos registrados')}</td>
@@ -2040,7 +2041,7 @@ function exportCronogramaExcel(tasks) {
     <table>
       <tr><td class="title" colspan="11">Detalle del Cronograma</td></tr>
       <tr>
-        <th>N</th><th>Fase</th><th>Actividad</th><th>Descripcion</th><th>Responsable</th><th>Avance</th><th>Fecha inicio</th><th>Horas</th><th>Fecha fin</th><th>Estado</th><th>Documentos</th>
+        <th>N</th><th>Fase</th><th>Actividad</th><th>Entregable / Hito</th><th>Responsable</th><th>Avance</th><th>Fecha inicio</th><th>Horas</th><th>Fecha fin</th><th>Estado</th><th>Documentos</th>
       </tr>
       ${detailRows}
     </table>
@@ -2099,7 +2100,7 @@ function exportCronogramaWord(tasks) {
           <td class="center">${escapeHtml(task.responsable || '')}</td>
           <td class="center"><strong>${Number(task.avance) || 0}%</strong></td>
           <td>${formatCronogramaDate(task.fechaInicio)}</td>
-          <td class="center">${Number(task.horas) || 8}</td>
+          <td class="center">${Number(task.horas) || 0}</td>
           <td>${formatCronogramaDate(task.fechaFin)}</td>
           <td class="center">${status}</td>
           <td>${documents}</td>
@@ -2113,7 +2114,7 @@ function exportCronogramaWord(tasks) {
         <thead>
           <tr>
             <th style="width:5%">N</th>
-            <th style="width:27%">Actividad y descripcion</th>
+            <th style="width:27%">Actividad y entregable / hito</th>
             <th style="width:11%">Responsable</th>
             <th style="width:9%">Avance</th>
             <th style="width:12%">Fecha inicio</th>
