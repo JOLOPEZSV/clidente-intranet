@@ -408,7 +408,7 @@ function renderReuniones() {
       ],
       resources: [
         { label: 'Resumen Reunión', icon: 'fa-file-lines', href: 'https://drive.google.com/file/d/1yK0z0IGVcKAlE-67BSxwSRwtg7Ry6NQr/view?usp=sharing' },
-        { label: 'Roles del Equipo', icon: 'fa-list-check', href: 'Roles_Equipo_Consultor_Clidente.pdf' },
+        { label: 'Roles del Equipo', icon: 'fa-list-check', href: 'https://drive.google.com/file/d/12kjVnrkxJh525AASAo9dcXz4Z8gOPH00/view?usp=sharing' },
       ]
     },
     {
