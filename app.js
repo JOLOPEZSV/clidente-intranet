@@ -1444,7 +1444,7 @@ function normalizeCronogramaTask(task = {}, index = 0) {
   const horasValue = task.horas ?? task.hours;
   const horas = Math.max(0, horasValue === undefined || horasValue === null || horasValue === '' ? (legacyDays * 8) : Number(horasValue));
   const dias = getCronogramaDaysFromHours(horas);
-  const fechaFin = fechaInicio ? addCronogramaDays(fechaInicio, dias) : fechaFinOriginal;
+  const fechaFin = fechaFinOriginal;
   return {
     id: task.id || `cr-${Date.now()}-${index}`,
     grupo: task.grupo || 'Fase 1 - Diagnostico',
@@ -1601,7 +1601,7 @@ function renderCronograma() {
 
   return `
   <h1 class="section-title">Cronograma de la Consultoria</h1>
-  <p class="cronograma-intro">Cronograma editable tipo Microsoft Project para registrar actividades, responsables, avance, horas, fechas y documentos de soporte. La fecha fin se calcula automaticamente usando 8 horas como 1 dia de trabajo.</p>
+  <p class="cronograma-intro">Cronograma editable tipo Microsoft Project para registrar actividades, responsables, avance, horas, fechas y documentos de soporte. La fecha fin se registra manualmente para reflejar el compromiso real de entrega.</p>
 
   <div class="project-toolbar">
     <button class="btn-resource" id="cronogramaExportExcel" type="button"><i class="fas fa-file-excel"></i> Exportar Excel ejecutivo</button>
@@ -1651,7 +1651,7 @@ function renderCronograma() {
         <input data-field="semana" type="text" value="${escapeHtml(task.semana || '')}" placeholder="1-2">
         <input data-field="fechaInicio" type="date" value="${task.fechaInicio || ''}">
         <input data-field="horas" type="number" min="0" step="1" value="${Number(task.horas) || 0}">
-        <input data-field="fechaFin" type="date" value="${task.fechaFin || ''}" readonly>
+        <input data-field="fechaFin" type="date" value="${task.fechaFin || ''}">
         <textarea data-field="documentos" rows="2" placeholder="Pega links de Drive, PDFs o notas de soporte">${escapeHtml(task.documentos || '')}</textarea>
         <span class="status-badge status-${status}">${label}</span>
         <div class="project-gantt-cell">
@@ -1862,7 +1862,7 @@ function readCronogramaFromDom() {
     const fechaInicio = field('fechaInicio')?.value || '';
     const horas = Math.max(0, Number(field('horas')?.value) || 0);
     const dias = getCronogramaDaysFromHours(horas);
-    const fechaFin = addCronogramaDays(fechaInicio, dias);
+    const fechaFin = field('fechaFin')?.value || '';
     return {
       id: row.dataset.taskId,
       grupo: field('grupo')?.value || 'Fase 1 - Diagnostico',
