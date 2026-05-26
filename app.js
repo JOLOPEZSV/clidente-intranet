@@ -1085,38 +1085,38 @@ function renderFases() {
   const fases = [
     {
       n: 1,
-      titulo: 'Diagnóstico',
+      titulo: 'Etapa I: Diagnostico',
       icon: 'fa-search',
       color: '#1a56a4',
-      descripcion: 'Levantamiento de información y análisis de la situación actual de CLIDENTE. Incluye visitas de campo, entrevistas, análisis FODA, Fuerzas de Porter y diagnóstico organizacional integral.',
-      entregables: ['Informe de Diagnóstico V1', 'Análisis FODA', 'Análisis 5 Fuerzas de Porter', 'Diagnóstico de Desempeño Ambiental'],
+      descripcion: 'Diagnostico inicial de CLIDENTE durante 5 semanas habiles. Incluye comunicacion oficial con la empresa y tutor, levantamiento de informacion, visitas de campo, entrevistas, FODA, Fuerzas de Porter y diagnostico organizacional integral. Entrega oficial: 1 de junio de 2026.',
+      entregables: ['Comunicacion oficial a empresa y tutor: 22, 23 y 24 de abril', 'Informe de Diagnostico', 'Analisis FODA y 5 Fuerzas de Porter', 'Diagnostico de Desempeno Ambiental'],
       estado: 'wip'
     },
     {
       n: 2,
-      titulo: 'Desarrollo del Plan de Trabajo',
+      titulo: 'Etapa II: Desarrollo del Trabajo Final',
       icon: 'fa-tasks',
       color: '#0e7490',
-      descripcion: 'Diseño de la propuesta de mejora basada en los hallazgos del diagnóstico. Definición de objetivos, estrategias y plan de acción por área de intervención.',
-      entregables: ['Plan de Trabajo Estratégico', 'Propuesta de mejora por área', 'Matriz de priorización de acciones'],
+      descripcion: 'Desarrollo del trabajo final en un periodo de 10 semanas habiles. Se disena la propuesta de mejora con base en el diagnostico, se definen objetivos, alcances, estrategias, responsables y acciones por area de intervencion. Periodo finaliza: 16 de agosto de 2026.',
+      entregables: ['Plan de Trabajo a desarrollar', 'Propuesta de mejora por area', 'Matriz de priorizacion de acciones', 'Cierre de etapa: 16 de agosto de 2026'],
       estado: 'pending'
     },
     {
       n: 3,
-      titulo: 'Elaboración del Informe',
+      titulo: 'Etapa III: Trabajo de Escritorio',
       icon: 'fa-file-alt',
       color: '#7c3aed',
-      descripcion: 'Redacción del informe final de consultoría con todos los hallazgos, análisis y recomendaciones. Documento físico anillado y versión digital para entrega a ISEADE FEPADE.',
-      entregables: ['Informe Final de Consultoría', 'Documento anillado para ISEADE', 'Versión digital (vbeltran@iseade.edu.sv)'],
+      descripcion: 'Etapa de escritorio de 2 semanas habiles para integrar, revisar y cerrar el informe final de consultoria. Consolida hallazgos, analisis, recomendaciones, anexos y version final para entrega formal. Entrega: 31 de agosto de 2026.',
+      entregables: ['Informe Final de Consultoria', 'Documento final revisado', 'Anexos y soportes consolidados', 'Entrega oficial: 31 de agosto de 2026'],
       estado: 'pending'
     },
     {
       n: 4,
-      titulo: 'Presentación y Evaluación',
+      titulo: 'Presentacion, Evaluacion y Correcciones',
       icon: 'fa-chalkboard-teacher',
       color: '#b45309',
-      descripcion: 'Presentación de los resultados ante el tutor académico y evaluación final del Trabajo de Graduación. Cada consultor expone 2–3 diapositivas con hallazgos de su área.',
-      entregables: ['Presentación al tutor (26 may 2026)', 'Entrega final ISEADE (1 jun 2026)', 'Carta de Aprobación del tutor'],
+      descripcion: 'Presentacion ante jurado evaluador del 7 al 18 de septiembre de 2026. Posteriormente se entrega el informe final ajustado y empastado en un periodo de 2 semanas despues del envio de correcciones.',
+      entregables: ['Presentacion ante jurado evaluador: 7 al 18 de septiembre', 'Correcciones finales', 'Informe final ajustado', 'Entrega empastada posterior a correcciones'],
       estado: 'pending'
     },
   ];
