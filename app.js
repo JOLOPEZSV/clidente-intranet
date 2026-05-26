@@ -407,7 +407,7 @@ function renderReuniones() {
         'Metodología: trabajo en parejas (Pareja A: Ricardo + Elías · Pareja B: Jaime + Cecilia)',
       ],
       resources: [
-        { label: 'Resumen Reunión', icon: 'fa-file-lines', href: '05-12 Prometa Reunión de Coordinación con el Tutor-Adaptive Summary.pdf' },
+        { label: 'Resumen Reunión', icon: 'fa-file-lines', href: 'https://drive.google.com/file/d/1yK0z0IGVcKAlE-67BSxwSRwtg7Ry6NQr/view?usp=sharing' },
         { label: 'Roles del Equipo', icon: 'fa-list-check', href: 'Roles_Equipo_Consultor_Clidente.pdf' },
       ]
     },
@@ -422,7 +422,9 @@ function renderReuniones() {
         'Revisión del Informe de Diagnóstico borrador para ISEADE',
         'Firma de Carta de Aprobación del Diagnóstico por el tutor',
       ],
-      resources: []
+      resources: [
+        { label: 'Presentación Canva', icon: 'fa-palette', href: 'https://www.canva.com/design/DAHKbs9dEYE/Q-sYw1vxJaPpyXdgxGU-Wg/edit?ui=eyJBIjp7fX0' },
+      ]
     },
   ];
 
