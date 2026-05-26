@@ -308,7 +308,7 @@ function renderVisitas() {
       summary: 'Visita ambiental realizada por Elías el sábado 23 de mayo. Henry ya envió la información base del diagnóstico ambiental, pendiente de integrar al informe y convertir en recomendaciones ambientales.',
       estado: 'done',
       resources: [
-        { label: 'Encuestas Plan Ambiental', icon: 'fa-leaf', href: 'https://drive.google.com/drive/folders/1H0P57BQEVu9BQWfr9FRQFsIbt2R2fh-j?usp=sharing' },
+        { label: 'Encuesta Ambiental', icon: 'fa-leaf', href: 'https://drive.google.com/file/d/1bJKvFu_RPuOFINvk8oZm7LLF0pDcDMdh/preview', embed: true },
       ]
     },
   ];
@@ -346,10 +346,14 @@ function renderVisitas() {
       </p>
       <div class="resource-buttons">
         ${v.resources.map(r => `
-        <a href="${r.href}" target="_blank" class="btn-resource">
+        <a href="${r.embed ? `#visita-campo-${v.n}-pdf` : r.href}" ${r.embed ? '' : 'target="_blank"'} class="btn-resource">
           <i class="fas ${r.icon}"></i> ${r.label}
         </a>`).join('')}
       </div>
+      ${v.resources.filter(r => r.embed).map(r => `
+      <div class="visit-pdf-viewer" id="visita-campo-${v.n}-pdf">
+        <iframe src="${r.href}" title="${r.label}" loading="lazy" allow="fullscreen"></iframe>
+      </div>`).join('')}
     </div>`).join('')}
   </div>
 
