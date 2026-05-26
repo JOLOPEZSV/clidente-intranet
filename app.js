@@ -297,8 +297,7 @@ function renderVisitas() {
       summary: 'Visita sin previo aviso realizada el sábado 23 de mayo para observar la operación en condiciones reales. Objetivo: conteo real de pacientes, ticket promedio por procedimiento, análisis de métricas de redes sociales, journey del paciente y cierre de brechas de información pendiente.',
       estado: 'done',
       resources: [
-        { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
-        { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
+        { label: 'Resumen Ejecutivo Visita 3', icon: 'fa-file-alt', href: 'https://drive.google.com/file/d/1iNiWJ2VyZTt8A-xMywIfSirZYt22rmx7/view?usp=sharing' },
       ]
     },
     {
@@ -309,8 +308,7 @@ function renderVisitas() {
       summary: 'Visita ambiental realizada por Elías el sábado 23 de mayo. Henry ya envió la información base del diagnóstico ambiental, pendiente de integrar al informe y convertir en recomendaciones ambientales.',
       estado: 'done',
       resources: [
-        { label: 'Plan de Visitas',  icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
-        { label: 'Roles del Equipo', icon: 'fa-users',      href: 'Roles_Equipo_Consultor_Clidente.pdf' },
+        { label: 'Encuestas Plan Ambiental', icon: 'fa-leaf', href: 'https://drive.google.com/drive/folders/1H0P57BQEVu9BQWfr9FRQFsIbt2R2fh-j?usp=sharing' },
       ]
     },
   ];
