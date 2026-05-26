@@ -287,7 +287,6 @@ function renderVisitas() {
       estado: 'done',
       resources: [
         { label: 'Resumen Ejecutivo', icon: 'fa-file-alt',  href: 'https://drive.google.com/file/d/1k7Q4h0QR7ytd2-GOpYy__qIDZkVMBKK9/view?usp=sharing' },
-        { label: 'Plan de Visitas',   icon: 'fa-file-lines', href: 'Plan_Visitas_Campo_Clidente_2026.pdf' },
       ]
     },
     {
