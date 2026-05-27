@@ -67,7 +67,7 @@ function renderCartelera() {
   <!-- Alertas -->
   <div class="mp-alert">
     <span style="font-size:16px;flex-shrink:0">⚠️</span>
-    <div><strong>2 pendientes críticos sin comenzar:</strong> Referencias APA 7 · Anexo Metodológico de IA con URLs de prompts. El diagnóstico ambiental ya tiene insumo de Henry y debe integrarse al informe.</div>
+    <div><strong>Sin pendientes críticos sin comenzar:</strong> Referencias APA 7 y Anexo Metodológico de IA con URLs de prompts ya están trabajados. El diagnóstico ambiental ya cuenta con métricas e insumo base para integrarse al informe.</div>
   </div>
   <div class="mp-info">
     <span style="font-size:16px;flex-shrink:0">💡</span>
@@ -112,7 +112,7 @@ function renderCartelera() {
             ['#0D8A6E','SÁB · 23 MAY','Visita 3 — sin aviso realizada','Observación real efectuada para conteo de pacientes, ticket promedio, journey y cierre de brechas.'],
             ['#0D8A6E','SÁB · 23 MAY','Visita 4 — Diagnóstico ambiental realizada por Elías','Henry ya envió la información base del diagnóstico ambiental para integrar al informe.'],
             ['#C13030','MAR · 26 MAY — LÍMITE 1','Presentación al Tutor Roberto Castro','2-3 slides por consultor · Firma Carta de Aprobación del Tutor · Guardar URLs Claude para Anexo IA.'],
-            ['#677089','MIÉ–VIE · 28–30 MAY','Integración final','§VII completa · Referencias APA 7 · Anexo IA · Revisión cruzada · Control de horas.'],
+            ['#677089','MIÉ–VIE · 28–30 MAY','Integración final','§VII completa · Revisión cruzada · Control de horas · Integración final de anexos.'],
             ['#C13030','LUN · 1 JUN — LÍMITE 2','Entrega ISEADE (Jaime)','Físico anillado 9:30–18:30 + digital a vbeltran@iseade.edu.sv + sobre manila con 4 cartas sin perforar.'],
           ].map(([col,d,t,s]) => `
           <li class="mp-tl-item">
