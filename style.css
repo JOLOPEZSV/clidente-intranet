@@ -349,6 +349,8 @@ img { max-width: 100%; }
   background: var(--blue-light); color: var(--blue-dark);
   font-size: .82rem; font-weight: 600;
   border: 1px solid rgba(26,86,164,.15);
+  cursor: pointer;
+  font-family: inherit;
   transition: background .2s, transform .15s;
 }
 .btn-resource:hover {
@@ -437,6 +439,30 @@ img { max-width: 100%; }
   top: -14px;
 }
 .org-branches .org-node { max-width: none; }
+.org-detail-grid {
+  display: grid;
+  gap: .8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1rem;
+}
+.org-detail-grid div {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .8rem;
+}
+.org-detail-grid strong {
+  color: var(--blue-dark);
+  display: block;
+  font-size: .86rem;
+  margin-bottom: .3rem;
+}
+.org-detail-grid span {
+  color: var(--text-muted);
+  display: block;
+  font-size: .78rem;
+  line-height: 1.45;
+}
 
 .visit-pdf-viewer {
   border: 1px solid var(--border);
@@ -1727,6 +1753,7 @@ img { max-width: 100%; }
   .org-branches {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .org-detail-grid { grid-template-columns: 1fr; }
   .org-branches::before { display: none; }
   .collaborative-doc-actions,
   .collaborative-doc-open,

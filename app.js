@@ -523,38 +523,50 @@ function renderDiagnostico() {
     <div class="card-title"><i class="fas fa-network-wired" style="margin-right:.5rem"></i>Estructura Organizacional</div>
     <p class="resource-group-subtitle">Clínica con 8 sillas de atención, 10 horas diarias de operación, 24 personas en planilla ISSS (incluye otras empresas de la propietaria). Vacante identificada: <strong>Dirección Clínica</strong>. Contacto operativo: Tec. Henry Corcio – Gerente Administrativo.</p>
     <div class="resource-buttons">
-      <a href="#organigrama-clidente" class="btn-resource"><i class="fas fa-sitemap"></i> Visualizar organigrama</a>
+      <button type="button" class="btn-resource" id="btnOrgPdf"><i class="fas fa-file-pdf"></i> Generar PDF Organigrama</button>
     </div>
     <div class="org-chart" id="organigrama-clidente">
       <div class="org-node org-top">
         <span>Direccion General / Propietaria</span>
         <strong>Dra. Olga Dinora Vigil Romero</strong>
+        <small>Gobierno general, decisiones estrategicas y continuidad del negocio</small>
       </div>
       <div class="org-line"></div>
       <div class="org-node org-admin">
         <span>Gerencia Administrativa</span>
         <strong>Tec. Henry Corcio</strong>
+        <small>Operacion diaria, soporte administrativo, informacion base y coordinacion interna</small>
       </div>
       <div class="org-branches">
         <div class="org-node">
           <span>Unidad de Negocio</span>
           <strong>Clinica Dental</strong>
-          <small>8 sillas de atencion</small>
+          <small>8 sillas de atencion, servicios odontologicos y experiencia del paciente</small>
         </div>
         <div class="org-node org-vacant">
           <span>Vacante Identificada</span>
           <strong>Direccion Clinica</strong>
-          <small>Coordinacion tecnica odontologica</small>
+          <small>Coordinacion tecnica odontologica, supervision clinica y estandarizacion de protocolos</small>
         </div>
         <div class="org-node">
           <span>Unidad de Negocio</span>
           <strong>Laboratorio Dental</strong>
-          <small>Soporte tecnico dental</small>
+          <small>Soporte tecnico dental, produccion de trabajos y coordinacion con clinica</small>
         </div>
         <div class="org-node">
           <span>Unidad de Negocio</span>
           <strong>Oxicam</strong>
-          <small>Servicio complementario</small>
+          <small>Servicio complementario y gestion operativa asociada</small>
+        </div>
+      </div>
+      <div class="org-detail-grid">
+        <div>
+          <strong>Datos operativos</strong>
+          <span>10 horas diarias de operacion · 24 personas en planilla ISSS · contacto operativo centralizado en Gerencia Administrativa.</span>
+        </div>
+        <div>
+          <strong>Hallazgo organizacional</strong>
+          <span>La estructura requiere formalizar Direccion Clinica, responsabilidades por unidad y control financiero separado por negocio.</span>
         </div>
       </div>
     </div>
@@ -1874,6 +1886,7 @@ function navigate(sectionId) {
   // Init tabs if present
   initTabs();
   initIndiceResponsables();
+  initOrganigramaPdfButton();
   initDiagnosticPdfButton();
   initDiagnosticoEntregables();
   initCronogramaProject();
@@ -2478,6 +2491,127 @@ function initCronogramaProject() {
   if (exportWordBtn) {
     exportWordBtn.addEventListener('click', () => exportCronogramaWord(readCronogramaFromDom()));
   }
+}
+
+function buildOrganigramaPdfHtml() {
+  const generatedAt = new Date().toLocaleDateString('es-SV', { day: '2-digit', month: 'long', year: 'numeric' });
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Organigrama CLIDENTE</title>
+  <style>
+    @page { size: letter landscape; margin: 14mm; }
+    * { box-sizing: border-box; }
+    body { color: #1f2a3d; font-family: Arial, Helvetica, sans-serif; margin: 0; }
+    .page { min-height: 100vh; padding: 8px; }
+    .header { align-items: center; border-bottom: 3px solid #1a56a4; display: flex; gap: 18px; justify-content: space-between; padding-bottom: 14px; }
+    .brand { align-items: center; display: flex; gap: 12px; }
+    .brand img { height: 54px; object-fit: contain; }
+    h1 { color: #0f3d73; font-size: 24px; margin: 0; }
+    .subtitle { color: #5f718d; font-size: 12px; margin-top: 5px; }
+    .meta { color: #5f718d; font-size: 11px; text-align: right; }
+    .summary { background: #eef6ff; border: 1px solid #b7d5f6; border-radius: 8px; color: #173b69; font-size: 12px; line-height: 1.45; margin: 16px 0; padding: 12px 14px; }
+    .chart { margin: 18px auto 10px; max-width: 980px; text-align: center; }
+    .node { background: #fff; border: 1.5px solid #c6d5e8; border-radius: 8px; box-shadow: 0 5px 12px rgba(15, 23, 42, .08); display: inline-block; min-height: 84px; padding: 10px 12px; vertical-align: top; width: 220px; }
+    .node span { color: #5f718d; display: block; font-size: 10px; font-weight: 800; letter-spacing: .04em; margin-bottom: 7px; text-transform: uppercase; }
+    .node strong { color: #0f3d73; display: block; font-size: 15px; line-height: 1.2; }
+    .node small { color: #5f718d; display: block; font-size: 10.5px; line-height: 1.35; margin-top: 7px; }
+    .top { background: #0f3d73; border-color: #0f3d73; width: 330px; }
+    .top span, .top strong, .top small { color: #fff; }
+    .admin { background: #eef6ff; border-color: #9fc5f0; margin-top: 28px; width: 330px; }
+    .line { background: #9fb4d1; height: 28px; margin: 0 auto; width: 2px; }
+    .branch-line { background: #9fb4d1; height: 2px; margin: 18px auto 14px; width: 82%; }
+    .branches { display: grid; gap: 12px; grid-template-columns: repeat(4, 1fr); }
+    .branches .node { width: 100%; }
+    .vacant { background: #fff7ed; border-color: #fed7aa; }
+    .details { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-top: 18px; }
+    .detail { border: 1px solid #d9e2ef; border-radius: 8px; padding: 10px; }
+    .detail h3 { color: #0f3d73; font-size: 12px; margin: 0 0 6px; }
+    .detail p { color: #5f718d; font-size: 10.5px; line-height: 1.4; margin: 0; }
+    .footer { border-top: 1px solid #d9e2ef; color: #5f718d; font-size: 10px; margin-top: 16px; padding-top: 8px; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="header">
+      <div class="brand">
+        <img src="LOGO CLIDENTE.jpeg" alt="CLIDENTE">
+        <div>
+          <h1>Organigrama Detallado CLIDENTE</h1>
+          <div class="subtitle">Diagnostico Organizacional - Trabajo de Graduacion MBA ISEADE FEPADE</div>
+        </div>
+      </div>
+      <div class="meta">Generado desde Portal TDG<br>${generatedAt}</div>
+    </section>
+    <section class="summary">
+      Clinica con 8 sillas de atencion, 10 horas diarias de operacion y 24 personas en planilla ISSS. La estructura refleja las unidades de negocio identificadas: Clinica Dental, Laboratorio Dental y Oxicam. Se registra vacante critica de Direccion Clinica.
+    </section>
+    <section class="chart">
+      <div class="node top">
+        <span>Direccion General / Propietaria</span>
+        <strong>Dra. Olga Dinora Vigil Romero</strong>
+        <small>Gobierno general, decisiones estrategicas y continuidad del negocio</small>
+      </div>
+      <div class="line"></div>
+      <div class="node admin">
+        <span>Gerencia Administrativa</span>
+        <strong>Tec. Henry Corcio</strong>
+        <small>Operacion diaria, soporte administrativo, informacion base y coordinacion interna</small>
+      </div>
+      <div class="branch-line"></div>
+      <div class="branches">
+        <div class="node">
+          <span>Unidad de Negocio</span>
+          <strong>Clinica Dental</strong>
+          <small>Servicios odontologicos, atencion al paciente, agenda, recepcion y experiencia del paciente.</small>
+        </div>
+        <div class="node vacant">
+          <span>Vacante Identificada</span>
+          <strong>Direccion Clinica</strong>
+          <small>Coordinacion tecnica odontologica, protocolos clinicos, supervision profesional y calidad asistencial.</small>
+        </div>
+        <div class="node">
+          <span>Unidad de Negocio</span>
+          <strong>Laboratorio Dental</strong>
+          <small>Soporte tecnico dental, produccion de trabajos, coordinacion con clinica y control de entregas.</small>
+        </div>
+        <div class="node">
+          <span>Unidad de Negocio</span>
+          <strong>Oxicam</strong>
+          <small>Servicio complementario, gestion operativa asociada y control administrativo separado.</small>
+        </div>
+      </div>
+    </section>
+    <section class="details">
+      <div class="detail"><h3>Hallazgo de control</h3><p>Se recomienda separar indicadores financieros y operativos por unidad de negocio para mejorar trazabilidad, rentabilidad y toma de decisiones.</p></div>
+      <div class="detail"><h3>Riesgo organizacional</h3><p>La falta de Direccion Clinica formal limita la estandarizacion de protocolos, supervision tecnica y seguimiento preventivo.</p></div>
+      <div class="detail"><h3>Accion sugerida</h3><p>Formalizar perfiles, responsabilidades, autoridad de decision y flujos de reporte por area y unidad de negocio.</p></div>
+    </section>
+    <div class="footer">Fuente: levantamiento de campo del equipo consultor CLIDENTE - ISEADE FEPADE.</div>
+  </main>
+</body>
+</html>`;
+}
+
+function initOrganigramaPdfButton() {
+  const button = document.getElementById('btnOrgPdf');
+  if (!button) return;
+
+  button.addEventListener('click', () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      window.alert('El navegador bloqueo la ventana para generar el PDF. Permite ventanas emergentes para este portal.');
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(buildOrganigramaPdfHtml());
+    printWindow.document.close();
+    printWindow.focus();
+    window.setTimeout(() => {
+      printWindow.print();
+    }, 450);
+  });
 }
 
 function initDiagnosticPdfButton() {
