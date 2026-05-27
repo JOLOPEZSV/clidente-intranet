@@ -211,7 +211,7 @@ function renderSobreProyecto() {
     <div class="info-box">
       <div class="info-box-icon gold"><i class="fas fa-graduation-cap" style="color:#854d0e"></i></div>
       <h4>Tipo de Trabajo</h4>
-      <p>Consultoría empresarial gratuita + Diagnóstico Organizacional Integral con propuesta de mejora. Tres unidades de negocio: clínica dental, depósito dental y alquiler de bodegas.</p>
+      <p>Consultoría empresarial gratuita + Diagnóstico Organizacional Integral con propuesta de mejora. Tres unidades de negocio: clínica dental, Laboratorio Dental y Oxicam.</p>
     </div>
     <div class="info-box">
       <div class="info-box-icon blue"><i class="fas fa-bullseye" style="color:var(--blue)"></i></div>
@@ -515,7 +515,7 @@ function renderDiagnostico() {
       🔴 <strong>Falta de profesionalización empresarial</strong> – modelo familiar sin controles formales.<br>
       🔴 <strong>Desconocimiento de indicadores financieros</strong> por unidad de negocio.<br>
       🔴 <strong>Modelo reactivo</strong> de atención (no preventivo).<br>
-      🟡 Tres unidades de negocio: clínica dental, depósito dental y alquiler de bodegas (sin estados financieros separados).
+      🟡 Tres unidades de negocio: clínica dental, Laboratorio Dental y Oxicam (sin estados financieros separados).
     </p>
   </div>
 
