@@ -523,8 +523,40 @@ function renderDiagnostico() {
     <div class="card-title"><i class="fas fa-network-wired" style="margin-right:.5rem"></i>Estructura Organizacional</div>
     <p class="resource-group-subtitle">Clínica con 8 sillas de atención, 10 horas diarias de operación, 24 personas en planilla ISSS (incluye otras empresas de la propietaria). Vacante identificada: <strong>Dirección Clínica</strong>. Contacto operativo: Tec. Henry Corcio – Gerente Administrativo.</p>
     <div class="resource-buttons">
-      <a href="Roles_Equipo_Consultor_Clidente.pdf" target="_blank" class="btn-resource"><i class="fas fa-users"></i> Roles del Equipo</a>
-      <a href="Plan_Visitas_Campo_Clidente_2026.pdf" target="_blank" class="btn-resource"><i class="fas fa-map"></i> Plan de Visitas</a>
+      <a href="#organigrama-clidente" class="btn-resource"><i class="fas fa-sitemap"></i> Visualizar organigrama</a>
+    </div>
+    <div class="org-chart" id="organigrama-clidente">
+      <div class="org-node org-top">
+        <span>Direccion General / Propietaria</span>
+        <strong>Dra. Olga Dinora Vigil Romero</strong>
+      </div>
+      <div class="org-line"></div>
+      <div class="org-node org-admin">
+        <span>Gerencia Administrativa</span>
+        <strong>Tec. Henry Corcio</strong>
+      </div>
+      <div class="org-branches">
+        <div class="org-node">
+          <span>Unidad de Negocio</span>
+          <strong>Clinica Dental</strong>
+          <small>8 sillas de atencion</small>
+        </div>
+        <div class="org-node org-vacant">
+          <span>Vacante Identificada</span>
+          <strong>Direccion Clinica</strong>
+          <small>Coordinacion tecnica odontologica</small>
+        </div>
+        <div class="org-node">
+          <span>Unidad de Negocio</span>
+          <strong>Laboratorio Dental</strong>
+          <small>Soporte tecnico dental</small>
+        </div>
+        <div class="org-node">
+          <span>Unidad de Negocio</span>
+          <strong>Oxicam</strong>
+          <small>Servicio complementario</small>
+        </div>
+      </div>
     </div>
   </div>
 

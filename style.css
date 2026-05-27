@@ -361,6 +361,83 @@ img { max-width: 100%; }
 .btn-resource.btn-audio { background: #f0f7ff; color: #1565c0; border-color: rgba(21,101,192,.2); }
 .btn-resource.btn-img   { background: #f0fff4; color: #1a7340; border-color: rgba(26,115,64,.2); }
 
+.org-chart {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.org-node {
+  background: #fff;
+  border: 1px solid #cbd7e8;
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, .06);
+  color: var(--text);
+  margin: 0 auto;
+  max-width: 280px;
+  min-height: 82px;
+  padding: .75rem .85rem;
+  text-align: center;
+}
+.org-node span {
+  color: var(--text-muted);
+  display: block;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  margin-bottom: .35rem;
+  text-transform: uppercase;
+}
+.org-node strong {
+  color: var(--blue-dark);
+  display: block;
+  font-size: .95rem;
+  line-height: 1.25;
+}
+.org-node small {
+  color: var(--text-muted);
+  display: block;
+  font-size: .74rem;
+  line-height: 1.35;
+  margin-top: .35rem;
+}
+.org-top {
+  background: #0f3d73;
+  border-color: #0f3d73;
+}
+.org-top span,
+.org-top strong { color: #fff; }
+.org-admin {
+  background: #eef6ff;
+  border-color: #9fc5f0;
+}
+.org-vacant {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+.org-line {
+  background: #9fb4d1;
+  height: 28px;
+  margin: 0 auto;
+  width: 2px;
+}
+.org-branches {
+  display: grid;
+  gap: .8rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 1rem;
+  position: relative;
+}
+.org-branches::before {
+  background: #9fb4d1;
+  content: "";
+  height: 2px;
+  left: 10%;
+  position: absolute;
+  right: 10%;
+  top: -14px;
+}
+.org-branches .org-node { max-width: none; }
+
 .visit-pdf-viewer {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1647,6 +1724,10 @@ img { max-width: 100%; }
   .guide-stage-grid,
   .guide-action-grid,
   .final-report-grid { grid-template-columns: 1fr; }
+  .org-branches {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .org-branches::before { display: none; }
   .collaborative-doc-actions,
   .collaborative-doc-open,
   .collaborative-doc-pdf { width: 100%; }
@@ -1732,6 +1813,8 @@ img { max-width: 100%; }
   .guide-stage-hero,
   .ambiental-hero,
   .ambiental-stat { padding: 1rem; }
+  .org-branches { grid-template-columns: 1fr; }
+  .org-node { max-width: none; }
   .guide-stage-hero h2 { font-size: 1.08rem; }
   .ambiental-hero h2 { font-size: 1.08rem; }
   .ambiental-frame-toolbar { padding: .9rem; }
