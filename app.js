@@ -1269,18 +1269,30 @@ function renderFases() {
 }
 
 function renderAmbiental() {
-  const ambientalUrl = 'https://jolopezsv.github.io/clidente-ambiental/';
+  const ambientalPdfUrl = 'https://drive.google.com/file/d/1bJKvFu_RPuOFINvk8oZm7LLF0pDcDMdh/view?usp=sharing';
+  const areas = [
+    { name: 'Planificacion Ambiental', value: 23, status: 'Cumplimiento No Satisfactorio', detail: '2 respuestas al 100%, 1 al 25% y 7 sin implementar.', color: '#c47a15' },
+    { name: 'Cumplimiento de Requisitos', value: 40, status: 'Cumplimiento No Satisfactorio', detail: '2 respuestas al 100% y 3 sin implementar.', color: '#c47a15' },
+    { name: 'Operacion y Uso de Recursos', value: 0, status: 'Cumplimiento Nada Satisfactorio', detail: '6 respuestas sin implementar.', color: '#c13030' },
+    { name: 'Gestion de Efluentes y Residuos', value: 43, status: 'Cumplimiento No Satisfactorio', detail: '3 respuestas al 100% y 4 sin implementar.', color: '#c47a15' },
+  ];
+  const gaps = [
+    'Definir objetivos, metas, indicadores y politica ambiental formal.',
+    'Documentar cumplimiento legal ambiental y compromisos aplicables.',
+    'Establecer requisitos ambientales para compras, proveedores y respuesta a emergencias.',
+    'Crear programa de gestion de aguas residuales, residuos solidos y emisiones GEI.',
+  ];
 
   return `
-  <h1 class="section-title">Diagnóstico Ambiental</h1>
+  <h1 class="section-title">Diagnostico Ambiental</h1>
   <div class="ambiental-hero">
     <div>
-      <div class="ambiental-kicker">Herramienta de evaluación ambiental</div>
-      <h2>Resultados del Diagnóstico de Desempeño Ambiental 2025</h2>
-      <p>Vista integrada del reporte ambiental de CLIDENTE. Desde aquí se puede consultar la evaluación, generar el reporte y abrir la herramienta completa cuando se necesite trabajar con más espacio.</p>
+      <div class="ambiental-kicker">Resultado del diagnostico ambiental</div>
+      <h2>Desempeno ambiental general: 26%</h2>
+      <p>El reporte clasifica a CLIDENTE con <strong>Cumplimiento No Satisfactorio</strong>. La brecha principal esta en operacion, uso de recursos, indicadores, politica ambiental y documentacion del cumplimiento legal.</p>
     </div>
-    <a href="${ambientalUrl}" target="_blank" rel="noopener" class="btn-resource ambiental-open">
-      <i class="fas fa-up-right-from-square"></i> Abrir herramienta completa
+    <a href="${ambientalPdfUrl}" target="_blank" rel="noopener" class="btn-resource ambiental-open">
+      <i class="fas fa-file-pdf"></i> Ver PDF fuente
     </a>
   </div>
 
@@ -1288,8 +1300,8 @@ function renderAmbiental() {
     <div class="ambiental-stat">
       <span class="ambiental-stat-icon"><i class="fas fa-leaf"></i></span>
       <div>
-        <div class="ambiental-stat-value">4 áreas</div>
-        <div class="ambiental-stat-label">Planificación, requisitos, recursos y residuos</div>
+        <div class="ambiental-stat-value">26%</div>
+        <div class="ambiental-stat-label">Promedio general de desempeno ambiental</div>
       </div>
     </div>
     <div class="ambiental-stat">
@@ -1302,23 +1314,52 @@ function renderAmbiental() {
     <div class="ambiental-stat">
       <span class="ambiental-stat-icon blue"><i class="fas fa-chart-radar"></i></span>
       <div>
-        <div class="ambiental-stat-value">Reporte</div>
-        <div class="ambiental-stat-label">Promedio global, brechas y detalle por área</div>
+        <div class="ambiental-stat-value">4 areas</div>
+        <div class="ambiental-stat-label">Planificacion, requisitos, recursos y residuos</div>
       </div>
     </div>
   </div>
 
-  <div class="ambiental-frame-card">
-    <div class="ambiental-frame-toolbar">
-      <div>
-        <div class="card-title">Reporte Ambiental CLIDENTE</div>
-        <p class="card-subtitle">Contenido cargado desde clidente-ambiental.</p>
-      </div>
-      <a href="${ambientalUrl}" target="_blank" rel="noopener" class="btn-resource">
-        <i class="fas fa-external-link-alt"></i> Ver en pestaña nueva
-      </a>
+  <div class="ambiental-metrics-card">
+    <div class="card-title"><i class="fas fa-chart-simple" style="margin-right:.5rem"></i>Balance de Desempeno por Area Evaluada</div>
+    <div class="ambiental-bars">
+      ${areas.map(area => `
+      <div class="ambiental-bar-row">
+        <div class="ambiental-bar-head">
+          <div>
+            <strong>${area.name}</strong>
+            <span>${area.status}</span>
+          </div>
+          <b style="color:${area.color}">${area.value}%</b>
+        </div>
+        <div class="ambiental-bar-track"><span style="width:${area.value}%;background:${area.color}"></span></div>
+        <p>${area.detail}</p>
+      </div>`).join('')}
     </div>
-    <iframe class="ambiental-frame" src="${ambientalUrl}" title="Diagnóstico de Desempeño Ambiental CLIDENTE" loading="lazy"></iframe>
+  </div>
+
+  <div class="ambiental-dashboard-grid">
+    <div class="ambiental-metrics-card">
+      <div class="card-title"><i class="fas fa-clipboard-check" style="margin-right:.5rem"></i>Lectura Ejecutiva</div>
+      <div class="ambiental-score-box">
+        <span>26%</span>
+        <div>
+          <strong>Cumplimiento No Satisfactorio</strong>
+          <p>Promedio general del nivel de desempeno ambiental de la organizacion.</p>
+        </div>
+      </div>
+      <ul class="ambiental-clean-list">
+        <li><strong>5</strong> respuestas en operacion continua.</li>
+        <li><strong>1</strong> respuesta en analisis o diseno.</li>
+        <li><strong>22</strong> respuestas sin implementar.</li>
+      </ul>
+    </div>
+    <div class="ambiental-metrics-card">
+      <div class="card-title"><i class="fas fa-triangle-exclamation" style="margin-right:.5rem"></i>Brechas Prioritarias</div>
+      <ul class="ambiental-clean-list">
+        ${gaps.map(gap => `<li>${gap}</li>`).join('')}
+      </ul>
+    </div>
   </div>`;
 }
 
