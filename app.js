@@ -427,6 +427,24 @@ function renderReuniones() {
         { label: 'Presentación Canva', icon: 'fa-palette', href: 'https://www.canva.com/design/DAHKbs9dEYE/Q-sYw1vxJaPpyXdgxGU-Wg/edit?ui=eyJBIjp7fX0' },
       ]
     },
+    {
+      n: 3, title: 'Revisión de Avances y Recomendaciones de Gestión',
+      date: '9 de junio de 2026',
+      tutor: 'Lic. Roberto Arturo Castro Castañeda',
+      topics: [
+        'Laboratorio Dental: se confirmó que no forma parte de CLIDENTE; debe manejarse como empresa separada y formalizar cobros por renta, salarios y servicios.',
+        'Finanzas: la operación es rentable, con margen bruto aproximado del 66%; la principal presión está en la liquidez por la deuda bancaria.',
+        'Punto de equilibrio: aproximadamente 451 pacientes mensuales y $16,400 en ingresos.',
+        'Ocupación: se identificó alta capacidad ociosa; se recomendó elevar la ocupación al menos al 30% y revisar los horarios de operación.',
+        'Odontólogos: establecer una meta mínima de facturación de $2,500 y evaluar un esquema escalonado de comisiones.',
+        'Compras e inventarios: crear archivo maestro, política de compras, precontratos anuales y mejores condiciones de crédito con proveedores.',
+        'Gestión del cambio: presentar avances a la propietaria antes del informe final e involucrar a las personas responsables de implementar las mejoras.',
+        'Seguimiento: continuar las reuniones con el tutor cada 15 días y avanzar en paralelo con las recomendaciones solicitadas.',
+      ],
+      resources: [
+        { label: 'Transcripción Reunión 3', icon: 'fa-file-word', href: 'docs/Reunion-3-con-Tutor-9-Junio-2026.docx' },
+      ]
+    },
   ];
 
   return `
