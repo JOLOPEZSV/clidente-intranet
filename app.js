@@ -2385,6 +2385,21 @@ function groupCronogramaTasks(tasks) {
   }, {});
 }
 
+function getCronogramaPhaseWeekLabel(task, phaseTasks = []) {
+  if (task.semana) return task.semana;
+  const dateValue = task.fechaInicio || task.fechaFin || task.fechaMeta || task.fechaRealizada;
+  if (!dateValue) return '-';
+  const phaseDates = phaseTasks
+    .map(item => item.fechaInicio || item.fechaFin || item.fechaMeta || item.fechaRealizada)
+    .filter(Boolean)
+    .sort();
+  const startValue = phaseDates[0] || dateValue;
+  const start = new Date(`${startValue}T00:00:00`);
+  const current = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(current.getTime())) return '-';
+  return String(Math.max(1, Math.floor((current - start) / 604800000) + 1));
+}
+
 async function exportCronogramaWord(tasks) {
   const generatedAt = new Date().toLocaleDateString('es-SV', { day: '2-digit', month: 'long', year: 'numeric' });
   const summary = getCronogramaSummary(tasks);
@@ -2448,7 +2463,7 @@ async function exportCronogramaWord(tasks) {
     const phaseHours = groupTasks.reduce((sum, task) => sum + (Number(task.horas) || 0), 0);
     const rows = groupTasks.map((task, index) => {
       const [state, status] = getCronogramaStatus(task);
-      const documents = task.documentos ? escapeHtml(task.documentos).replace(/\n/g, '<br>') : 'Sin documentos registrados';
+      const weekLabel = getCronogramaPhaseWeekLabel(task, groupTasks);
       const cellStyle = getCronogramaWordCellStyle(task.avance);
       const firstCellStyle = getCronogramaWordCellStyle(task.avance, true);
       return `
@@ -2457,12 +2472,11 @@ async function exportCronogramaWord(tasks) {
           <td style="${cellStyle}"><strong>${escapeHtml(task.actividad)}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
           <td style="${cellStyle}" class="center">${escapeHtml(task.responsable || '')}</td>
           <td style="${cellStyle}" class="center"><strong>${Number(task.avance) || 0}%</strong></td>
-          <td style="${cellStyle}" class="center">${escapeHtml(task.semana || '')}</td>
+          <td style="${cellStyle}" class="center">${escapeHtml(weekLabel)}</td>
           <td style="${cellStyle}" class="center">${formatCronogramaDate(task.fechaInicio)}</td>
           <td style="${cellStyle}" class="center">${Number(task.horas) || 0}</td>
           <td style="${cellStyle}" class="center">${formatCronogramaDate(task.fechaFin)}</td>
           <td style="${cellStyle}" class="center status-pill status-${state}">${status}</td>
-          <td style="${cellStyle}">${documents}</td>
         </tr>`;
     }).join('');
 
@@ -2473,15 +2487,14 @@ async function exportCronogramaWord(tasks) {
         <thead>
           <tr>
             <th style="width:5%">N</th>
-            <th style="width:25%">Actividad y entregable / hito</th>
-            <th style="width:11%">Responsable</th>
-            <th style="width:9%">Avance</th>
-            <th style="width:7%">Semana</th>
+            <th style="width:31%">Actividad y entregable / hito</th>
+            <th style="width:12%">Responsable</th>
+            <th style="width:8%">Avance</th>
+            <th style="width:8%">Semana</th>
             <th style="width:12%">Fecha inicio</th>
-            <th style="width:7%">Horas</th>
+            <th style="width:6%">Horas</th>
             <th style="width:12%">Fecha fin</th>
-            <th style="width:10%">Estado</th>
-            <th style="width:12%">Documentos</th>
+            <th style="width:6%">Estado</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
