@@ -1445,9 +1445,12 @@ function renderDesarrolloPlan() {
     {
       date: 'Lunes 29 de junio de 2026',
       label: 'Informe 2',
-      status: 'Programado',
+      status: 'Entregado',
       note: 'Segundo seguimiento quincenal. Periodo cubierto: 15 al 29 de junio de 2026.',
-      links: [],
+      links: [
+        { label: 'Control seguimiento consultoria 2 de 4', href: 'https://docs.google.com/document/d/1dPVeoEte-G9HlK7IbnRMVM-UMVOdf8w7/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
+        { label: 'Plan de trabajo 2 de 4', href: 'https://docs.google.com/document/d/1TQOpw-OiDSBS-Un5XJJ2htxilPA4aW99/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
+      ],
     },
     {
       date: 'Lunes 13 de julio de 2026',
