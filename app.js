@@ -1855,6 +1855,18 @@ function getCronogramaProgressClass(avance, prefix = 'project') {
   return `${prefix}-progress-red`;
 }
 
+function getCronogramaProgressColors(avance) {
+  const value = Math.max(0, Math.min(100, Number(avance) || 0));
+  if (value >= 80) return { fill: '#ecfdf5', border: '#bbf7d0', accent: '#059669' };
+  if (value >= 40) return { fill: '#fffbeb', border: '#fde68a', accent: '#d97706' };
+  return { fill: '#fff1f2', border: '#fecdd3', accent: '#dc2626' };
+}
+
+function getCronogramaWordCellStyle(avance, firstCell = false) {
+  const colors = getCronogramaProgressColors(avance);
+  return `background:${colors.fill};background-color:${colors.fill};border-color:${colors.border};${firstCell ? `border-left:4pt solid ${colors.accent};` : ''}`;
+}
+
 function getGanttLeft(dateValue) {
   const date = dateValue ? new Date(`${dateValue}T00:00:00`) : CRONOGRAMA_START;
   const total = CRONOGRAMA_END - CRONOGRAMA_START;
@@ -2437,18 +2449,20 @@ async function exportCronogramaWord(tasks) {
     const rows = groupTasks.map((task, index) => {
       const [state, status] = getCronogramaStatus(task);
       const documents = task.documentos ? escapeHtml(task.documentos).replace(/\n/g, '<br>') : 'Sin documentos registrados';
+      const cellStyle = getCronogramaWordCellStyle(task.avance);
+      const firstCellStyle = getCronogramaWordCellStyle(task.avance, true);
       return `
         <tr class="detail-row ${getCronogramaProgressClass(task.avance, 'word')}">
-          <td class="center">${index + 1}</td>
-          <td><strong>${escapeHtml(task.actividad)}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
-          <td class="center">${escapeHtml(task.responsable || '')}</td>
-          <td class="center"><strong>${Number(task.avance) || 0}%</strong></td>
-          <td class="center">${escapeHtml(task.semana || '')}</td>
-          <td class="center">${formatCronogramaDate(task.fechaInicio)}</td>
-          <td class="center">${Number(task.horas) || 0}</td>
-          <td class="center">${formatCronogramaDate(task.fechaFin)}</td>
-          <td class="center status-pill status-${state}">${status}</td>
-          <td>${documents}</td>
+          <td style="${firstCellStyle}" class="center">${index + 1}</td>
+          <td style="${cellStyle}"><strong>${escapeHtml(task.actividad)}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
+          <td style="${cellStyle}" class="center">${escapeHtml(task.responsable || '')}</td>
+          <td style="${cellStyle}" class="center"><strong>${Number(task.avance) || 0}%</strong></td>
+          <td style="${cellStyle}" class="center">${escapeHtml(task.semana || '')}</td>
+          <td style="${cellStyle}" class="center">${formatCronogramaDate(task.fechaInicio)}</td>
+          <td style="${cellStyle}" class="center">${Number(task.horas) || 0}</td>
+          <td style="${cellStyle}" class="center">${formatCronogramaDate(task.fechaFin)}</td>
+          <td style="${cellStyle}" class="center status-pill status-${state}">${status}</td>
+          <td style="${cellStyle}">${documents}</td>
         </tr>`;
     }).join('');
 
