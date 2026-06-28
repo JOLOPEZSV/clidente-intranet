@@ -1848,6 +1848,13 @@ function getCronogramaStatus(task) {
   return ['pending', 'Pendiente'];
 }
 
+function getCronogramaProgressClass(avance, prefix = 'project') {
+  const value = Math.max(0, Math.min(100, Number(avance) || 0));
+  if (value >= 80) return `${prefix}-progress-green`;
+  if (value >= 40) return `${prefix}-progress-yellow`;
+  return `${prefix}-progress-red`;
+}
+
 function getGanttLeft(dateValue) {
   const date = dateValue ? new Date(`${dateValue}T00:00:00`) : CRONOGRAMA_START;
   const total = CRONOGRAMA_END - CRONOGRAMA_START;
@@ -1896,7 +1903,7 @@ function renderCronograma() {
       const showGroup = index === 0 || task.grupo !== tasks[index - 1]?.grupo;
       return `
       ${showGroup ? `<div class="project-group-row">${escapeHtml(task.grupo || 'Sin fase')}</div>` : ''}
-      <div class="project-grid project-grid-row" data-task-id="${task.id}">
+      <div class="project-grid project-grid-row ${getCronogramaProgressClass(task.avance)}" data-task-id="${task.id}">
         <div class="project-index">${index + 1}</div>
         <select data-field="grupo">
           ${CRONOGRAMA_GRUPOS.map(name => `<option value="${name}"${(task.grupo || 'Fase 1 - Diagnostico') === name ? ' selected' : ''}>${name}</option>`).join('')}
@@ -2412,7 +2419,7 @@ async function exportCronogramaWord(tasks) {
     .map((task) => {
       const [state, status] = getCronogramaStatus(task);
       return `
-        <tr>
+        <tr class="${getCronogramaProgressClass(task.avance, 'word')}">
           <td>${formatCronogramaDate(task.fechaFin || task.fechaInicio)}</td>
           <td><strong>${escapeHtml(task.actividad || '')}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
           <td>${escapeHtml(task.grupo || '')}</td>
@@ -2431,7 +2438,7 @@ async function exportCronogramaWord(tasks) {
       const [state, status] = getCronogramaStatus(task);
       const documents = task.documentos ? escapeHtml(task.documentos).replace(/\n/g, '<br>') : 'Sin documentos registrados';
       return `
-        <tr class="detail-row">
+        <tr class="detail-row ${getCronogramaProgressClass(task.avance, 'word')}">
           <td class="center">${index + 1}</td>
           <td><strong>${escapeHtml(task.actividad)}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
           <td class="center">${escapeHtml(task.responsable || '')}</td>
@@ -2505,6 +2512,12 @@ async function exportCronogramaWord(tasks) {
       td span { color: #5d6f89; font-size: 7.6pt; }
       .phase-summary th { background: #123d73; color: #fff; }
       .detail-table tbody tr:nth-child(even) td { background: #f8fafc; }
+      .word-progress-red td { background: #fff1f2; border-color: #fecdd3; }
+      .word-progress-yellow td { background: #fffbeb; border-color: #fde68a; }
+      .word-progress-green td { background: #ecfdf5; border-color: #bbf7d0; }
+      .word-progress-red td:first-child { border-left: 4pt solid #dc2626; }
+      .word-progress-yellow td:first-child { border-left: 4pt solid #d97706; }
+      .word-progress-green td:first-child { border-left: 4pt solid #059669; }
       .center { text-align: center; }
       .status-pill { font-weight: bold; }
       .status-done { background: #dcfce7; color: #166534; }

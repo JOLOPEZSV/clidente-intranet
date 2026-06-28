@@ -1238,6 +1238,57 @@ img { max-width: 100%; }
   background: #f8fbff;
 }
 .project-grid-row:hover { background: #f8fbff; }
+.project-grid-row.project-progress-red {
+  background: #fff7f7;
+  box-shadow: inset 6px 0 0 #dc2626;
+}
+.project-grid-row.project-progress-yellow {
+  background: #fffaf0;
+  box-shadow: inset 6px 0 0 #d97706;
+}
+.project-grid-row.project-progress-green {
+  background: #f0fdf7;
+  box-shadow: inset 6px 0 0 #059669;
+}
+.project-grid-row.project-progress-red > *,
+.project-grid-row.project-progress-red textarea,
+.project-grid-row.project-progress-red select,
+.project-grid-row.project-progress-red input {
+  background-color: #fff7f7;
+  border-color: #fecaca;
+}
+.project-grid-row.project-progress-yellow > *,
+.project-grid-row.project-progress-yellow textarea,
+.project-grid-row.project-progress-yellow select,
+.project-grid-row.project-progress-yellow input {
+  background-color: #fffaf0;
+  border-color: #fde68a;
+}
+.project-grid-row.project-progress-green > *,
+.project-grid-row.project-progress-green textarea,
+.project-grid-row.project-progress-green select,
+.project-grid-row.project-progress-green input {
+  background-color: #f0fdf7;
+  border-color: #bbf7d0;
+}
+.project-grid-row.project-progress-red:hover > *,
+.project-grid-row.project-progress-red:hover textarea,
+.project-grid-row.project-progress-red:hover select,
+.project-grid-row.project-progress-red:hover input {
+  background-color: #fff1f2;
+}
+.project-grid-row.project-progress-yellow:hover > *,
+.project-grid-row.project-progress-yellow:hover textarea,
+.project-grid-row.project-progress-yellow:hover select,
+.project-grid-row.project-progress-yellow:hover input {
+  background-color: #fffbeb;
+}
+.project-grid-row.project-progress-green:hover > *,
+.project-grid-row.project-progress-green:hover textarea,
+.project-grid-row.project-progress-green:hover select,
+.project-grid-row.project-progress-green:hover input {
+  background-color: #ecfdf5;
+}
 .project-group-row {
   background: #e8f0fb;
   border-bottom: 1px solid #cbd9ee;
