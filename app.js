@@ -1429,7 +1429,40 @@ function renderDesarrolloPlan() {
   const reportItems = [
     'Control de seguimiento quincenal usando el modelo proporcionado por ISEADE.',
     'Plan de trabajo con actividades desglosadas.',
-    'Porcentaje de avance en relación con la programación de actividades.',
+    'Porcentaje de avance en relacion con la programacion de actividades.',
+  ];
+  const followupReports = [
+    {
+      date: 'Lunes 15 de junio de 2026',
+      label: 'Informe 1',
+      status: 'Entregado',
+      note: 'Primer avance quincenal presentado con control de consultoria y plan de trabajo 1 de 4.',
+      links: [
+        { label: 'Control de consultoria 1 de 4', href: 'https://drive.google.com/file/d/14OeL2tp4WNRwplU1vtGv15Gtdg75XCVa/view?usp=sharing', icon: 'file-pdf' },
+        { label: 'Plan de trabajo 1 de 4', href: 'https://drive.google.com/file/d/1Bv6iaE7w8qpvIpLRUGiDU94L3FpYZLIM/view?usp=sharing', icon: 'file-pdf' },
+      ],
+    },
+    {
+      date: 'Lunes 29 de junio de 2026',
+      label: 'Informe 2',
+      status: 'Programado',
+      note: 'Segundo seguimiento quincenal. Periodo cubierto: 15 al 29 de junio de 2026.',
+      links: [],
+    },
+    {
+      date: 'Lunes 13 de julio de 2026',
+      label: 'Informe 3',
+      status: 'Programado',
+      note: 'Tercer seguimiento quincenal del desarrollo del plan de trabajo.',
+      links: [],
+    },
+    {
+      date: 'Lunes 27 de julio de 2026',
+      label: 'Informe 4',
+      status: 'Programado',
+      note: 'Cuarto seguimiento quincenal previo al cierre de la Etapa II.',
+      links: [],
+    },
   ];
 
   return `
@@ -1437,9 +1470,9 @@ function renderDesarrolloPlan() {
 
   <div class="guide-stage-hero">
     <div>
-      <div class="guide-stage-kicker">Etapa II · Desarrollo en 10 semanas</div>
-      <h2>Realización de actividades</h2>
-      <p>Según la guía de Vanessa para MAE 58, esta etapa analiza las posibles alternativas y define las acciones a realizar con base en los objetivos generales y específicos de la consultoría.</p>
+      <div class="guide-stage-kicker">Etapa II - Desarrollo en 10 semanas</div>
+      <h2>Realizacion de actividades</h2>
+      <p>Segun la guia de Vanessa para MAE 58, esta etapa analiza las posibles alternativas y define las acciones a realizar con base en los objetivos generales y especificos de la consultoria.</p>
     </div>
     <span class="guide-stage-badge"><i class="fas fa-calendar-days"></i> Finaliza: 16 de agosto de 2026</span>
   </div>
@@ -1447,8 +1480,8 @@ function renderDesarrolloPlan() {
   <div class="guide-stage-grid">
     <div class="card">
       <div class="card-title"><i class="fas fa-bullseye" style="margin-right:.5rem"></i>Enfoque de la etapa</div>
-      <p class="guide-stage-text">El enfoque principal es fortalecer las capacidades de la empresa mediante el perfeccionamiento de sus estrategias, políticas y procesos.</p>
-      <p class="guide-stage-text">Las acciones a realizar deberán ser acordadas con la empresa y, en la medida de lo posible, implementadas durante el proceso de consultoría.</p>
+      <p class="guide-stage-text">El enfoque principal es fortalecer las capacidades de la empresa mediante el perfeccionamiento de sus estrategias, politicas y procesos.</p>
+      <p class="guide-stage-text">Las acciones a realizar deberan ser acordadas con la empresa y, en la medida de lo posible, implementadas durante el proceso de consultoria.</p>
     </div>
 
     <div class="card">
@@ -1457,15 +1490,42 @@ function renderDesarrolloPlan() {
       <ul class="guide-stage-list">
         ${reportItems.map(item => `<li>${item}</li>`).join('')}
       </ul>
+      <div class="resource-buttons followup-primary-actions">
+        <a href="https://drive.google.com/file/d/14OeL2tp4WNRwplU1vtGv15Gtdg75XCVa/view?usp=sharing" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-file-pdf"></i> Control de consultoria 1 de 4</a>
+        <a href="https://drive.google.com/file/d/1Bv6iaE7w8qpvIpLRUGiDU94L3FpYZLIM/view?usp=sharing" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-file-pdf"></i> Plan de trabajo 1 de 4</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card followup-schedule-card">
+    <div class="card-title"><i class="fas fa-calendar-check" style="margin-right:.5rem"></i>Calendario de presentacion de seguimiento</div>
+    <p class="guide-stage-text">Calendario quincenal de informes para mantener al tutor y al equipo alineados con los avances de la Etapa II.</p>
+    <div class="followup-schedule">
+      ${followupReports.map(report => `
+        <div class="followup-item ${report.links.length ? 'is-ready' : ''}">
+          <div class="followup-date">
+            <span>${report.date}</span>
+            <strong>${report.label}</strong>
+          </div>
+          <div class="followup-meta">
+            <span class="followup-status ${report.links.length ? 'done' : 'pending'}">${report.status}</span>
+            <p>${report.note}</p>
+            ${report.links.length ? `
+              <div class="resource-buttons followup-links">
+                ${report.links.map(link => `<a href="${link.href}" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-${link.icon}"></i> ${link.label}</a>`).join('')}
+              </div>` : '<span class="followup-pending-note">Pendiente de cargar documentos</span>'}
+          </div>
+        </div>
+      `).join('')}
     </div>
   </div>
 
   <div class="card">
-    <div class="card-title"><i class="fas fa-clipboard-check" style="margin-right:.5rem"></i>Aplicación para CLIDENTE</div>
+    <div class="card-title"><i class="fas fa-clipboard-check" style="margin-right:.5rem"></i>Aplicacion para CLIDENTE</div>
     <div class="guide-action-grid">
-      <div><span>1</span><strong>Priorizar alternativas</strong><p>Convertir hallazgos del diagnóstico en líneas de acción concretas.</p></div>
-      <div><span>2</span><strong>Acordar acciones</strong><p>Validar con CLIDENTE qué acciones son factibles durante la consultoría.</p></div>
-      <div><span>3</span><strong>Medir avance</strong><p>Reportar cada quince días actividades, responsables y porcentaje de cumplimiento.</p></div>
+      <div><span>1</span><strong>Priorizar alternativas</strong><p>Convertir hallazgos del diagnostico en lineas de accion concretas.</p></div>
+      <div><span>2</span><strong>Acordar acciones</strong><p>Validar con CLIDENTE que acciones son factibles durante la consultoria.</p></div>
+      <div><span>3</span><strong>Medir avance</strong><p>Reportar cada quince dias actividades, responsables y porcentaje de cumplimiento.</p></div>
     </div>
   </div>`;
 }
