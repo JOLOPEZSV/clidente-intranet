@@ -2333,6 +2333,21 @@ function formatCronogramaDate(dateValue) {
   return date.toLocaleDateString('es-SV', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
+function getAssetDataUri(assetPath) {
+  return fetch(assetPath, { cache: 'force-cache' })
+    .then(response => {
+      if (!response.ok) throw new Error(`No se pudo cargar ${assetPath}`);
+      return response.blob();
+    })
+    .then(blob => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    }))
+    .catch(() => assetPath);
+}
+
 function getCronogramaSummary(tasks) {
   const total = tasks.length;
   const done = tasks.filter(task => getCronogramaStatus(task)[0] === 'done').length;
@@ -2351,7 +2366,7 @@ function groupCronogramaTasks(tasks) {
   }, {});
 }
 
-function exportCronogramaWord(tasks) {
+async function exportCronogramaWord(tasks) {
   const generatedAt = new Date().toLocaleDateString('es-SV', { day: '2-digit', month: 'long', year: 'numeric' });
   const summary = getCronogramaSummary(tasks);
   const groups = groupCronogramaTasks(tasks);
@@ -2359,6 +2374,10 @@ function exportCronogramaWord(tasks) {
   const startDate = CRONOGRAMA_REPORT_PERIOD.start;
   const endDate = CRONOGRAMA_REPORT_PERIOD.end;
   const phasesCount = Object.keys(groups).length;
+  const [clidenteLogo, iseadeLogo] = await Promise.all([
+    getAssetDataUri('LOGO CLIDENTE.jpeg'),
+    getAssetDataUri('Nuevo Logo ISEADE-04.png'),
+  ]);
 
   const getRange = (phaseTasks) => {
     const dates = phaseTasks
@@ -2463,6 +2482,15 @@ function exportCronogramaWord(tasks) {
       .subtitle { color: #5d6f89; font-size: 11pt; margin: 0 0 10pt; }
       .top-rule { background: #123d73; height: 4pt; line-height: 4pt; margin: 0 0 14pt; }
       .cover { border-bottom: 1pt solid #c8d8ef; margin-bottom: 12pt; padding-bottom: 10pt; }
+      .brand-table { border-collapse: collapse; margin: 0 0 12pt; width: 100%; }
+      .brand-table td { border: 0; padding: 0; vertical-align: middle; }
+      .brand-left { text-align: left; width: 42%; }
+      .brand-center { color: #123d73; font-size: 15pt; font-weight: bold; letter-spacing: .6pt; text-align: center; text-transform: uppercase; width: 16%; }
+      .brand-right { text-align: right; width: 42%; }
+      .client-logo { height: 52pt; width: 54pt; }
+      .school-logo { height: 45pt; width: 45pt; vertical-align: middle; }
+      .school-wordmark { color: #071933; display: inline-block; font-size: 10pt; font-weight: bold; letter-spacing: .4pt; line-height: 1.05; margin-left: 6pt; text-align: left; text-transform: uppercase; vertical-align: middle; }
+      .school-wordmark strong { color: #071933; font-size: 17pt; letter-spacing: 1pt; }
       .meta-line { color: #1f2937; font-size: 9pt; margin: 0; }
       .meta-line strong { color: #123d73; }
       .kpi-table { border-collapse: separate; border-spacing: 4pt; margin: 10pt 0 12pt; width: 100%; }
@@ -2490,6 +2518,16 @@ function exportCronogramaWord(tasks) {
     <div class="WordSection1">
       <div class="top-rule">&nbsp;</div>
       <div class="cover">
+        <table class="brand-table">
+          <tr>
+            <td class="brand-left"><img class="client-logo" src="${clidenteLogo}" alt="CLIDENTE"></td>
+            <td class="brand-center">Seguimiento<br>a consultor&iacute;a</td>
+            <td class="brand-right">
+              <img class="school-logo" src="${iseadeLogo}" alt="ISEADE FEPADE">
+              <span class="school-wordmark"><strong>ISEADE</strong><br>Business School<br>FEPADE</span>
+            </td>
+          </tr>
+        </table>
         <h1>Cronograma de la Consultor&iacute;a</h1>
         <p class="subtitle">Trabajo de Graduaci&oacute;n MBA ISEADE FEPADE - Cl&iacute;nica Dental CLIDENTE</p>
         <p class="meta-line"><strong>Documento generado:</strong> ${generatedAt}</p>
