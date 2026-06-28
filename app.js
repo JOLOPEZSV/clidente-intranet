@@ -1587,7 +1587,29 @@ const CRONOGRAMA_STORAGE_KEY = 'clidente_cronograma_project_v1';
 const CRONOGRAMA_START = new Date('2026-04-22T00:00:00');
 const CRONOGRAMA_END = new Date('2026-09-18T00:00:00');
 const CRONOGRAMA_RESPONSABLES = ['JAIME', 'CECILIA', 'RICARDO', 'ELIAS', 'TODOS'];
+const CRONOGRAMA_REPORT_PERIOD = { start: '2026-06-15', end: '2026-06-29' };
 const CRONOGRAMA_GRUPOS = ['Fase 0 - Inicio del Trabajo de Graduacion', 'Fase 1 - Diagnostico', 'Fase 2 - Desarrollo Plan de Trabajo', 'Fase 3 - Elaboracion Informe Final', 'Fase 4 - Presentacion y Evaluacion', 'Post-correcciones'];
+
+const CRONOGRAMA_PLAN_TRABAJO_20260615_TASKS = [
+  { id: 'cr-f2-20260615-001', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Revisar lineamientos del articulo y comenzar redaccion', descripcion: 'Lineamientos del articulo enviados por Vanessa. Accionable del Plan de trabajo 1de4.', responsable: 'JAIME', avance: 50, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-19' },
+  { id: 'cr-f2-20260615-002', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Gestionar firma original del tutor', descripcion: 'Firma original del tutor, sin perforar, en sobre manila. Enviar digital separado del informe.', responsable: 'JAIME', avance: 0, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-19' },
+  { id: 'cr-f2-20260615-003', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Completar ficha MINEDUCYT', descripcion: 'Gestionar y completar la ficha del MINEDUCYT en formato Word de Vanessa.', responsable: 'JAIME', avance: 0, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-19' },
+  { id: 'cr-f2-20260615-004', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Redactar politica formal de meta minima de produccion por odontologa', descripcion: 'Politica de meta minima de produccion de $2,500 mensuales. Si no se alcanza en 3 meses consecutivos, activar no renovacion de espacio. Compartir a Ricardo listado de odontologos y niveles de produccion para cuantificar costo de silla subutilizada.', responsable: 'JAIME', avance: 50, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-005', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Agendar dos reuniones intermedias con la Dra. Vigil', descripcion: 'Compartir avances antes de la presentacion final.', responsable: 'JAIME', avance: 20, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-006', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Fortalecer analisis de comision escalonada', descripcion: 'Construir el cruce entre costo de silla e ingreso por odontologa.', responsable: 'RICARDO', avance: 50, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-007', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Proyectar impacto financiero de tacticas comerciales y operativas', descripcion: 'Usar datos de Elias (+8% seguimiento post consulta), Cecilia (+15% programa de referidos) y listado de produccion por odontologa de Jaime para cuantificar ingresos mensuales adicionales y costo real de sillas subutilizadas. Presentar proyeccion integrada para reunion del 23 de junio.', responsable: 'RICARDO', avance: 60, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-008', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Agregar media aritmetica en tabla de facturacion', descripcion: 'Desarrollar politica de meta minima de produccion de $2,500 mensuales.', responsable: 'RICARDO', avance: 60, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-009', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Activar campana de referidos', descripcion: 'Contactar por WhatsApp o llamada directa desde telefono de la clinica a los 103 pacientes referidos identificados, con oferta del 10% de descuento por cada nuevo referido.', responsable: 'CECILIA', avance: 50, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-010', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Estimar pacientes adicionales por programa de referidos', descripcion: 'Roberto sugiere incremento del 15% de ocupacion como referencia. Compartir dato con Ricardo para proyectarlo como ingresos mensuales adicionales.', responsable: 'CECILIA', avance: 60, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-011', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Corregir modelo de gestion comercial', descripcion: 'Agregar objetivo medible en dinero o utilidad y responsable nombrado.', responsable: 'CECILIA', avance: 50, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-012', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Estimar pacientes adicionales por seguimiento post atencion', descripcion: 'Reactivar protocolo de seguimiento post atencion. Roberto indica que puede traducirse facilmente en +8% de ocupacion. Compartir dato con Ricardo para proyeccion de ingresos mensuales adicionales.', responsable: 'ELIAS', avance: 50, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-013', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Construir grafica de ingreso real vs potencial perdido', descripcion: 'Grafica de ingreso real contra potencial perdido por capacidad ociosa, expresado en valores mensuales.', responsable: 'ELIAS', avance: 50, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-014', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Cuantificar ahorro por precontratos anuales con proveedores', descripcion: 'Evaluar ahorro estimado de precontratos anuales y reduccion de horas de apertura en horarios de baja demanda.', responsable: 'ELIAS', avance: 50, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-06-23' },
+  { id: 'cr-f2-20260615-015', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Registrar horas efectivas de la fase 2', descripcion: 'Comenzar a registrar horas efectivas de esta fase desde ya. No incluir horas del diagnostico.', responsable: 'TODOS', avance: 10, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-08-31' },
+  { id: 'cr-f2-20260615-016', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Registrar uso de inteligencia artificial', descripcion: 'Cada vez que se use IA, registrar herramienta, proposito y URL del prompt en el cuadro de la seccion 4.', responsable: 'TODOS', avance: 20, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-08-31' },
+  { id: 'cr-f2-20260615-017', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '15-29 jun', actividad: 'Incluir recomendacion ambiental en informe final', descripcion: 'Al menos una recomendacion ambiental incluida dentro de las recomendaciones del informe final. No es documento aparte.', responsable: 'JAIME, ELIAS', avance: 30, horas: 8, fechaInicio: '2026-06-15', fechaFin: '2026-08-31' },
+];
+
 const CRONOGRAMA_DEFAULT_TASKS = [
   { id: 'cr-000', grupo: 'Fase 0 - Inicio del Trabajo de Graduacion', actividad: 'Induccion de reglas del Trabajo de Graduacion', descripcion: 'Sesion inicial con Vanessa e ISEADE para explicar reglas, etapas, entregables, fechas importantes y lineamientos generales del proceso MAE LVIII.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-04-22', fechaRealizada: '2026-04-22' },
   { id: 'cr-001', grupo: 'Fase 0 - Inicio del Trabajo de Graduacion', actividad: 'Comunicacion oficial a empresa y tutor', descripcion: 'Inicio formal del proceso MAE LVIII.', responsable: 'TODOS', avance: 100, fechaMeta: '2026-04-24', fechaRealizada: '2026-04-24' },
@@ -1602,6 +1624,7 @@ const CRONOGRAMA_DEFAULT_TASKS = [
   { id: 'cr-008', grupo: 'Fase 1 - Diagnostico', actividad: 'Reunion 2 con Tutor Roberto', descripcion: 'Presentacion consolidada de elementos solicitados por integrante y revision de soportes.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-05-26', fechaRealizada: '' },
   { id: 'cr-009', grupo: 'Fase 1 - Diagnostico', actividad: 'Entrega ISEADE: diagnostico', descripcion: 'Entrega fisica anillada y digital del informe de diagnostico.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-06-01', fechaRealizada: '' },
   { id: 'cr-010', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', actividad: 'Desarrollo del plan de trabajo', descripcion: 'Ejecucion de acciones acordadas, seguimiento quincenal y medicion de avances.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-08-16', fechaRealizada: '' },
+  ...CRONOGRAMA_PLAN_TRABAJO_20260615_TASKS,
   { id: 'cr-011', grupo: 'Fase 3 - Elaboracion Informe Final', actividad: 'Entrega interna informe final al tutor', descripcion: 'Documento final para revision del tutor, 8 dias antes de ISEADE.', responsable: 'JAIME', avance: 0, fechaMeta: '2026-08-23', fechaRealizada: '' },
   { id: 'cr-012', grupo: 'Fase 3 - Elaboracion Informe Final', actividad: 'Entrega ISEADE: informe final', descripcion: 'Trabajo de escritorio final y documentacion completa.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-08-31', fechaRealizada: '' },
   { id: 'cr-013', grupo: 'Fase 4 - Presentacion y Evaluacion', actividad: 'Presentacion ante jurado evaluador', descripcion: 'Exposicion ejecutiva del informe final de consultoria.', responsable: 'TODOS', avance: 0, fechaMeta: '2026-09-07', fechaRealizada: '' },
@@ -1664,6 +1687,38 @@ function normalizeCronogramaTask(task = {}, index = 0) {
 
 function normalizeCronogramaTasks(tasks) {
   return (Array.isArray(tasks) ? tasks : CRONOGRAMA_DEFAULT_TASKS).map(normalizeCronogramaTask);
+}
+
+
+function normalizeCronogramaComparableText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function isCronogramaImportedTaskPresent(tasks, importedTask) {
+  const importedActivity = normalizeCronogramaComparableText(importedTask.actividad);
+  const importedCombined = normalizeCronogramaComparableText(`${importedTask.actividad} ${importedTask.descripcion}`);
+  const importedWords = importedActivity.split(' ').filter(word => word.length > 4);
+  return tasks.some(task => {
+    if (task.id === importedTask.id) return true;
+    const activity = normalizeCronogramaComparableText(task.actividad);
+    const combined = normalizeCronogramaComparableText(`${task.actividad} ${task.descripcion}`);
+    if (activity && importedActivity && (activity.includes(importedActivity) || importedActivity.includes(activity))) return true;
+    if (combined && importedCombined && (combined.includes(importedActivity) || importedCombined.includes(activity))) return true;
+    const matches = importedWords.filter(word => combined.includes(word)).length;
+    return importedWords.length >= 3 && matches >= Math.min(3, importedWords.length);
+  });
+}
+
+function mergeCronogramaImportedTasks(tasks) {
+  const normalized = normalizeCronogramaTasks(tasks);
+  const imported = normalizeCronogramaTasks(CRONOGRAMA_PLAN_TRABAJO_20260615_TASKS);
+  const missing = imported.filter(task => !isCronogramaImportedTaskPresent(normalized, task));
+  return missing.length ? [...normalized, ...missing] : normalized;
 }
 
 function getCronogramaTasks() {
@@ -1744,8 +1799,13 @@ async function loadCronogramaFromSupabase() {
   await seedCronogramaSupabaseIfEmpty();
   const rows = await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?select=*&order=sort_order.asc`);
   const tasks = getCronogramaTasksFromSupabaseRows(rows || []);
-  saveCronogramaTasksLocal(tasks.length ? tasks : CRONOGRAMA_DEFAULT_TASKS);
-  return tasks.length ? tasks : normalizeCronogramaTasks(CRONOGRAMA_DEFAULT_TASKS);
+  const baseTasks = tasks.length ? tasks : normalizeCronogramaTasks(CRONOGRAMA_DEFAULT_TASKS);
+  const mergedTasks = mergeCronogramaImportedTasks(baseTasks);
+  saveCronogramaTasksLocal(mergedTasks);
+  if (mergedTasks.length !== baseTasks.length) {
+    await saveCronogramaToSupabase(mergedTasks);
+  }
+  return mergedTasks;
 }
 
 async function deleteCronogramaRemoteIds(ids) {
@@ -2296,12 +2356,8 @@ function exportCronogramaWord(tasks) {
   const summary = getCronogramaSummary(tasks);
   const groups = groupCronogramaTasks(tasks);
   const totalHours = tasks.reduce((sum, task) => sum + (Number(task.horas) || 0), 0);
-  const datedValues = tasks
-    .flatMap(task => [task.fechaInicio, task.fechaFin])
-    .filter(Boolean)
-    .sort();
-  const startDate = datedValues[0] || '';
-  const endDate = datedValues[datedValues.length - 1] || '';
+  const startDate = CRONOGRAMA_REPORT_PERIOD.start;
+  const endDate = CRONOGRAMA_REPORT_PERIOD.end;
   const phasesCount = Object.keys(groups).length;
 
   const getRange = (phaseTasks) => {
