@@ -2295,32 +2295,85 @@ function exportCronogramaWord(tasks) {
   const generatedAt = new Date().toLocaleDateString('es-SV', { day: '2-digit', month: 'long', year: 'numeric' });
   const summary = getCronogramaSummary(tasks);
   const groups = groupCronogramaTasks(tasks);
+  const totalHours = tasks.reduce((sum, task) => sum + (Number(task.horas) || 0), 0);
+  const datedValues = tasks
+    .flatMap(task => [task.fechaInicio, task.fechaFin])
+    .filter(Boolean)
+    .sort();
+  const startDate = datedValues[0] || '';
+  const endDate = datedValues[datedValues.length - 1] || '';
+  const phasesCount = Object.keys(groups).length;
+
+  const getRange = (phaseTasks) => {
+    const dates = phaseTasks
+      .flatMap(task => [task.fechaInicio, task.fechaFin])
+      .filter(Boolean)
+      .sort();
+    if (!dates.length) return 'Pendiente';
+    return `${formatCronogramaDate(dates[0])} - ${formatCronogramaDate(dates[dates.length - 1])}`;
+  };
+
+  const phaseSummaryRows = Object.entries(groups).map(([group, groupTasks]) => {
+    const phaseSummary = getCronogramaSummary(groupTasks);
+    const phaseHours = groupTasks.reduce((sum, task) => sum + (Number(task.horas) || 0), 0);
+    return `
+      <tr>
+        <td><strong>${escapeHtml(group)}</strong></td>
+        <td class="center">${phaseSummary.total}</td>
+        <td class="center"><strong>${phaseSummary.average}%</strong></td>
+        <td class="center">${phaseHours}</td>
+        <td class="center">${phaseSummary.done}</td>
+        <td class="center">${phaseSummary.wip}</td>
+        <td class="center">${phaseSummary.pending}</td>
+        <td>${getRange(groupTasks)}</td>
+      </tr>`;
+  }).join('');
+
+  const pendingRows = tasks
+    .filter(task => getCronogramaStatus(task)[0] !== 'done')
+    .slice()
+    .sort((a, b) => String(a.fechaFin || a.fechaInicio || '9999-12-31').localeCompare(String(b.fechaFin || b.fechaInicio || '9999-12-31')))
+    .slice(0, 6)
+    .map((task) => {
+      const [state, status] = getCronogramaStatus(task);
+      return `
+        <tr>
+          <td>${formatCronogramaDate(task.fechaFin || task.fechaInicio)}</td>
+          <td><strong>${escapeHtml(task.actividad || '')}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
+          <td>${escapeHtml(task.grupo || '')}</td>
+          <td class="center">${escapeHtml(task.responsable || '')}</td>
+          <td class="center"><strong>${Number(task.avance) || 0}%</strong></td>
+          <td class="center status-pill status-${state}">${status}</td>
+        </tr>`;
+    }).join('');
+
   const phaseSections = Object.entries(groups).map(([group, groupTasks]) => {
     const phaseAverage = groupTasks.length
       ? Math.round(groupTasks.reduce((sum, task) => sum + (Number(task.avance) || 0), 0) / groupTasks.length)
       : 0;
+    const phaseHours = groupTasks.reduce((sum, task) => sum + (Number(task.horas) || 0), 0);
     const rows = groupTasks.map((task, index) => {
-      const [, status] = getCronogramaStatus(task);
+      const [state, status] = getCronogramaStatus(task);
       const documents = task.documentos ? escapeHtml(task.documentos).replace(/\n/g, '<br>') : 'Sin documentos registrados';
       return `
-        <tr>
+        <tr class="detail-row">
           <td class="center">${index + 1}</td>
           <td><strong>${escapeHtml(task.actividad)}</strong><br><span>${escapeHtml(task.descripcion || '')}</span></td>
           <td class="center">${escapeHtml(task.responsable || '')}</td>
           <td class="center"><strong>${Number(task.avance) || 0}%</strong></td>
           <td class="center">${escapeHtml(task.semana || '')}</td>
-          <td>${formatCronogramaDate(task.fechaInicio)}</td>
+          <td class="center">${formatCronogramaDate(task.fechaInicio)}</td>
           <td class="center">${Number(task.horas) || 0}</td>
-          <td>${formatCronogramaDate(task.fechaFin)}</td>
-          <td class="center">${status}</td>
+          <td class="center">${formatCronogramaDate(task.fechaFin)}</td>
+          <td class="center status-pill status-${state}">${status}</td>
           <td>${documents}</td>
         </tr>`;
     }).join('');
 
     return `
       <h2>${escapeHtml(group)}</h2>
-      <p class="phase-note">Actividades: <strong>${groupTasks.length}</strong> | Avance promedio: <strong>${phaseAverage}%</strong></p>
-      <table>
+      <p class="phase-note">Actividades: <strong>${groupTasks.length}</strong> | Avance promedio: <strong>${phaseAverage}%</strong> | Horas planificadas: <strong>${phaseHours}</strong> | Periodo: <strong>${getRange(groupTasks)}</strong></p>
+      <table class="detail-table">
         <thead>
           <tr>
             <th style="width:5%">N</th>
@@ -2348,40 +2401,88 @@ function exportCronogramaWord(tasks) {
     <style>
       @page WordSection1 { size: 11in 8.5in; margin: .55in .45in .55in .45in; }
       div.WordSection1 { page: WordSection1; }
-      body { color: #1f2937; font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.35; }
-      h1 { color: #123d73; font-size: 22pt; margin: 0 0 6pt; }
-      h2 { background: #1a56a4; color: #fff; font-size: 12pt; margin: 18pt 0 0; padding: 7pt 9pt; text-transform: uppercase; }
-      .subtitle { color: #5d6f89; font-size: 11pt; margin: 0 0 12pt; }
-      .meta { border-top: 3pt solid #1a56a4; margin-bottom: 14pt; padding-top: 8pt; }
-      .summary { border-collapse: collapse; margin: 10pt 0 16pt; width: 100%; }
-      .summary td { background: #edf4ff; border: 1pt solid #c8d8ef; color: #123d73; font-weight: bold; padding: 8pt; text-align: center; }
-      .summary span { color: #5d6f89; display: block; font-size: 8pt; font-weight: normal; margin-top: 2pt; text-transform: uppercase; }
-      .phase-note { color: #5d6f89; font-size: 9pt; margin: 5pt 0 7pt; }
+      body { color: #1f2937; font-family: Arial, sans-serif; font-size: 9.5pt; line-height: 1.35; }
+      h1 { color: #123d73; font-size: 24pt; letter-spacing: .2pt; margin: 0 0 5pt; }
+      h2 { background: #1a56a4; color: #fff; font-size: 11.5pt; margin: 16pt 0 0; padding: 7pt 9pt; text-transform: uppercase; }
+      .subtitle { color: #5d6f89; font-size: 11pt; margin: 0 0 10pt; }
+      .top-rule { background: #123d73; height: 4pt; line-height: 4pt; margin: 0 0 14pt; }
+      .cover { border-bottom: 1pt solid #c8d8ef; margin-bottom: 12pt; padding-bottom: 10pt; }
+      .meta-line { color: #1f2937; font-size: 9pt; margin: 0; }
+      .meta-line strong { color: #123d73; }
+      .kpi-table { border-collapse: separate; border-spacing: 4pt; margin: 10pt 0 12pt; width: 100%; }
+      .kpi-table td { background: #edf4ff; border: 1pt solid #c8d8ef; color: #123d73; font-size: 17pt; font-weight: bold; padding: 8pt 7pt; text-align: center; vertical-align: middle; }
+      .kpi-table span { color: #5d6f89; display: block; font-size: 7.5pt; font-weight: bold; letter-spacing: .7pt; margin-top: 2pt; text-transform: uppercase; }
+      .executive-note { background: #f8fafc; border-left: 5pt solid #1a56a4; color: #30415c; font-size: 9pt; margin: 8pt 0 13pt; padding: 8pt 10pt; }
+      .section-label { color: #123d73; font-size: 12pt; font-weight: bold; margin: 12pt 0 6pt; text-transform: uppercase; }
+      .phase-note { color: #5d6f89; font-size: 8.5pt; margin: 5pt 0 7pt; }
       table { border-collapse: collapse; margin-bottom: 12pt; width: 100%; }
-      th { background: #dbeafe; border: 1pt solid #9fb8dc; color: #123d73; font-size: 8pt; padding: 6pt 5pt; text-transform: uppercase; }
-      td { border: 1pt solid #cfd9e6; font-size: 8.5pt; padding: 6pt 5pt; vertical-align: top; }
-      td span { color: #5d6f89; font-size: 8pt; }
+      th { background: #dbeafe; border: 1pt solid #9fb8dc; color: #123d73; font-size: 7.6pt; padding: 6pt 5pt; text-transform: uppercase; }
+      td { border: 1pt solid #cfd9e6; font-size: 8pt; padding: 6pt 5pt; vertical-align: top; }
+      td span { color: #5d6f89; font-size: 7.6pt; }
+      .phase-summary th { background: #123d73; color: #fff; }
+      .detail-table tbody tr:nth-child(even) td { background: #f8fafc; }
       .center { text-align: center; }
+      .status-pill { font-weight: bold; }
+      .status-done { background: #dcfce7; color: #166534; }
+      .status-wip { background: #fef3c7; color: #854d0e; }
+      .status-pending { background: #dbeafe; color: #1a56a4; }
+      .page-break { page-break-before: always; }
       .footer { border-top: 1pt solid #cfd9e6; color: #5d6f89; font-size: 8pt; margin-top: 16pt; padding-top: 7pt; }
     </style>
   </head>
   <body>
     <div class="WordSection1">
-      <div class="meta">
-        <h1>Cronograma de la Consultoria</h1>
-        <p class="subtitle">Trabajo de Graduacion MBA ISEADE FEPADE - Clinica Dental CLIDENTE</p>
-        <p><strong>Documento generado:</strong> ${generatedAt}<br>
-        <strong>Criterio de seguimiento:</strong> entregas internas al tutor al menos 8 dias antes de las fechas oficiales solicitadas por ISEADE.</p>
+      <div class="top-rule">&nbsp;</div>
+      <div class="cover">
+        <h1>Cronograma de la Consultor&iacute;a</h1>
+        <p class="subtitle">Trabajo de Graduaci&oacute;n MBA ISEADE FEPADE - Cl&iacute;nica Dental CLIDENTE</p>
+        <p class="meta-line"><strong>Documento generado:</strong> ${generatedAt}</p>
+        <p class="meta-line"><strong>Criterio de seguimiento:</strong> entregas internas al tutor al menos 8 d&iacute;as antes de las fechas oficiales solicitadas por ISEADE.</p>
+        <p class="meta-line"><strong>Periodo cubierto:</strong> ${formatCronogramaDate(startDate)} - ${formatCronogramaDate(endDate)}</p>
       </div>
-      <table class="summary">
+      <table class="kpi-table">
         <tr>
           <td>${summary.total}<span>Actividades</span></td>
           <td>${summary.average}%<span>Avance promedio</span></td>
           <td>${summary.done}<span>Completadas</span></td>
           <td>${summary.wip}<span>En progreso</span></td>
           <td>${summary.pending}<span>Pendientes</span></td>
+          <td>${totalHours}<span>Horas planificadas</span></td>
         </tr>
       </table>
+      <p class="executive-note"><strong>Lectura gerencial:</strong> el cronograma consolida ${summary.total} actividades distribuidas en ${phasesCount} fases de trabajo. El avance promedio actual es ${summary.average}%, con ${summary.done} actividades completadas, ${summary.wip} en progreso y ${summary.pending} pendientes. Este documento prioriza la lectura ejecutiva para tutor y equipo, manteniendo el detalle operativo por fase en las p&aacute;ginas siguientes.</p>
+      <p class="section-label">Resumen por fase</p>
+      <table class="phase-summary">
+        <thead>
+          <tr>
+            <th style="width:29%">Fase</th>
+            <th style="width:8%">Acts.</th>
+            <th style="width:9%">Avance</th>
+            <th style="width:8%">Horas</th>
+            <th style="width:9%">Comp.</th>
+            <th style="width:9%">Prog.</th>
+            <th style="width:9%">Pend.</th>
+            <th style="width:19%">Rango de fechas</th>
+          </tr>
+        </thead>
+        <tbody>${phaseSummaryRows}</tbody>
+      </table>
+      <p class="section-label">Pr&oacute;ximos hitos de atenci&oacute;n</p>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:12%">Fecha</th>
+            <th style="width:36%">Actividad / hito</th>
+            <th style="width:18%">Fase</th>
+            <th style="width:12%">Responsable</th>
+            <th style="width:8%">Avance</th>
+            <th style="width:14%">Estado</th>
+          </tr>
+        </thead>
+        <tbody>${pendingRows || '<tr><td colspan="6" class="center">No hay hitos pendientes registrados.</td></tr>'}</tbody>
+      </table>
+      <div class="page-break"></div>
+      <p class="section-label">Detalle operativo por fase</p>
       ${phaseSections}
       <p class="footer">Fuente: Portal TDG - CLIDENTE. Este cronograma se genera con la version editable sincronizada en Supabase.</p>
     </div>
