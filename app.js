@@ -1486,11 +1486,12 @@ function renderDesarrolloPlan() {
 
     <div class="card">
       <div class="card-title"><i class="fas fa-file-lines" style="margin-right:.5rem"></i>Informes quincenales</div>
-      <p class="guide-stage-text">En esta etapa se entregan informes quincenales con evidencia de seguimiento y avance.</p>
+      <p class="guide-stage-text">En esta etapa se entregan informes quincenales con evidencia de seguimiento y avance. La guia de Vanessa define el formato base para redactar cada entrega.</p>
       <ul class="guide-stage-list">
         ${reportItems.map(item => `<li>${item}</li>`).join('')}
       </ul>
       <div class="resource-buttons followup-primary-actions">
+        <a href="https://drive.google.com/file/d/1dW2m-FNzpiCpFLoLnNcwtK-vCo4tQHz0/view?usp=sharing" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-book-open"></i> Guia de Vanessa para informes quincenales</a>
         <a href="https://drive.google.com/file/d/14OeL2tp4WNRwplU1vtGv15Gtdg75XCVa/view?usp=sharing" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-file-pdf"></i> Control de consultoria 1 de 4</a>
         <a href="https://drive.google.com/file/d/1Bv6iaE7w8qpvIpLRUGiDU94L3FpYZLIM/view?usp=sharing" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-file-pdf"></i> Plan de trabajo 1 de 4</a>
       </div>
