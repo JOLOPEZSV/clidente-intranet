@@ -1492,8 +1492,6 @@ function renderDesarrolloPlan() {
       </ul>
       <div class="resource-buttons followup-primary-actions">
         <a href="https://drive.google.com/file/d/1dW2m-FNzpiCpFLoLnNcwtK-vCo4tQHz0/view?usp=sharing" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-book-open"></i> Guia de Vanessa para informes quincenales</a>
-        <a href="https://drive.google.com/file/d/14OeL2tp4WNRwplU1vtGv15Gtdg75XCVa/view?usp=sharing" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-file-pdf"></i> Control de consultoria 1 de 4</a>
-        <a href="https://drive.google.com/file/d/1Bv6iaE7w8qpvIpLRUGiDU94L3FpYZLIM/view?usp=sharing" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-file-pdf"></i> Plan de trabajo 1 de 4</a>
       </div>
     </div>
   </div>
