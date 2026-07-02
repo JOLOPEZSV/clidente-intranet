@@ -108,3 +108,16 @@
 .fd-month-control select:focus, .fd-month-badge select:focus {
   outline:2px solid rgba(26,86,164,.2); border-color:var(--blue);
 }
+.fd-month-pair {
+  display:inline-flex;
+  align-items:center;
+  gap:.4rem;
+  flex-wrap:wrap;
+}
+.fd-month-pair select:first-child { min-width:125px; }
+.fd-month-pair select:last-child { min-width:92px; }
+@media(max-width:540px) {
+  .fd-month-control, .fd-month-badge { align-items:flex-start; flex-direction:column; border-radius:12px; }
+  .fd-month-pair { width:100%; }
+  .fd-month-pair select { flex:1; min-width:0; }
+}

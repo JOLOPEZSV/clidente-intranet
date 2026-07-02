@@ -43,21 +43,64 @@ const FD_DENTISTAS_NOMBRES = [
   'Dr. Oscar Guardado',
 ];
 
-const FD_MESES_2026 = [
-  'Mayo 2026',
-  'Junio 2026',
-  'Julio 2026',
-  'Agosto 2026',
-  'Septiembre 2026',
-  'Octubre 2026',
-  'Noviembre 2026',
-  'Diciembre 2026'
+const FD_MESES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre'
 ];
 
+const FD_ANIOS_BASE = [2026, 2027, 2028, 2029, 2030];
 let fdMesActivoSeleccionado = 'Mayo 2026';
 
-function fdMesOptions(selected = fdMesActivoSeleccionado) {
-  return FD_MESES_2026.map(mes => `<option value="${mes}" ${mes === selected ? 'selected' : ''}>${mes}</option>`).join('');
+function fdParseMesActivo(mesTexto = fdMesActivoSeleccionado) {
+  const parts = String(mesTexto || 'Mayo 2026').trim().split(/\s+/);
+  const anio = parseInt(parts[parts.length - 1], 10) || 2026;
+  const mes = parts.slice(0, -1).join(' ') || 'Mayo';
+  return {
+    mes: FD_MESES.includes(mes) ? mes : 'Mayo',
+    anio
+  };
+}
+
+function fdBuildMesActivo(mes, anio) {
+  const cleanMes = FD_MESES.includes(mes) ? mes : 'Mayo';
+  const cleanAnio = parseInt(anio, 10) || 2026;
+  return `${cleanMes} ${cleanAnio}`;
+}
+
+function fdMesOptions(selected = fdParseMesActivo().mes) {
+  return FD_MESES.map(mes => `<option value="${mes}" ${mes === selected ? 'selected' : ''}>${mes}</option>`).join('');
+}
+
+function fdAnioOptions(selected = fdParseMesActivo().anio, extraAnios = []) {
+  const anios = [...new Set([...FD_ANIOS_BASE, ...extraAnios.map(Number).filter(Boolean), Number(selected)])].sort((a, b) => a - b);
+  return anios.map(anio => `<option value="${anio}" ${Number(anio) === Number(selected) ? 'selected' : ''}>${anio}</option>`).join('');
+}
+
+function fdReadMesControls(prefix) {
+  const mes = document.getElementById(`${prefix}-mes`)?.value;
+  const anio = document.getElementById(`${prefix}-anio`)?.value;
+  return fdBuildMesActivo(mes, anio);
+}
+
+function fdSetMesControls(prefix, mesTexto, extraAnios = []) {
+  const parsed = fdParseMesActivo(mesTexto);
+  const mesSelect = document.getElementById(`${prefix}-mes`);
+  const anioSelect = document.getElementById(`${prefix}-anio`);
+  if (mesSelect) mesSelect.value = parsed.mes;
+  if (anioSelect) {
+    anioSelect.innerHTML = fdAnioOptions(parsed.anio, extraAnios);
+    anioSelect.value = String(parsed.anio);
+  }
 }
 
 function formatoDolar(n) {
@@ -155,19 +198,20 @@ async function seedMayo2026() {
   return okDashboard && okDentistas;
 }
 
-async function fdCargarMesesDisponibles() {
-  if (!fdSupabaseConfigurado()) return ['Mayo 2026'];
+async function fdCargarAniosDisponibles() {
+  if (!fdSupabaseConfigurado()) return FD_ANIOS_BASE;
   try {
     await seedMayo2026();
     const rows = await fdSupabaseGetRows('dashboard_mensual?select=mes,created_at&order=created_at.desc');
-    const meses = [...new Set((Array.isArray(rows) ? rows : []).map(row => row.mes).filter(Boolean))];
-    return meses.length ? meses : ['Mayo 2026'];
+    const anios = (Array.isArray(rows) ? rows : [])
+      .map(row => fdParseMesActivo(row.mes).anio)
+      .filter(Boolean);
+    return [...new Set([...FD_ANIOS_BASE, ...anios])].sort((a, b) => a - b);
   } catch (err) {
-    console.error('No se pudieron cargar los meses:', err);
-    return ['Mayo 2026'];
+    console.error('No se pudieron cargar los años:', err);
+    return FD_ANIOS_BASE;
   }
 }
-
 async function fdCargarDatosDashboard(mesActivo = fdMesActivoSeleccionado) {
   if (!fdSupabaseConfigurado()) {
     return { mensual: FD_MAYO_2026, dentistas: FD_DENTISTAS_MAYO_2026, fallback: true };
@@ -191,7 +235,7 @@ function renderDashboardFinanciero() {
     <div class="fd-hero card">
       <div>
         <h1 class="section-title" style="margin-bottom:.35rem">Dashboard de gestion mensual — Clinica Dental Clidente</h1>
-        <label class="fd-month-control">Mes activo <select id="fd-dashboard-mes"><option>Cargando...</option></select></label>
+        <label class="fd-month-control">Mes activo <span class="fd-month-pair"><select id="fd-dashboard-mes">${fdMesOptions()}</select><select id="fd-dashboard-anio">${fdAnioOptions()}</select></span></label>
         <div class="fd-source-row">
           <span class="fd-source blue">FG Dental</span>
           <span class="fd-source green">Excel caja</span>
@@ -274,9 +318,8 @@ function fdRenderDashboard(mensual, dentistas, fallback) {
   const punto = parseInt(mensual.punto_equilibrio || FD_PUNTO_EQUILIBRIO, 10);
   const equilibrioPct = punto > 0 ? (pacientes / punto) * 100 : 0;
 
-  const mesSelector = document.getElementById('fd-dashboard-mes');
-  if (mesSelector) mesSelector.value = mensual.mes || fdMesActivoSeleccionado;
   fdMesActivoSeleccionado = mensual.mes || fdMesActivoSeleccionado;
+  fdSetMesControls('fd-dashboard', fdMesActivoSeleccionado);
   fdSetText('fd-kpi-facturacion', formatoDolar(facturacion));
   fdSetText('fd-kpi-pacientes', fdEntero(pacientes));
   fdSetText('fd-kpi-ticket', formatoDolar(ticket));
@@ -337,17 +380,19 @@ async function initDashboardFinanciero() {
   if (!root || root.dataset.ready === 'true') return;
   root.dataset.ready = 'true';
 
-  const selector = document.getElementById('fd-dashboard-mes');
-  const meses = await fdCargarMesesDisponibles();
-  if (!meses.includes(fdMesActivoSeleccionado)) fdMesActivoSeleccionado = meses[0] || 'Mayo 2026';
-  if (selector) {
-    selector.innerHTML = meses.map(mes => `<option value="${mes}" ${mes === fdMesActivoSeleccionado ? 'selected' : ''}>${mes}</option>`).join('');
-    selector.addEventListener('change', async () => {
-      fdMesActivoSeleccionado = selector.value;
-      const { mensual, dentistas, fallback } = await fdCargarDatosDashboard(fdMesActivoSeleccionado);
-      fdRenderDashboard(mensual, dentistas, fallback);
-    });
-  }
+  const monthSelect = document.getElementById('fd-dashboard-mes');
+  const yearSelect = document.getElementById('fd-dashboard-anio');
+  const anios = await fdCargarAniosDisponibles();
+  fdSetMesControls('fd-dashboard', fdMesActivoSeleccionado, anios);
+
+  const cargarMesActivo = async () => {
+    fdMesActivoSeleccionado = fdReadMesControls('fd-dashboard');
+    const { mensual, dentistas, fallback } = await fdCargarDatosDashboard(fdMesActivoSeleccionado);
+    fdRenderDashboard(mensual, dentistas, fallback);
+  };
+
+  monthSelect?.addEventListener('change', cargarMesActivo);
+  yearSelect?.addEventListener('change', cargarMesActivo);
 
   const { mensual, dentistas, fallback } = await fdCargarDatosDashboard(fdMesActivoSeleccionado);
   fdRenderDashboard(mensual, dentistas, fallback);
@@ -364,7 +409,7 @@ function renderFormularioHenry() {
         <h1 class="section-title" style="margin-bottom:.35rem">Ingreso mensual de datos — Dashboard Clidente</h1>
         <p class="fd-subtitle">Completa los 3 pasos una vez al mes. Tiempo estimado: 15 minutos.</p>
       </div>
-      <label class="fd-month-badge">Mes activo <select id="henry-mes">${fdMesOptions()}</select></label>
+      <label class="fd-month-badge">Mes activo <span class="fd-month-pair"><select id="henry-mes">${fdMesOptions()}</select><select id="henry-anio">${fdAnioOptions()}</select></span></label>
     </div>
 
     <div id="henry-config-warning" class="fd-warning" style="display:none">
@@ -428,7 +473,7 @@ function fdNumber(id) {
 }
 
 function fdCollectHenryData() {
-  const mes = document.getElementById('henry-mes')?.value.trim() || 'Mayo 2026';
+  const mes = fdReadMesControls('henry');
   const facturacion = fdNumber('henry-facturacion');
   const pacientes = parseInt(document.getElementById('henry-pacientes')?.value || 0, 10) || 0;
   const comisiones = fdNumber('henry-comisiones');
@@ -550,8 +595,7 @@ function initFormularioHenry() {
   if (!root || root.dataset.ready === 'true') return;
   root.dataset.ready = 'true';
   document.getElementById('henry-config-warning').style.display = fdSupabaseConfigurado() ? 'none' : 'block';
-  const mesSelect = document.getElementById('henry-mes');
-  if (mesSelect) mesSelect.value = fdMesActivoSeleccionado;
+  fdSetMesControls('henry', fdMesActivoSeleccionado);
   root.querySelectorAll('input, select').forEach(input => input.addEventListener('input', fdUpdateHenryPreview));
   root.querySelectorAll('select').forEach(input => input.addEventListener('change', fdUpdateHenryPreview));
   document.getElementById('henry-guardar')?.addEventListener('click', fdGuardarHenry);
