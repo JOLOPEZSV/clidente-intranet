@@ -2010,6 +2010,8 @@ function renderCronograma() {
 
 /* ── SECTION MAP ───────────────────────────────────────────── */
 const SECTIONS = {
+  'dashboard-financiero': { label: 'Dashboard Financiero', render: renderDashboardFinanciero },
+  'formulario-henry':     { label: 'Ingreso mensual Henry', render: renderFormularioHenry },
   'cartelera':      { label: 'Cartelera',            render: renderCartelera },
   'equipo':         { label: 'Equipo',               render: renderEquipo },
   'fases':          { label: 'Fases del Proyecto',   render: renderFases },
@@ -2049,6 +2051,8 @@ function navigate(sectionId) {
   initDiagnosticPdfButton();
   initDiagnosticoEntregables();
   initCronogramaProject();
+  if (typeof initDashboardFinanciero === 'function') initDashboardFinanciero();
+  if (typeof initFormularioHenry === 'function') initFormularioHenry();
 
   // Animate progress bars
   requestAnimationFrame(() => {
@@ -3055,18 +3059,25 @@ function initMobileSidebar() {
 document.addEventListener('DOMContentLoaded', () => {
   initMobileSidebar();
 
-  // Welcome modal
-  const backdrop = document.getElementById('welcomeBackdrop');
-  document.getElementById('btnEnter').addEventListener('click', () => {
-    backdrop.classList.add('hidden');
-    navigate('cartelera');
-  });
+  const params = new URLSearchParams(window.location.search);
+  const requested = window.CLIDENTE_INITIAL_SECTION || params.get('section') || 'cartelera';
+  const initialSection = SECTIONS[requested] ? requested : 'cartelera';
 
-  // Sidebar navigation
+  const backdrop = document.getElementById('welcomeBackdrop');
+  const btnEnter = document.getElementById('btnEnter');
+  if (btnEnter) {
+    btnEnter.addEventListener('click', () => {
+      backdrop?.classList.add('hidden');
+      navigate(initialSection);
+    });
+  }
+
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => navigate(btn.dataset.section));
   });
 
-  // Pre-render cartelera behind modal
-  navigate('cartelera');
+  if (initialSection !== 'cartelera') {
+    backdrop?.classList.add('hidden');
+  }
+  navigate(initialSection);
 });
