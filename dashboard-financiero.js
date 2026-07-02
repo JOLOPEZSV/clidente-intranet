@@ -541,6 +541,20 @@ function fdUpdateHenryPreview() {
   }
 }
 
+
+function fdMostrarErrorSupabase(err) {
+  const detail = err?.message || String(err || 'Error desconocido');
+  const friendly = [
+    'No se pudieron guardar los datos en Supabase.',
+    '',
+    'Detalle tecnico:',
+    detail,
+    '',
+    'Si dice "relation does not exist", falta ejecutar supabase-schema.sql.',
+    'Si dice "row-level security" o "permission denied", faltan politicas/permisos en Supabase.'
+  ].join('\n');
+  alert(friendly);
+}
 async function fdGuardarHenry() {
   if (!fdSupabaseConfigurado()) {
     document.getElementById('henry-config-warning').style.display = 'block';
@@ -586,7 +600,7 @@ async function fdGuardarHenry() {
     navigate('dashboard-financiero');
   } catch (err) {
     console.error(err);
-    alert('No se pudieron guardar los datos. Revisa credenciales, tablas y permisos RLS en Supabase.');
+    fdMostrarErrorSupabase(err);
   }
 }
 
