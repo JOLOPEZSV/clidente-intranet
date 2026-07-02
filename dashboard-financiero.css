@@ -73,14 +73,14 @@
   display:flex; align-items:center; gap:.55rem; background:white; border:1px solid var(--border);
   color:var(--text-muted); border-radius:999px; padding:.4rem .5rem .4rem .85rem; font-size:.78rem; font-weight:700;
 }
-.fd-month-badge input { border:0; background:var(--blue-light); color:var(--blue-dark); border-radius:999px; padding:.35rem .65rem; font:inherit; min-width:130px; }
+.fd-month-badge input, .fd-month-badge select { border:0; background:var(--blue-light); color:var(--blue-dark); border-radius:999px; padding:.35rem .65rem; font:inherit; min-width:130px; }
 .fd-form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; }
 .fd-form-grid label, .fd-input-table td { color:var(--text-muted); font-size:.82rem; font-weight:700; }
 .fd-form-grid input, .fd-input-table input {
   width:100%; margin-top:.35rem; border:1px solid var(--border);
   border-radius:8px; padding:.68rem .75rem; font:inherit; color:var(--text); background:#fff;
 }
-.fd-form-grid input:focus, .fd-input-table input:focus, .fd-month-badge input:focus {
+.fd-form-grid input:focus, .fd-input-table input:focus, .fd-month-badge input:focus, .fd-month-badge select:focus {
   outline:2px solid rgba(26,86,164,.2); border-color:var(--blue);
 }
 .fd-actions { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:2rem; }
@@ -92,4 +92,19 @@
   .fd-grid2 { grid-template-columns:1fr; }
   .fd-hero { align-items:stretch; }
   .fd-secondary, .fd-save { width:100%; }
+}
+
+.fd-month-control {
+  display:inline-flex; align-items:center; gap:.55rem;
+  margin:.1rem 0 .85rem; color:var(--text-muted);
+  font-size:.82rem; font-weight:700;
+}
+.fd-month-control select, .fd-month-badge select {
+  border:1px solid rgba(26,86,164,.22);
+  background:var(--blue-light); color:var(--blue-dark);
+  border-radius:999px; padding:.42rem 2rem .42rem .75rem;
+  font:inherit; min-width:150px;
+}
+.fd-month-control select:focus, .fd-month-badge select:focus {
+  outline:2px solid rgba(26,86,164,.2); border-color:var(--blue);
 }

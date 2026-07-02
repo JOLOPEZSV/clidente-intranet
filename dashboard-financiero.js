@@ -43,6 +43,23 @@ const FD_DENTISTAS_NOMBRES = [
   'Dr. Oscar Guardado',
 ];
 
+const FD_MESES_2026 = [
+  'Mayo 2026',
+  'Junio 2026',
+  'Julio 2026',
+  'Agosto 2026',
+  'Septiembre 2026',
+  'Octubre 2026',
+  'Noviembre 2026',
+  'Diciembre 2026'
+];
+
+let fdMesActivoSeleccionado = 'Mayo 2026';
+
+function fdMesOptions(selected = fdMesActivoSeleccionado) {
+  return FD_MESES_2026.map(mes => `<option value="${mes}" ${mes === selected ? 'selected' : ''}>${mes}</option>`).join('');
+}
+
 function formatoDolar(n) {
   return '$' + parseFloat(n || 0).toLocaleString('es-SV', {
     minimumFractionDigits: 2,
@@ -82,14 +99,44 @@ function fdFiltroMes(mes) {
   return `?mes=eq.${encodeURIComponent(mes)}`;
 }
 
-async function fdSupabaseDelete(tabla, filtros) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}${filtros}`, {
-    method: 'DELETE',
-    headers: supabaseHeaders
-  });
-  return res.ok;
+async function fdSupabaseGetRows(path) {
+  if (typeof supabaseRequest === 'function') return supabaseRequest(path);
+  if (typeof supabaseGet === 'function') {
+    const queryIndex = path.indexOf('?');
+    const tabla = queryIndex === -1 ? path : path.slice(0, queryIndex);
+    const filtros = queryIndex === -1 ? '' : path.slice(queryIndex);
+    return supabaseGet(tabla, filtros);
+  }
+  throw new Error('No hay cliente Supabase disponible');
 }
 
+async function fdSupabaseInsert(tabla, datos) {
+  if (typeof supabaseRequest === 'function') {
+    await supabaseRequest(tabla, {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify(datos)
+    });
+    return true;
+  }
+  if (typeof supabasePost === 'function') return supabasePost(tabla, datos);
+  throw new Error('No hay cliente Supabase disponible');
+}
+
+async function fdSupabaseDelete(tabla, filtros) {
+  if (typeof supabaseRequest === 'function') {
+    await supabaseRequest(`${tabla}${filtros}`, { method: 'DELETE' });
+    return true;
+  }
+  if (typeof supabaseHeaders !== 'undefined') {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}${filtros}`, {
+      method: 'DELETE',
+      headers: supabaseHeaders
+    });
+    return res.ok;
+  }
+  throw new Error('No hay cliente Supabase disponible');
+}
 async function seedMayo2026() {
   if (!fdSupabaseConfigurado()) return false;
 
@@ -108,31 +155,43 @@ async function seedMayo2026() {
   return okDashboard && okDentistas;
 }
 
-async function fdCargarDatosDashboard() {
+async function fdCargarMesesDisponibles() {
+  if (!fdSupabaseConfigurado()) return ['Mayo 2026'];
+  try {
+    await seedMayo2026();
+    const rows = await fdSupabaseGetRows('dashboard_mensual?select=mes,created_at&order=created_at.desc');
+    const meses = [...new Set((Array.isArray(rows) ? rows : []).map(row => row.mes).filter(Boolean))];
+    return meses.length ? meses : ['Mayo 2026'];
+  } catch (err) {
+    console.error('No se pudieron cargar los meses:', err);
+    return ['Mayo 2026'];
+  }
+}
+
+async function fdCargarDatosDashboard(mesActivo = fdMesActivoSeleccionado) {
   if (!fdSupabaseConfigurado()) {
     return { mensual: FD_MAYO_2026, dentistas: FD_DENTISTAS_MAYO_2026, fallback: true };
   }
 
   try {
     await seedMayo2026();
-    const mensualRows = await fdSupabaseGetRows('dashboard_mensual?select=*&order=created_at.desc&limit=1');
-    const mensual = Array.isArray(mensualRows) && mensualRows.length ? mensualRows[0] : FD_MAYO_2026;
+    const mensualRows = await fdSupabaseGetRows(`dashboard_mensual?select=*&mes=eq.${encodeURIComponent(mesActivo)}&limit=1`);
+    const mensual = Array.isArray(mensualRows) && mensualRows.length ? mensualRows[0] : { ...FD_MAYO_2026, mes: mesActivo, facturacion_total: 0, pacientes_atendidos: 0, ticket_promedio: 0, flujo_neto: 0, comisiones: 0, insumos: 0, costos_fijos: 10800 };
     const dentistasRows = await fdSupabaseGetRows(`produccion_dentistas?select=*&mes=eq.${encodeURIComponent(mensual.mes)}&order=facturacion.desc`);
-    const dentistas = Array.isArray(dentistasRows) && dentistasRows.length ? dentistasRows : FD_DENTISTAS_MAYO_2026;
+    const dentistas = Array.isArray(dentistasRows) && dentistasRows.length ? dentistasRows : FD_DENTISTAS_NOMBRES.map(nombre => ({ nombre, facturacion: 0, meta: FD_META_DENTISTA, estado: 'critico' }));
     return { mensual, dentistas, fallback: false };
   } catch (err) {
     console.error('No se pudo cargar Supabase:', err);
     return { mensual: FD_MAYO_2026, dentistas: FD_DENTISTAS_MAYO_2026, fallback: true };
   }
 }
-
 function renderDashboardFinanciero() {
   return `
   <div id="dashboard-financiero-root" class="fd-shell">
     <div class="fd-hero card">
       <div>
         <h1 class="section-title" style="margin-bottom:.35rem">Dashboard de gestion mensual — Clinica Dental Clidente</h1>
-        <p class="fd-subtitle">Mes activo: <strong id="fd-mes-activo">Cargando...</strong></p>
+        <label class="fd-month-control">Mes activo <select id="fd-dashboard-mes"><option>Cargando...</option></select></label>
         <div class="fd-source-row">
           <span class="fd-source blue">FG Dental</span>
           <span class="fd-source green">Excel caja</span>
@@ -215,7 +274,9 @@ function fdRenderDashboard(mensual, dentistas, fallback) {
   const punto = parseInt(mensual.punto_equilibrio || FD_PUNTO_EQUILIBRIO, 10);
   const equilibrioPct = punto > 0 ? (pacientes / punto) * 100 : 0;
 
-  fdSetText('fd-mes-activo', mensual.mes || 'Mayo 2026');
+  const mesSelector = document.getElementById('fd-dashboard-mes');
+  if (mesSelector) mesSelector.value = mensual.mes || fdMesActivoSeleccionado;
+  fdMesActivoSeleccionado = mensual.mes || fdMesActivoSeleccionado;
   fdSetText('fd-kpi-facturacion', formatoDolar(facturacion));
   fdSetText('fd-kpi-pacientes', fdEntero(pacientes));
   fdSetText('fd-kpi-ticket', formatoDolar(ticket));
@@ -273,11 +334,24 @@ function fdRenderDashboard(mensual, dentistas, fallback) {
 
 async function initDashboardFinanciero() {
   const root = document.getElementById('dashboard-financiero-root');
-  if (!root) return;
-  const { mensual, dentistas, fallback } = await fdCargarDatosDashboard();
+  if (!root || root.dataset.ready === 'true') return;
+  root.dataset.ready = 'true';
+
+  const selector = document.getElementById('fd-dashboard-mes');
+  const meses = await fdCargarMesesDisponibles();
+  if (!meses.includes(fdMesActivoSeleccionado)) fdMesActivoSeleccionado = meses[0] || 'Mayo 2026';
+  if (selector) {
+    selector.innerHTML = meses.map(mes => `<option value="${mes}" ${mes === fdMesActivoSeleccionado ? 'selected' : ''}>${mes}</option>`).join('');
+    selector.addEventListener('change', async () => {
+      fdMesActivoSeleccionado = selector.value;
+      const { mensual, dentistas, fallback } = await fdCargarDatosDashboard(fdMesActivoSeleccionado);
+      fdRenderDashboard(mensual, dentistas, fallback);
+    });
+  }
+
+  const { mensual, dentistas, fallback } = await fdCargarDatosDashboard(fdMesActivoSeleccionado);
   fdRenderDashboard(mensual, dentistas, fallback);
 }
-
 function fdSlug(texto) {
   return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
@@ -290,7 +364,7 @@ function renderFormularioHenry() {
         <h1 class="section-title" style="margin-bottom:.35rem">Ingreso mensual de datos — Dashboard Clidente</h1>
         <p class="fd-subtitle">Completa los 3 pasos una vez al mes. Tiempo estimado: 15 minutos.</p>
       </div>
-      <label class="fd-month-badge">Mes activo <input id="henry-mes" type="text" value="Mayo 2026"></label>
+      <label class="fd-month-badge">Mes activo <select id="henry-mes">${fdMesOptions()}</select></label>
     </div>
 
     <div id="henry-config-warning" class="fd-warning" style="display:none">
@@ -462,6 +536,7 @@ async function fdGuardarHenry() {
     const okDentistas = await fdSupabaseInsert('produccion_dentistas', data.dentistas);
     if (!okMensual || !okDentistas) throw new Error('Supabase rechazo el guardado');
 
+    fdMesActivoSeleccionado = data.mes;
     alert(`Datos de ${data.mes} guardados correctamente.`);
     navigate('dashboard-financiero');
   } catch (err) {
@@ -475,7 +550,10 @@ function initFormularioHenry() {
   if (!root || root.dataset.ready === 'true') return;
   root.dataset.ready = 'true';
   document.getElementById('henry-config-warning').style.display = fdSupabaseConfigurado() ? 'none' : 'block';
-  root.querySelectorAll('input').forEach(input => input.addEventListener('input', fdUpdateHenryPreview));
+  const mesSelect = document.getElementById('henry-mes');
+  if (mesSelect) mesSelect.value = fdMesActivoSeleccionado;
+  root.querySelectorAll('input, select').forEach(input => input.addEventListener('input', fdUpdateHenryPreview));
+  root.querySelectorAll('select').forEach(input => input.addEventListener('change', fdUpdateHenryPreview));
   document.getElementById('henry-guardar')?.addEventListener('click', fdGuardarHenry);
   fdUpdateHenryPreview();
 }
