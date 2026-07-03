@@ -60,6 +60,8 @@ const FD_MESES = [
 
 const FD_ANIOS_BASE = [2026, 2027, 2028, 2029, 2030];
 let fdMesActivoSeleccionado = 'Mayo 2026';
+const FD_LOCAL_DASHBOARD_KEY = 'clidente_fd_dashboard_mensual';
+const FD_LOCAL_DENTISTAS_KEY = 'clidente_fd_produccion_dentistas';
 
 function fdParseMesActivo(mesTexto = fdMesActivoSeleccionado) {
   const parts = String(mesTexto || 'Mayo 2026').trim().split(/\s+/);
@@ -103,6 +105,45 @@ function fdSetMesControls(prefix, mesTexto, extraAnios = []) {
   }
 }
 
+function fdGetLocalJson(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function fdSetLocalJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value || []));
+}
+
+function fdGetLocalMes(mes) {
+  const mensual = fdGetLocalJson(FD_LOCAL_DASHBOARD_KEY).find(row => row.mes === mes);
+  const dentistas = fdGetLocalJson(FD_LOCAL_DENTISTAS_KEY).filter(row => row.mes === mes);
+  if (!mensual) return null;
+  return { mensual, dentistas: dentistas.length ? dentistas : FD_DENTISTAS_NOMBRES.map(nombre => ({ mes, nombre, facturacion: 0, meta: FD_META_DENTISTA, estado: 'critico' })) };
+}
+
+function fdGuardarLocal(data) {
+  const mensualRows = fdGetLocalJson(FD_LOCAL_DASHBOARD_KEY).filter(row => row.mes !== data.mes);
+  mensualRows.push({
+    mes: data.mes,
+    facturacion_total: data.facturacion,
+    pacientes_atendidos: data.pacientes,
+    ticket_promedio: data.ticket,
+    flujo_neto: data.flujo,
+    costos_fijos: data.costos,
+    comisiones: data.comisiones,
+    insumos: data.insumos,
+    punto_equilibrio: FD_PUNTO_EQUILIBRIO,
+    local_only: true,
+    created_at: new Date().toISOString()
+  });
+  fdSetLocalJson(FD_LOCAL_DASHBOARD_KEY, mensualRows);
+
+  const dentistaRows = fdGetLocalJson(FD_LOCAL_DENTISTAS_KEY).filter(row => row.mes !== data.mes);
+  fdSetLocalJson(FD_LOCAL_DENTISTAS_KEY, dentistaRows.concat(data.dentistas.map(row => ({ ...row, local_only: true, created_at: new Date().toISOString() }))));
+}
 function formatoDolar(n) {
   return '$' + parseFloat(n || 0).toLocaleString('es-SV', {
     minimumFractionDigits: 2,
@@ -214,18 +255,23 @@ async function fdCargarAniosDisponibles() {
 }
 async function fdCargarDatosDashboard(mesActivo = fdMesActivoSeleccionado) {
   if (!fdSupabaseConfigurado()) {
+    const localData = fdGetLocalMes(mesActivo);
+    if (localData) return { ...localData, fallback: true };
     return { mensual: FD_MAYO_2026, dentistas: FD_DENTISTAS_MAYO_2026, fallback: true };
   }
 
   try {
     await seedMayo2026();
     const mensualRows = await fdSupabaseGetRows(`dashboard_mensual?select=*&mes=eq.${encodeURIComponent(mesActivo)}&limit=1`);
-    const mensual = Array.isArray(mensualRows) && mensualRows.length ? mensualRows[0] : { ...FD_MAYO_2026, mes: mesActivo, facturacion_total: 0, pacientes_atendidos: 0, ticket_promedio: 0, flujo_neto: 0, comisiones: 0, insumos: 0, costos_fijos: 10800 };
+    const localData = fdGetLocalMes(mesActivo);
+    const mensual = Array.isArray(mensualRows) && mensualRows.length ? mensualRows[0] : (localData?.mensual || { ...FD_MAYO_2026, mes: mesActivo, facturacion_total: 0, pacientes_atendidos: 0, ticket_promedio: 0, flujo_neto: 0, comisiones: 0, insumos: 0, costos_fijos: 10800 });
     const dentistasRows = await fdSupabaseGetRows(`produccion_dentistas?select=*&mes=eq.${encodeURIComponent(mensual.mes)}&order=facturacion.desc`);
-    const dentistas = Array.isArray(dentistasRows) && dentistasRows.length ? dentistasRows : FD_DENTISTAS_NOMBRES.map(nombre => ({ nombre, facturacion: 0, meta: FD_META_DENTISTA, estado: 'critico' }));
+    const dentistas = Array.isArray(dentistasRows) && dentistasRows.length ? dentistasRows : (localData?.dentistas || FD_DENTISTAS_NOMBRES.map(nombre => ({ nombre, facturacion: 0, meta: FD_META_DENTISTA, estado: 'critico' })));
     return { mensual, dentistas, fallback: false };
   } catch (err) {
     console.error('No se pudo cargar Supabase:', err);
+    const localData = fdGetLocalMes(mesActivo);
+    if (localData) return { ...localData, fallback: true };
     return { mensual: FD_MAYO_2026, dentistas: FD_DENTISTAS_MAYO_2026, fallback: true };
   }
 }
@@ -600,7 +646,10 @@ async function fdGuardarHenry() {
     navigate('dashboard-financiero');
   } catch (err) {
     console.error(err);
-    fdMostrarErrorSupabase(err);
+    fdGuardarLocal(data);
+    fdMesActivoSeleccionado = data.mes;
+    alert(`No se pudo conectar con Supabase (${err?.message || 'error desconocido'}). Los datos de ${data.mes} quedaron guardados temporalmente en este navegador. Para que se compartan con otros equipos, hay que corregir la conexion Supabase.`);
+    navigate('dashboard-financiero');
   }
 }
 
