@@ -1,4 +1,4 @@
--- Tablas para Dashboard Financiero CLIDENTE
+﻿-- Tablas para Dashboard Financiero CLIDENTE
 -- Ejecutar en Supabase SQL Editor si las tablas aun no existen.
 
 CREATE TABLE IF NOT EXISTS dashboard_mensual (
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS dashboard_mensual (
   costos_fijos NUMERIC(10,2) DEFAULT 10800,
   comisiones NUMERIC(10,2),
   insumos NUMERIC(10,2),
-  punto_equilibrio INTEGER DEFAULT 878,
+  punto_equilibrio INTEGER DEFAULT 418,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -29,7 +29,7 @@ INSERT INTO dashboard_mensual (
   mes, facturacion_total, pacientes_atendidos, ticket_promedio, flujo_neto,
   costos_fijos, comisiones, insumos, punto_equilibrio
 )
-SELECT 'Mayo 2026', 30443.34, 783, 38.87, -965, 10800, 7611, 12997, 878
+SELECT 'Mayo 2026', 30443.34, 783, 38.87, -965, 10800, 7611, 12997, 418
 WHERE NOT EXISTS (SELECT 1 FROM dashboard_mensual WHERE mes = 'Mayo 2026');
 
 INSERT INTO produccion_dentistas (mes, nombre, facturacion, meta, estado)
@@ -46,3 +46,4 @@ SELECT * FROM (VALUES
   ('Mayo 2026', 'Dr. Oscar Guardado', 664.41, 2500, 'critico')
 ) AS seed(mes, nombre, facturacion, meta, estado)
 WHERE NOT EXISTS (SELECT 1 FROM produccion_dentistas WHERE mes = 'Mayo 2026');
+

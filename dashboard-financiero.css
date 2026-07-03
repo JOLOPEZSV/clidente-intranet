@@ -121,3 +121,79 @@
   .fd-month-pair { width:100%; }
   .fd-month-pair select { flex:1; min-width:0; }
 }
+
+.fd-view-toggle {
+  display:inline-flex;
+  align-items:center;
+  gap:.25rem;
+  background:var(--blue-light);
+  border:1px solid rgba(26,86,164,.18);
+  border-radius:999px;
+  padding:.25rem;
+  margin:.1rem 0 .75rem;
+}
+.fd-view-toggle button {
+  border:0;
+  background:transparent;
+  color:var(--blue-dark);
+  border-radius:999px;
+  padding:.42rem .8rem;
+  font:inherit;
+  font-size:.8rem;
+  font-weight:800;
+  cursor:pointer;
+}
+.fd-view-toggle button.active {
+  background:white;
+  box-shadow:0 2px 8px rgba(15,35,64,.12);
+}
+.fd-periodo-summary {
+  color:var(--text-muted);
+  font-size:.84rem;
+  font-weight:700;
+  margin:0 0 .75rem;
+}
+.fd-insight-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(185px,1fr));
+  gap:.85rem;
+  margin:-.35rem 0 1.25rem;
+}
+.fd-insight {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:var(--shadow-card);
+  padding:.9rem 1rem;
+}
+.fd-insight span {
+  display:block;
+  color:var(--text-muted);
+  font-size:.72rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  margin-bottom:.35rem;
+}
+.fd-insight strong {
+  display:block;
+  color:var(--blue-dark);
+  font-size:1.35rem;
+  line-height:1.05;
+}
+.fd-insight small {
+  display:block;
+  color:var(--text-muted);
+  font-size:.76rem;
+  line-height:1.35;
+  margin-top:.35rem;
+}
+.fd-note {
+  color:var(--text-muted);
+  font-size:.82rem;
+  margin:.65rem 0 0;
+}
+@media(max-width:540px) {
+  .fd-view-toggle { width:100%; }
+  .fd-view-toggle button { flex:1; }
+}

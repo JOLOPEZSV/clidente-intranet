@@ -1,9 +1,12 @@
-/* Dashboard Financiero CLIDENTE - Supabase + SPA */
+﻿/* Dashboard Financiero CLIDENTE - Supabase + SPA */
 
 const FD_META_DENTISTA = 2500;
 const FD_PISO_RENTABILIDAD = 1800;
 const FD_MAX_BARRA = 6500;
-const FD_PUNTO_EQUILIBRIO = 878;
+const FD_PUNTO_EQUILIBRIO = 418;
+const FD_META_PACIENTES = 878;
+const FD_CAPACIDAD_MENSUAL = 3000;
+let fdVistaDashboard = 'mensual';
 
 const FD_MAYO_2026 = {
   mes: 'Mayo 2026',
@@ -14,7 +17,7 @@ const FD_MAYO_2026 = {
   costos_fijos: 10800,
   comisiones: 7611,
   insumos: 12997,
-  punto_equilibrio: 878
+  punto_equilibrio: 418
 };
 
 const FD_DENTISTAS_MAYO_2026 = [
@@ -172,10 +175,10 @@ function fdSupabaseConfigurado() {
     && !SUPABASE_KEY.includes('REEMPLAZAR_CON_TU_SUPABASE_ANON_KEY');
 }
 
-function fdEstadoDentista(valor) {
+function fdEstadoDentista(valor, meta = FD_META_DENTISTA, piso = FD_PISO_RENTABILIDAD) {
   const n = parseFloat(valor || 0);
-  if (n >= FD_META_DENTISTA) return { key: 'sobre_meta', label: 'Sobre meta', css: 'ok' };
-  if (n >= FD_PISO_RENTABILIDAD) return { key: 'advertencia', label: 'Advertencia', css: 'warn' };
+  if (n >= meta) return { key: 'sobre_meta', label: 'Sobre meta', css: 'ok' };
+  if (n >= piso) return { key: 'advertencia', label: 'Advertencia', css: 'warn' };
   return { key: 'critico', label: 'Critico', css: 'no' };
 }
 
@@ -249,39 +252,212 @@ async function fdCargarAniosDisponibles() {
       .filter(Boolean);
     return [...new Set([...FD_ANIOS_BASE, ...anios])].sort((a, b) => a - b);
   } catch (err) {
-    console.error('No se pudieron cargar los años:', err);
+    console.error('No se pudieron cargar los aÃ±os:', err);
     return FD_ANIOS_BASE;
   }
 }
 async function fdCargarDatosDashboard(mesActivo = fdMesActivoSeleccionado) {
   if (!fdSupabaseConfigurado()) {
     const localData = fdGetLocalMes(mesActivo);
-    if (localData) return { ...localData, fallback: true };
-    return { mensual: FD_MAYO_2026, dentistas: FD_DENTISTAS_MAYO_2026, fallback: true };
+    if (localData) return { ...localData, fallback: true, vista: 'mensual' };
+    if (mesActivo === 'Mayo 2026') return { mensual: FD_MAYO_2026, dentistas: FD_DENTISTAS_MAYO_2026, fallback: true, vista: 'mensual' };
+    return { mensual: fdBuildEmptyMensual(mesActivo), dentistas: fdDentistasCero(mesActivo), fallback: true, vista: 'mensual' };
   }
 
   try {
     await seedMayo2026();
     const mensualRows = await fdSupabaseGetRows(`dashboard_mensual?select=*&mes=eq.${encodeURIComponent(mesActivo)}&limit=1`);
     const localData = fdGetLocalMes(mesActivo);
-    const mensual = Array.isArray(mensualRows) && mensualRows.length ? mensualRows[0] : (localData?.mensual || { ...FD_MAYO_2026, mes: mesActivo, facturacion_total: 0, pacientes_atendidos: 0, ticket_promedio: 0, flujo_neto: 0, comisiones: 0, insumos: 0, costos_fijos: 10800 });
-    const dentistasRows = await fdSupabaseGetRows(`produccion_dentistas?select=*&mes=eq.${encodeURIComponent(mensual.mes)}&order=facturacion.desc`);
-    const dentistas = Array.isArray(dentistasRows) && dentistasRows.length ? dentistasRows : (localData?.dentistas || FD_DENTISTAS_NOMBRES.map(nombre => ({ nombre, facturacion: 0, meta: FD_META_DENTISTA, estado: 'critico' })));
-    return { mensual, dentistas, fallback: false };
+    const mensual = Array.isArray(mensualRows) && mensualRows.length ? mensualRows[0] : (localData?.mensual || fdBuildEmptyMensual(mesActivo));
+    const dentistasRows = await fdSupabaseGetRows(`produccion_dentistas?select=*&mes=eq.${encodeURIComponent(mesActivo)}&order=facturacion.desc`);
+    const dentistas = Array.isArray(dentistasRows) && dentistasRows.length ? dentistasRows : (localData?.dentistas || fdDentistasCero(mesActivo));
+    return { mensual, dentistas, fallback: false, vista: 'mensual' };
   } catch (err) {
     console.error('No se pudo cargar Supabase:', err);
     const localData = fdGetLocalMes(mesActivo);
-    if (localData) return { ...localData, fallback: true };
-    return { mensual: FD_MAYO_2026, dentistas: FD_DENTISTAS_MAYO_2026, fallback: true };
+    if (localData) return { ...localData, fallback: true, vista: 'mensual' };
+    if (mesActivo === 'Mayo 2026') return { mensual: FD_MAYO_2026, dentistas: FD_DENTISTAS_MAYO_2026, fallback: true, vista: 'mensual' };
+    return { mensual: fdBuildEmptyMensual(mesActivo), dentistas: fdDentistasCero(mesActivo), fallback: true, vista: 'mensual' };
   }
 }
+
+function fdMesIndice(mesTexto) {
+  const parsed = fdParseMesActivo(mesTexto);
+  return FD_MESES.indexOf(parsed.mes) + 1;
+}
+
+function fdBuildEmptyMensual(mes) {
+  return {
+    mes,
+    facturacion_total: 0,
+    pacientes_atendidos: 0,
+    ticket_promedio: 0,
+    flujo_neto: 0,
+    costos_fijos: 10800,
+    comisiones: 0,
+    insumos: 0,
+    punto_equilibrio: FD_PUNTO_EQUILIBRIO,
+    meta_pacientes: FD_META_PACIENTES
+  };
+}
+
+function fdDentistasCero(mes) {
+  return FD_DENTISTAS_NOMBRES.map(nombre => ({
+    mes,
+    nombre,
+    facturacion: 0,
+    meta: FD_META_DENTISTA,
+    estado: 'critico'
+  }));
+}
+
+function fdFiltrarMensualesAnio(rows, anio, mesLimite) {
+  return (Array.isArray(rows) ? rows : [])
+    .filter(row => {
+      const parsed = fdParseMesActivo(row.mes);
+      const idx = fdMesIndice(row.mes);
+      return parsed.anio === Number(anio) && idx > 0 && idx <= mesLimite;
+    })
+    .sort((a, b) => fdMesIndice(a.mes) - fdMesIndice(b.mes));
+}
+
+function fdMergeMensuales(remoteRows, localRows) {
+  const map = new Map();
+  (Array.isArray(remoteRows) ? remoteRows : []).forEach(row => map.set(row.mes, row));
+  (Array.isArray(localRows) ? localRows : []).forEach(row => map.set(row.mes, row));
+  return [...map.values()];
+}
+
+function fdMergeDentistas(remoteRows, localRows) {
+  const map = new Map();
+  const add = row => {
+    if (!row || !row.mes || !row.nombre) return;
+    map.set(`${row.mes}||${row.nombre}`, row);
+  };
+  (Array.isArray(remoteRows) ? remoteRows : []).forEach(add);
+  (Array.isArray(localRows) ? localRows : []).forEach(add);
+  return [...map.values()];
+}
+
+function fdRowsConMayoBase(rows, anio, mesLimite) {
+  const incluyeMayo = Number(anio) === 2026 && mesLimite >= 5;
+  if (!incluyeMayo || rows.some(row => row.mes === 'Mayo 2026')) return rows;
+  return rows.concat(FD_MAYO_2026);
+}
+
+function fdDentistasConMayoBase(rows, mesesIncluidos) {
+  if (!mesesIncluidos.has('Mayo 2026') || rows.some(row => row.mes === 'Mayo 2026')) return rows;
+  return rows.concat(FD_DENTISTAS_MAYO_2026.map(row => ({ ...row, mes: 'Mayo 2026' })));
+}
+
+function fdAgruparDentistas(rows, mesesRegistrados) {
+  const map = new Map();
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const nombre = row.nombre || 'Sin nombre';
+    const actual = map.get(nombre) || { nombre, facturacion: 0, meta: FD_META_DENTISTA * mesesRegistrados, estado: 'critico' };
+    actual.facturacion += parseFloat(row.facturacion || 0);
+    map.set(nombre, actual);
+  });
+  const grouped = [...map.values()];
+  FD_DENTISTAS_NOMBRES.forEach(nombre => {
+    if (!map.has(nombre)) grouped.push({ nombre, facturacion: 0, meta: FD_META_DENTISTA * mesesRegistrados, estado: 'critico' });
+  });
+  return grouped.map(row => {
+    const estado = fdEstadoDentista(row.facturacion, FD_META_DENTISTA * mesesRegistrados, FD_PISO_RENTABILIDAD * mesesRegistrados);
+    return { ...row, estado: estado.key, meta: FD_META_DENTISTA * mesesRegistrados };
+  });
+}
+
+async function fdCargarDatosAcumulados(mesActivo = fdMesActivoSeleccionado) {
+  const parsed = fdParseMesActivo(mesActivo);
+  const mesLimite = fdMesIndice(mesActivo);
+  const localMensual = fdGetLocalJson(FD_LOCAL_DASHBOARD_KEY);
+  const localDentistas = fdGetLocalJson(FD_LOCAL_DENTISTAS_KEY);
+  let remoteMensual = [];
+  let remoteDentistas = [];
+  let fallback = !fdSupabaseConfigurado();
+
+  if (fdSupabaseConfigurado()) {
+    try {
+      await seedMayo2026();
+      remoteMensual = await fdSupabaseGetRows('dashboard_mensual?select=*&order=created_at.asc');
+      remoteDentistas = await fdSupabaseGetRows('produccion_dentistas?select=*&order=created_at.asc');
+    } catch (err) {
+      console.error('No se pudo cargar acumulado desde Supabase:', err);
+      fallback = true;
+    }
+  }
+
+  let mensuales = fdMergeMensuales(remoteMensual, localMensual);
+  mensuales = fdRowsConMayoBase(mensuales, parsed.anio, mesLimite);
+  mensuales = fdFiltrarMensualesAnio(mensuales, parsed.anio, mesLimite);
+
+  if (!mensuales.length) {
+    return {
+      mensual: {
+        ...fdBuildEmptyMensual(mesActivo),
+        mes: `Acumulado ${parsed.anio}`,
+        mes_activo: mesActivo,
+        periodo_titulo: `Acumulado ${parsed.anio} hasta ${parsed.mes}`,
+        meses_registrados: 0,
+        meta_pacientes: 0,
+        punto_equilibrio: 0
+      },
+      dentistas: fdDentistasCero(mesActivo),
+      fallback,
+      vista: 'acumulado'
+    };
+  }
+
+  const mesesIncluidos = new Set(mensuales.map(row => row.mes));
+  let dentistasRows = fdMergeDentistas(remoteDentistas, localDentistas)
+    .filter(row => mesesIncluidos.has(row.mes));
+  dentistasRows = fdDentistasConMayoBase(dentistasRows, mesesIncluidos);
+
+  const mesesRegistrados = mensuales.length;
+  const facturacion = mensuales.reduce((sum, row) => sum + parseFloat(row.facturacion_total || 0), 0);
+  const pacientes = mensuales.reduce((sum, row) => sum + parseInt(row.pacientes_atendidos || 0, 10), 0);
+  const comisiones = mensuales.reduce((sum, row) => sum + parseFloat(row.comisiones || 0), 0);
+  const insumos = mensuales.reduce((sum, row) => sum + parseFloat(row.insumos || 0), 0);
+  const costos = mensuales.reduce((sum, row) => sum + parseFloat(row.costos_fijos || 0), 0);
+  const flujo = mensuales.reduce((sum, row) => sum + parseFloat(row.flujo_neto || 0), 0);
+  const mesesTexto = mensuales.map(row => fdParseMesActivo(row.mes).mes).join(', ');
+
+  return {
+    mensual: {
+      mes: `Acumulado ${parsed.anio}`,
+      mes_activo: mesActivo,
+      periodo_titulo: `Acumulado ${parsed.anio} hasta ${parsed.mes}`,
+      periodo_detalle: `${mesesRegistrados} mes(es) registrado(s): ${mesesTexto}`,
+      facturacion_total: facturacion,
+      pacientes_atendidos: pacientes,
+      ticket_promedio: pacientes > 0 ? facturacion / pacientes : 0,
+      flujo_neto: flujo,
+      costos_fijos: costos,
+      comisiones,
+      insumos,
+      punto_equilibrio: FD_PUNTO_EQUILIBRIO * mesesRegistrados,
+      meta_pacientes: FD_META_PACIENTES * mesesRegistrados,
+      meses_registrados: mesesRegistrados
+    },
+    dentistas: fdAgruparDentistas(dentistasRows, mesesRegistrados || 1),
+    fallback,
+    vista: 'acumulado'
+  };
+}
+
 function renderDashboardFinanciero() {
   return `
   <div id="dashboard-financiero-root" class="fd-shell">
     <div class="fd-hero card">
       <div>
-        <h1 class="section-title" style="margin-bottom:.35rem">Dashboard de gestion mensual — Clinica Dental Clidente</h1>
+        <h1 class="section-title" style="margin-bottom:.35rem">Dashboard de gestion financiera - Clinica Dental Clidente</h1>
         <label class="fd-month-control">Mes activo <span class="fd-month-pair"><select id="fd-dashboard-mes">${fdMesOptions()}</select><select id="fd-dashboard-anio">${fdAnioOptions()}</select></span></label>
+        <div class="fd-view-toggle" role="group" aria-label="Vista del dashboard">
+          <button type="button" id="fd-vista-mensual" class="active">Mensual</button>
+          <button type="button" id="fd-vista-acumulado">Acumulado anual</button>
+        </div>
+        <p id="fd-periodo-summary" class="fd-periodo-summary">Vista mensual: Mayo 2026</p>
         <div class="fd-source-row">
           <span class="fd-source blue">FG Dental</span>
           <span class="fd-source green">Excel caja</span>
@@ -294,14 +470,21 @@ function renderDashboardFinanciero() {
     </div>
 
     <div id="fd-config-warning" class="fd-warning" style="display:none">
-      Supabase aun no esta disponible. El dashboard muestra Mayo 2026 como datos de arranque hasta revisar la conexion del portal.
+      Supabase aun no esta disponible. El dashboard muestra los datos guardados localmente o la base de Mayo 2026.
     </div>
 
     <div class="fd-kpi-grid">
-      <div class="fd-kpi-card"><span>Facturacion total</span><strong id="fd-kpi-facturacion">$0.00</strong></div>
-      <div class="fd-kpi-card"><span>Pacientes atendidos</span><strong id="fd-kpi-pacientes">0</strong></div>
+      <div class="fd-kpi-card"><span id="fd-label-facturacion">Facturacion total</span><strong id="fd-kpi-facturacion">$0.00</strong></div>
+      <div class="fd-kpi-card"><span id="fd-label-pacientes">Pacientes atendidos</span><strong id="fd-kpi-pacientes">0</strong></div>
       <div class="fd-kpi-card"><span>Ticket promedio</span><strong id="fd-kpi-ticket">$0.00</strong></div>
-      <div class="fd-kpi-card"><span>Flujo neto</span><strong id="fd-kpi-flujo">$0.00</strong></div>
+      <div class="fd-kpi-card"><span id="fd-label-flujo">Flujo neto</span><strong id="fd-kpi-flujo">$0.00</strong></div>
+    </div>
+
+    <div class="fd-insight-grid">
+      <div class="fd-insight"><span>Ocupacion</span><strong id="fd-extra-ocupacion">0.0%</strong><small id="fd-extra-capacidad">0 de 0 capacidad</small></div>
+      <div class="fd-insight"><span>Punto equilibrio operativo</span><strong id="fd-extra-equilibrio">0 px</strong><small>$16,243/mes segun PPT</small></div>
+      <div class="fd-insight"><span>Meta de pacientes</span><strong id="fd-extra-meta">0 px</strong><small id="fd-extra-meta-note">878 pacientes/mes</small></div>
+      <div class="fd-insight"><span>Meses registrados</span><strong id="fd-extra-meses">1</strong><small id="fd-extra-periodo">Mes activo</small></div>
     </div>
 
     <div class="card fd-card-tight">
@@ -317,15 +500,15 @@ function renderDashboardFinanciero() {
     <div class="fd-grid2">
       <div class="card fd-card-tight">
         <div class="card-title"><i class="fas fa-chair" style="margin-right:.5rem"></i>Analisis por silla</div>
-        <div class="fd-metric-row"><span>Costo fijo por silla</span><strong>$1,350/mes</strong></div>
-        <div class="fd-metric-row"><span>Piso de rentabilidad</span><strong>$1,800/mes</strong></div>
-        <div class="fd-metric-row"><span>Media aritmetica del grupo</span><strong>$3,044/mes</strong></div>
-        <div class="fd-metric-row"><span>Meta politica</span><strong>$2,500/mes</strong></div>
-        <div class="fd-metric-row danger"><span>3 sillas en contribucion negativa</span><strong>-$1,587/mes</strong></div>
+        <div class="fd-metric-row"><span>Costo fijo por silla</span><strong id="fd-silla-costo">$1,350/mes</strong></div>
+        <div class="fd-metric-row"><span>Piso de rentabilidad</span><strong id="fd-silla-piso">$1,800/mes</strong></div>
+        <div class="fd-metric-row"><span>Media aritmetica del grupo</span><strong id="fd-silla-media">$0/mes</strong></div>
+        <div class="fd-metric-row"><span>Meta politica</span><strong id="fd-silla-meta">$2,500/mes</strong></div>
+        <div class="fd-metric-row danger"><span id="fd-silla-neg-label">Sillas bajo piso</span><strong id="fd-silla-neg-valor">$0.00</strong></div>
       </div>
 
       <div class="card fd-card-tight">
-        <div class="card-title"><i class="fas fa-cash-register" style="margin-right:.5rem"></i>Flujo de caja del mes</div>
+        <div class="card-title" id="fd-caja-title"><i class="fas fa-cash-register" style="margin-right:.5rem"></i>Flujo de caja del mes</div>
         <div class="fd-metric-row"><span>Facturacion bruta</span><strong id="fd-caja-facturacion">$0.00</strong></div>
         <div class="fd-metric-row danger"><span>Comisiones</span><strong id="fd-caja-comisiones">$0.00</strong></div>
         <div class="fd-metric-row danger"><span>Costos fijos</span><strong id="fd-caja-costos">$0.00</strong></div>
@@ -335,9 +518,10 @@ function renderDashboardFinanciero() {
     </div>
 
     <div class="card fd-card-tight">
-      <div class="card-title"><i class="fas fa-gauge-high" style="margin-right:.5rem"></i>Punto de equilibrio</div>
-      <div class="fd-progress-label"><span id="fd-equilibrio-texto">0 de 878 pacientes — punto de equilibrio</span><strong id="fd-equilibrio-pct">0.0%</strong></div>
+      <div class="card-title"><i class="fas fa-gauge-high" style="margin-right:.5rem"></i>Meta de pacientes</div>
+      <div class="fd-progress-label"><span id="fd-equilibrio-texto">0 de 878 pacientes - meta mensual</span><strong id="fd-equilibrio-pct">0.0%</strong></div>
       <div class="fd-big-track"><div id="fd-equilibrio-bar" class="fd-big-fill danger" style="width:0%"></div></div>
+      <p id="fd-equilibrio-note" class="fd-note">Punto de equilibrio operativo: 418 pacientes/mes.</p>
     </div>
 
     <div class="card fd-card-tight">
@@ -346,7 +530,7 @@ function renderDashboardFinanciero() {
     </div>
 
     <div class="fd-footer">
-      Fuentes: FG Dental · Excel caja · Contador externo · Informe estrategico enero-abril 2026 · Confidencial — uso exclusivo Clinica Dental Clidente
+      Fuentes: FG Dental &middot; Excel caja &middot; Contador externo &middot; Informe estrategico enero-abril 2026 &middot; Confidencial - uso exclusivo Clinica Dental Clidente
     </div>
   </div>`;
 }
@@ -356,44 +540,76 @@ function fdSetText(id, value) {
   if (el) el.textContent = value;
 }
 
-function fdRenderDashboard(mensual, dentistas, fallback) {
+function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboard) {
+  const isAcumulado = vista === 'acumulado';
+  const mesesRegistrados = Math.max(parseInt(mensual.meses_registrados || 1, 10), 1);
   const facturacion = parseFloat(mensual.facturacion_total || 0);
   const pacientes = parseInt(mensual.pacientes_atendidos || 0, 10);
   const ticket = pacientes > 0 ? facturacion / pacientes : 0;
   const flujo = parseFloat(mensual.flujo_neto || 0);
-  const punto = parseInt(mensual.punto_equilibrio || FD_PUNTO_EQUILIBRIO, 10);
-  const equilibrioPct = punto > 0 ? (pacientes / punto) * 100 : 0;
+  const metaPacientes = isAcumulado ? parseInt(mensual.meta_pacientes || FD_META_PACIENTES * mesesRegistrados, 10) : FD_META_PACIENTES;
+  const puntoOperativo = isAcumulado ? FD_PUNTO_EQUILIBRIO * mesesRegistrados : FD_PUNTO_EQUILIBRIO;
+  const capacidad = FD_CAPACIDAD_MENSUAL * mesesRegistrados;
+  const metaPct = metaPacientes > 0 ? (pacientes / metaPacientes) * 100 : 0;
+  const ocupacionPct = capacidad > 0 ? (pacientes / capacidad) * 100 : 0;
+  const metaDentista = FD_META_DENTISTA * mesesRegistrados;
+  const pisoDentista = FD_PISO_RENTABILIDAD * mesesRegistrados;
+  const maxBarra = FD_MAX_BARRA * mesesRegistrados;
 
-  fdMesActivoSeleccionado = mensual.mes || fdMesActivoSeleccionado;
+  fdMesActivoSeleccionado = mensual.mes_activo || mensual.mes || fdMesActivoSeleccionado;
   fdSetMesControls('fd-dashboard', fdMesActivoSeleccionado);
+  fdSetText('fd-periodo-summary', isAcumulado ? (mensual.periodo_titulo || `Acumulado anual`) : `Vista mensual: ${fdMesActivoSeleccionado}`);
+  fdSetText('fd-label-facturacion', isAcumulado ? 'Facturacion acumulada' : 'Facturacion total');
+  fdSetText('fd-label-pacientes', isAcumulado ? 'Pacientes acumulados' : 'Pacientes atendidos');
+  fdSetText('fd-label-flujo', isAcumulado ? 'Flujo acumulado' : 'Flujo neto');
   fdSetText('fd-kpi-facturacion', formatoDolar(facturacion));
   fdSetText('fd-kpi-pacientes', fdEntero(pacientes));
   fdSetText('fd-kpi-ticket', formatoDolar(ticket));
   fdSetText('fd-kpi-flujo', formatoDolar(flujo));
+  fdSetText('fd-extra-ocupacion', fdPorcentaje(ocupacionPct));
+  fdSetText('fd-extra-capacidad', `${fdEntero(pacientes)} de ${fdEntero(capacidad)} capacidad`);
+  fdSetText('fd-extra-equilibrio', `${fdEntero(puntoOperativo)} px`);
+  fdSetText('fd-extra-meta', `${fdEntero(metaPacientes)} px`);
+  fdSetText('fd-extra-meta-note', isAcumulado ? `${mesesRegistrados} x 878 pacientes/mes` : '878 pacientes/mes');
+  fdSetText('fd-extra-meses', isAcumulado ? fdEntero(mensual.meses_registrados || 0) : '1');
+  fdSetText('fd-extra-periodo', isAcumulado ? (mensual.periodo_detalle || 'Meses del periodo con datos') : 'Mes activo');
 
+  document.getElementById('fd-vista-mensual')?.classList.toggle('active', !isAcumulado);
+  document.getElementById('fd-vista-acumulado')?.classList.toggle('active', isAcumulado);
   document.getElementById('fd-kpi-flujo')?.classList.toggle('fd-positive', flujo >= 0);
   document.getElementById('fd-kpi-flujo')?.classList.toggle('fd-negative', flujo < 0);
   document.getElementById('fd-config-warning').style.display = fallback ? 'block' : 'none';
 
   const tbody = document.getElementById('fd-dentistas-body');
+  const dentistasOrdenados = (Array.isArray(dentistas) ? dentistas : [])
+    .slice()
+    .sort((a, b) => parseFloat(b.facturacion || 0) - parseFloat(a.facturacion || 0));
   if (tbody) {
-    tbody.innerHTML = dentistas
-      .slice()
-      .sort((a, b) => parseFloat(b.facturacion || 0) - parseFloat(a.facturacion || 0))
-      .map(d => {
-        const valor = parseFloat(d.facturacion || 0);
-        const estado = fdEstadoDentista(valor);
-        const width = Math.min((valor / FD_MAX_BARRA) * 100, 100);
-        const suffix = estado.key === 'advertencia' ? ' &#9888;' : estado.key === 'critico' ? ' &times;' : '';
-        return `<tr>
-          <td>${d.nombre}</td>
-          <td><strong>${formatoDolar(valor)}</strong></td>
-          <td><div class="fd-mini-track"><div class="fd-mini-fill ${estado.css}" style="width:${width}%"></div></div></td>
-          <td><span class="fd-status ${estado.css}">${estado.label}${suffix}</span></td>
-        </tr>`;
-      }).join('');
+    tbody.innerHTML = dentistasOrdenados.map(d => {
+      const valor = parseFloat(d.facturacion || 0);
+      const estado = fdEstadoDentista(valor, metaDentista, pisoDentista);
+      const width = Math.min((valor / maxBarra) * 100, 100);
+      const suffix = estado.key === 'advertencia' ? ' &#9888;' : estado.key === 'critico' ? ' &times;' : '';
+      return `<tr>
+        <td>${d.nombre}</td>
+        <td><strong>${formatoDolar(valor)}</strong></td>
+        <td><div class="fd-mini-track"><div class="fd-mini-fill ${estado.css}" style="width:${width}%"></div></div></td>
+        <td><span class="fd-status ${estado.css}">${estado.label}${suffix}</span></td>
+      </tr>`;
+    }).join('');
   }
 
+  const promedioDentista = dentistasOrdenados.length ? dentistasOrdenados.reduce((sum, d) => sum + parseFloat(d.facturacion || 0), 0) / dentistasOrdenados.length : 0;
+  const negativos = dentistasOrdenados.filter(d => parseFloat(d.facturacion || 0) < pisoDentista);
+  const brechaPiso = negativos.reduce((sum, d) => sum + Math.max(pisoDentista - parseFloat(d.facturacion || 0), 0), 0);
+  fdSetText('fd-silla-costo', isAcumulado ? `${formatoDolar(1350 * mesesRegistrados)} acumulado` : '$1,350/mes');
+  fdSetText('fd-silla-piso', isAcumulado ? `${formatoDolar(pisoDentista)} acumulado` : '$1,800/mes');
+  fdSetText('fd-silla-media', isAcumulado ? `${formatoDolar(promedioDentista)} acumulado` : `${formatoDolar(promedioDentista)}/mes`);
+  fdSetText('fd-silla-meta', isAcumulado ? `${formatoDolar(metaDentista)} acumulado` : '$2,500/mes');
+  fdSetText('fd-silla-neg-label', `${negativos.length} silla(s) bajo piso`);
+  fdSetText('fd-silla-neg-valor', brechaPiso ? '-' + formatoDolar(brechaPiso) : formatoDolar(0));
+
+  fdSetText('fd-caja-title', isAcumulado ? 'Flujo de caja acumulado' : 'Flujo de caja del mes');
   fdSetText('fd-caja-facturacion', formatoDolar(facturacion));
   fdSetText('fd-caja-comisiones', '-' + formatoDolar(mensual.comisiones || 0));
   fdSetText('fd-caja-costos', '-' + formatoDolar(mensual.costos_fijos || 0));
@@ -402,22 +618,26 @@ function fdRenderDashboard(mensual, dentistas, fallback) {
   document.getElementById('fd-caja-flujo')?.classList.toggle('fd-positive', flujo >= 0);
   document.getElementById('fd-caja-flujo')?.classList.toggle('fd-negative', flujo < 0);
 
-  fdSetText('fd-equilibrio-texto', `${fdEntero(pacientes)} de ${fdEntero(punto)} pacientes — punto de equilibrio`);
-  fdSetText('fd-equilibrio-pct', fdPorcentaje(equilibrioPct));
+  fdSetText('fd-equilibrio-texto', `${fdEntero(pacientes)} de ${fdEntero(metaPacientes)} pacientes - ${isAcumulado ? 'meta acumulada' : 'meta mensual'}`);
+  fdSetText('fd-equilibrio-pct', fdPorcentaje(metaPct));
+  fdSetText('fd-equilibrio-note', `Punto de equilibrio operativo: ${fdEntero(puntoOperativo)} pacientes${isAcumulado ? ' acumulados' : '/mes'}; meta comercial: ${fdEntero(metaPacientes)} pacientes.`);
   const bar = document.getElementById('fd-equilibrio-bar');
   if (bar) {
-    bar.style.width = Math.min(equilibrioPct, 100) + '%';
-    bar.classList.toggle('success', pacientes >= punto);
-    bar.classList.toggle('danger', pacientes < punto);
+    bar.style.width = Math.min(metaPct, 100) + '%';
+    bar.classList.toggle('success', pacientes >= metaPacientes);
+    bar.classList.toggle('danger', pacientes < metaPacientes);
   }
 
+  const bajoMeta = dentistasOrdenados.filter(d => parseFloat(d.facturacion || 0) < metaDentista);
+  const brechaMeta = bajoMeta.reduce((sum, d) => sum + Math.max(metaDentista - parseFloat(d.facturacion || 0), 0), 0);
+  const nombresNegativos = negativos.slice(0, 4).map(d => d.nombre.replace(/^Dr\.\s+|^Dra\.\s+/, '')).join(', ');
   const alertas = document.getElementById('fd-alertas');
   if (alertas) {
     alertas.innerHTML = `
-      <div class="fd-alert red">3 sillas con contribucion negativa — Mendez, Arriaza, Guardado: -$1,587/mes</div>
-      <div class="fd-alert red">Flujo negativo — el mes cerro en ${formatoDolar(flujo)}</div>
-      <div class="fd-alert yellow">5 dentistas bajo meta $2,500 — brecha total: $5,088/mes</div>
-      <div class="fd-alert green">Potencial referidos + reactivacion — +$4,904/mes proyectado</div>`;
+      <div class="fd-alert ${negativos.length ? 'red' : 'green'}">${negativos.length} silla(s) bajo piso de rentabilidad${nombresNegativos ? ` - ${nombresNegativos}` : ''}: ${brechaPiso ? '-' + formatoDolar(brechaPiso) : formatoDolar(0)}</div>
+      <div class="fd-alert ${flujo < 0 ? 'red' : 'green'}">Flujo ${flujo < 0 ? 'negativo' : 'positivo'} - ${isAcumulado ? 'el periodo cerro en' : 'el mes cerro en'} ${formatoDolar(flujo)}</div>
+      <div class="fd-alert ${bajoMeta.length ? 'yellow' : 'green'}">${bajoMeta.length} dentista(s) bajo meta ${formatoDolar(metaDentista)} - brecha total: ${formatoDolar(brechaMeta)}</div>
+      <div class="fd-alert green">Potencial referidos + reactivacion - +$4,904/mes proyectado</div>`;
   }
 }
 
@@ -428,20 +648,25 @@ async function initDashboardFinanciero() {
 
   const monthSelect = document.getElementById('fd-dashboard-mes');
   const yearSelect = document.getElementById('fd-dashboard-anio');
+  const btnMensual = document.getElementById('fd-vista-mensual');
+  const btnAcumulado = document.getElementById('fd-vista-acumulado');
   const anios = await fdCargarAniosDisponibles();
   fdSetMesControls('fd-dashboard', fdMesActivoSeleccionado, anios);
 
-  const cargarMesActivo = async () => {
+  const cargarVista = async () => {
     fdMesActivoSeleccionado = fdReadMesControls('fd-dashboard');
-    const { mensual, dentistas, fallback } = await fdCargarDatosDashboard(fdMesActivoSeleccionado);
-    fdRenderDashboard(mensual, dentistas, fallback);
+    const data = fdVistaDashboard === 'acumulado'
+      ? await fdCargarDatosAcumulados(fdMesActivoSeleccionado)
+      : await fdCargarDatosDashboard(fdMesActivoSeleccionado);
+    fdRenderDashboard(data.mensual, data.dentistas, data.fallback, data.vista || fdVistaDashboard);
   };
 
-  monthSelect?.addEventListener('change', cargarMesActivo);
-  yearSelect?.addEventListener('change', cargarMesActivo);
+  monthSelect?.addEventListener('change', cargarVista);
+  yearSelect?.addEventListener('change', cargarVista);
+  btnMensual?.addEventListener('click', () => { fdVistaDashboard = 'mensual'; cargarVista(); });
+  btnAcumulado?.addEventListener('click', () => { fdVistaDashboard = 'acumulado'; cargarVista(); });
 
-  const { mensual, dentistas, fallback } = await fdCargarDatosDashboard(fdMesActivoSeleccionado);
-  fdRenderDashboard(mensual, dentistas, fallback);
+  await cargarVista();
 }
 function fdSlug(texto) {
   return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -452,7 +677,7 @@ function renderFormularioHenry() {
   <div id="formulario-henry-root" class="fd-shell fd-form-shell">
     <div class="fd-hero card">
       <div>
-        <h1 class="section-title" style="margin-bottom:.35rem">Ingreso mensual de datos — Dashboard Clidente</h1>
+        <h1 class="section-title" style="margin-bottom:.35rem">Ingreso mensual de datos â€” Dashboard Clidente</h1>
         <p class="fd-subtitle">Completa los 3 pasos una vez al mes. Tiempo estimado: 15 minutos.</p>
       </div>
       <label class="fd-month-badge">Mes activo <span class="fd-month-pair"><select id="henry-mes">${fdMesOptions()}</select><select id="henry-anio">${fdAnioOptions()}</select></span></label>
@@ -463,7 +688,7 @@ function renderFormularioHenry() {
     </div>
 
     <div class="card fd-card-tight">
-      <div class="card-title">Paso 1 — Datos generales <span class="fd-source green">Excel caja</span></div>
+      <div class="card-title">Paso 1 â€” Datos generales <span class="fd-source green">Excel caja</span></div>
       <div class="fd-form-grid">
         <label>Facturacion total del mes ($)<input id="henry-facturacion" type="number" min="0" step="0.01" placeholder="0.00"></label>
         <label>Pacientes atendidos<input id="henry-pacientes" type="number" min="0" step="1" placeholder="0"></label>
@@ -474,7 +699,7 @@ function renderFormularioHenry() {
     </div>
 
     <div class="card fd-card-tight">
-      <div class="card-title">Paso 2 — Facturacion por dentista <span class="fd-source blue">FG Dental</span></div>
+      <div class="card-title">Paso 2 â€” Facturacion por dentista <span class="fd-source blue">FG Dental</span></div>
       <div class="fd-table-wrap">
         <table class="fd-table fd-input-table">
           <thead><tr><th>Nombre</th><th>Campo de facturacion ($)</th><th>Badge de estado</th></tr></thead>
@@ -493,14 +718,14 @@ function renderFormularioHenry() {
     </div>
 
     <div class="card fd-card-tight">
-      <div class="card-title">Paso 3 — Vista previa antes de guardar</div>
+      <div class="card-title">Paso 3 â€” Vista previa antes de guardar</div>
       <div class="fd-kpi-grid compact">
         <div class="fd-kpi-card"><span>Facturacion</span><strong id="prev-facturacion">$0.00</strong></div>
         <div class="fd-kpi-card"><span>Pacientes</span><strong id="prev-pacientes">0</strong></div>
         <div class="fd-kpi-card"><span>Ticket promedio</span><strong id="prev-ticket">$0.00</strong></div>
         <div class="fd-kpi-card"><span>Flujo neto</span><strong id="prev-flujo">$0.00</strong></div>
       </div>
-      <div class="fd-progress-label"><span id="prev-equilibrio-texto">0 de 878 pacientes — punto de equilibrio</span><strong id="prev-equilibrio-pct">0.0%</strong></div>
+      <div class="fd-progress-label"><span id="prev-equilibrio-texto">0 de 878 pacientes - meta mensual</span><strong id="prev-equilibrio-pct">0.0%</strong></div>
       <div class="fd-big-track"><div id="prev-equilibrio-bar" class="fd-big-fill danger" style="width:0%"></div></div>
       <div id="prev-alertas" class="fd-alert-grid" style="margin-top:1rem"></div>
       <div id="prev-mejoras" class="fd-improvement" style="display:none"></div>
@@ -537,13 +762,13 @@ function fdCollectHenryData() {
 
 function fdUpdateHenryPreview() {
   const data = fdCollectHenryData();
-  const equilibrioPct = (data.pacientes / FD_PUNTO_EQUILIBRIO) * 100;
+  const equilibrioPct = (data.pacientes / FD_META_PACIENTES) * 100;
 
   fdSetText('prev-facturacion', formatoDolar(data.facturacion));
   fdSetText('prev-pacientes', fdEntero(data.pacientes));
   fdSetText('prev-ticket', formatoDolar(data.ticket));
   fdSetText('prev-flujo', formatoDolar(data.flujo));
-  fdSetText('prev-equilibrio-texto', `${fdEntero(data.pacientes)} de ${FD_PUNTO_EQUILIBRIO} pacientes — punto de equilibrio`);
+  fdSetText('prev-equilibrio-texto', `${fdEntero(data.pacientes)} de ${FD_META_PACIENTES} pacientes - meta mensual`);
   fdSetText('prev-equilibrio-pct', fdPorcentaje(equilibrioPct));
   fdSetText('henry-guardar', `Guardar datos de ${data.mes}`);
 
@@ -552,8 +777,8 @@ function fdUpdateHenryPreview() {
   const bar = document.getElementById('prev-equilibrio-bar');
   if (bar) {
     bar.style.width = Math.min(equilibrioPct, 100) + '%';
-    bar.classList.toggle('success', data.pacientes >= FD_PUNTO_EQUILIBRIO);
-    bar.classList.toggle('danger', data.pacientes < FD_PUNTO_EQUILIBRIO);
+    bar.classList.toggle('success', data.pacientes >= FD_META_PACIENTES);
+    bar.classList.toggle('danger', data.pacientes < FD_META_PACIENTES);
   }
 
   document.querySelectorAll('.fd-dentista-input').forEach(input => {
@@ -570,9 +795,10 @@ function fdUpdateHenryPreview() {
   const alertas = document.getElementById('prev-alertas');
   if (alertas) {
     alertas.innerHTML = `
-      <div class="fd-alert ${data.flujo < 0 ? 'red' : 'green'}">Flujo ${data.flujo < 0 ? 'negativo' : 'positivo'} — ${formatoDolar(data.flujo)}</div>
-      <div class="fd-alert ${data.pacientes < FD_PUNTO_EQUILIBRIO ? 'red' : 'green'}">${fdEntero(data.pacientes)} pacientes vs punto de equilibrio de ${FD_PUNTO_EQUILIBRIO}</div>
-      <div class="fd-alert ${bajoMeta.length ? 'yellow' : 'green'}">${bajoMeta.length} dentistas bajo meta $2,500 — brecha total: ${formatoDolar(brecha)}</div>`;
+      <div class="fd-alert ${data.flujo < 0 ? 'red' : 'green'}">Flujo ${data.flujo < 0 ? 'negativo' : 'positivo'} â€” ${formatoDolar(data.flujo)}</div>
+      <div class="fd-alert ${data.pacientes < FD_PUNTO_EQUILIBRIO ? 'red' : 'green'}">${fdEntero(data.pacientes)} pacientes vs punto de equilibrio operativo de ${FD_PUNTO_EQUILIBRIO}</div>
+      <div class="fd-alert ${data.pacientes < FD_META_PACIENTES ? 'yellow' : 'green'}">${fdEntero(data.pacientes)} pacientes vs meta mensual de ${FD_META_PACIENTES}</div>
+      <div class="fd-alert ${bajoMeta.length ? 'yellow' : 'green'}">${bajoMeta.length} dentistas bajo meta $2,500 â€” brecha total: ${formatoDolar(brecha)}</div>`;
   }
 
   const mejoras = [];
@@ -583,7 +809,7 @@ function fdUpdateHenryPreview() {
   const mejorasBox = document.getElementById('prev-mejoras');
   if (mejorasBox) {
     mejorasBox.style.display = mejoras.length ? 'block' : 'none';
-    mejorasBox.innerHTML = mejoras.length ? `<strong>Mejoras frente a Mayo 2026:</strong> ${mejoras.join(' · ')}` : '';
+    mejorasBox.innerHTML = mejoras.length ? `<strong>Mejoras frente a Mayo 2026:</strong> ${mejoras.join(' Â· ')}` : '';
   }
 }
 
@@ -664,3 +890,4 @@ function initFormularioHenry() {
   document.getElementById('henry-guardar')?.addEventListener('click', fdGuardarHenry);
   fdUpdateHenryPreview();
 }
+
