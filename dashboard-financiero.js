@@ -215,6 +215,13 @@ async function fdSupabaseDelete(tabla, filtros) {
     await supabaseRequest(`${tabla}${filtros}`, { method: 'DELETE' });
     return true;
   }
+  if (typeof getSupabaseHeaders === 'function') {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}${filtros}`, {
+      method: 'DELETE',
+      headers: getSupabaseHeaders()
+    });
+    return res.ok;
+  }
   if (typeof supabaseHeaders !== 'undefined') {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabla}${filtros}`, {
       method: 'DELETE',

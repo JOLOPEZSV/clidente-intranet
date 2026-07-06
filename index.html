@@ -8,9 +8,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="style.css?v=20260628-informe-2">
+  <link rel="stylesheet" href="auth.css?v=20260706-allowlist">
   <link rel="stylesheet" href="dashboard-financiero.css?v=20260703-acumulado">
 </head>
-<body>
+<body class="auth-checking">
 
   <!-- ══ WELCOME MODAL ══════════════════════════════════════════ -->
   <div class="modal-backdrop" id="welcomeBackdrop">
@@ -82,6 +83,10 @@
         <span class="nav-number">12</span>
         <span class="nav-label">DASHBOARD FINANCIERO</span>
       </button>
+      <button class="nav-item" data-section="formulario-henry">
+        <span class="nav-number">13</span>
+        <span class="nav-label">INGRESO MENSUAL</span>
+      </button>
     </nav>
 
     <div class="sidebar-user">
@@ -114,6 +119,9 @@
 
   </div><!-- /main-wrapper -->
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="auth-config.js?v=20260706-allowlist"></script>
+  <script src="auth-guard.js?v=20260706-allowlist"></script>
   <script src="dashboard-financiero.js?v=20260703-acumulado"></script>
   <script src="app.js?v=20260628-informe-2"></script>
 </body>

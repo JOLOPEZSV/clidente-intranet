@@ -785,9 +785,10 @@ function getIndiceRowById(rowId) {
 }
 
 function getSupabaseHeaders(extra = {}) {
+  const authToken = window.clidenteAuth?.getAccessToken?.();
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
-    Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+    Authorization: `Bearer ${authToken || SUPABASE_PUBLISHABLE_KEY}`,
     'Content-Type': 'application/json',
     ...extra,
   };
@@ -2010,8 +2011,6 @@ function renderCronograma() {
 
 /* ── SECTION MAP ───────────────────────────────────────────── */
 const SECTIONS = {
-  'dashboard-financiero': { label: 'Dashboard Financiero', render: renderDashboardFinanciero },
-  'formulario-henry':     { label: 'Ingreso mensual Henry', render: renderFormularioHenry },
   'cartelera':      { label: 'Cartelera',            render: renderCartelera },
   'equipo':         { label: 'Equipo',               render: renderEquipo },
   'fases':          { label: 'Fases del Proyecto',   render: renderFases },
@@ -2023,6 +2022,8 @@ const SECTIONS = {
   'desarrollo-plan': { label: 'Desarrollo Plan de Trabajo', render: renderDesarrolloPlan },
   'informe-final':  { label: 'Elaboración del Informe Final', render: renderInformeFinal },
   'cronograma':     { label: 'Cronograma',           render: renderCronograma },
+  'dashboard-financiero': { label: 'Dashboard Financiero', render: renderDashboardFinanciero },
+  'formulario-henry':     { label: 'Ingreso mensual Henry', render: renderFormularioHenry },
 };
 
 /* ── NAVIGATION ────────────────────────────────────────────── */
@@ -2033,7 +2034,7 @@ function navigate(sectionId) {
 
   // Render content
   const area = document.getElementById('contentArea');
-  area.classList.toggle('content-area-wide', sectionId === 'cronograma');
+  area.classList.toggle('content-area-wide', ['cronograma', 'dashboard-financiero', 'formulario-henry'].includes(sectionId));
   area.innerHTML = `<div class="fade-in">${section.render()}</div>`;
 
   // Update breadcrumb
