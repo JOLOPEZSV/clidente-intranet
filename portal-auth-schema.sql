@@ -11,14 +11,20 @@ CREATE TABLE IF NOT EXISTS public.portal_allowed_users (
 INSERT INTO public.portal_allowed_users (email, role, active)
 VALUES
   ('jolopezsalsv@gmail.com', 'admin', true),
-  ('stardent.jolopez@gmail.com', 'admin', true),
   ('cecilia_cbcg@hotmail.com', 'editor', true),
   ('ricardoa7@hotmail.com', 'editor', true),
-  ('jm.josemenjivar@gmail.com', 'editor', true),
-  ('roca2608@gmail.com', 'viewer', true)
+  ('jm.josemenjivar@gmail.com', 'editor', true)
 ON CONFLICT (email) DO UPDATE
 SET role = EXCLUDED.role,
     active = EXCLUDED.active;
+
+DELETE FROM public.portal_allowed_users
+WHERE lower(email) NOT IN (
+  'jolopezsalsv@gmail.com',
+  'cecilia_cbcg@hotmail.com',
+  'ricardoa7@hotmail.com',
+  'jm.josemenjivar@gmail.com'
+);
 
 ALTER TABLE public.portal_allowed_users ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.portal_allowed_users FROM anon;
