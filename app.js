@@ -1534,6 +1534,31 @@ function renderDesarrolloPlan() {
 }
 
 function renderInformeFinal() {
+  // Entregables finales: para activar un documento pendiente solo hay que llenar su url
+  // (y pdfUrl si aplica) con el enlace compartido de Google Drive / Docs.
+  const entregaFinalDocs = [
+    {
+      icon: 'fa-file-word',
+      title: 'Documento base de la presentación final',
+      desc: 'Word colaborativo en Google Docs del que se construirá la presentación final.',
+      url: 'https://docs.google.com/document/d/1Bi1UGkgGSMChUQOuV00hqab7LR_2pUq0/edit?usp=sharing&rtpof=true&sd=true',
+      pdfUrl: 'https://docs.google.com/document/d/1Bi1UGkgGSMChUQOuV00hqab7LR_2pUq0/export?format=pdf',
+    },
+    {
+      icon: 'fa-file-powerpoint',
+      title: 'Presentación final',
+      desc: 'Slides de la presentación ante ISEADE FEPADE.',
+      url: '',
+      pdfUrl: '',
+    },
+    {
+      icon: 'fa-file-signature',
+      title: 'Documento final (informe ISEADE)',
+      desc: 'Informe final de la consultoría para entrega el 31 de agosto de 2026.',
+      url: '',
+      pdfUrl: '',
+    },
+  ];
   const guideItems = [
     'Portada',
     'Índice',
@@ -1558,6 +1583,27 @@ function renderInformeFinal() {
       <p>Contenido tomado de la presentación de instrucciones de Vanessa para MAE 58. Esta estructura ordena el documento final que se entregará a ISEADE.</p>
     </div>
     <span class="guide-stage-badge"><i class="fas fa-calendar-check"></i> Entrega: 31 de agosto de 2026</span>
+  </div>
+
+  <div class="resource-group card collaborative-doc-card">
+    <div class="card-title"><i class="fas fa-folder-open" style="margin-right:.5rem"></i>Documentos de la entrega final</div>
+    <p class="resource-group-subtitle">Acceso del equipo a los tres entregables. El acceso lo controla Google Drive: solo los correos agregados como editores pueden abrir los documentos.</p>
+    ${entregaFinalDocs.map(doc => `
+    <div class="final-doc-row">
+      <div class="final-doc-info">
+        <i class="fas ${doc.icon}"></i>
+        <div>
+          <strong>${doc.title}</strong>
+          <span>${doc.desc}</span>
+        </div>
+      </div>
+      <div class="resource-buttons">
+        ${doc.url ? `
+        <a href="${doc.url}" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-pen-to-square"></i> Abrir y editar</a>
+        ${doc.pdfUrl ? `<a href="${doc.pdfUrl}" target="_blank" rel="noopener" class="btn-resource"><i class="fas fa-file-pdf"></i> Descargar PDF</a>` : ''}
+        ` : '<span class="followup-pending-note"><i class="fas fa-clock"></i> Pendiente de enlace</span>'}
+      </div>
+    </div>`).join('')}
   </div>
 
   <div class="card">

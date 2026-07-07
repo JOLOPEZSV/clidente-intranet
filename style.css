@@ -1995,3 +1995,31 @@ img { max-width: 100%; }
   .mp-info { font-size: 12px; }
   .mp-kpi-value { font-size: 24px; }
 }
+
+/* DOCUMENTOS ENTREGA FINAL ─────────────────────────────────── */
+.final-doc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: .85rem 0;
+  border-top: 1px solid var(--border, #e5e7eb);
+}
+.final-doc-row:first-of-type { border-top: none; }
+.final-doc-info {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  min-width: 260px;
+  flex: 1;
+}
+.final-doc-info > i {
+  font-size: 1.5rem;
+  color: var(--blue-dark, #1a56a4);
+  width: 2rem;
+  text-align: center;
+}
+.final-doc-info strong { display: block; font-size: .95rem; }
+.final-doc-info span { display: block; font-size: .8rem; color: var(--text-muted, #6b7280); }
+.final-doc-row .followup-pending-note { gap: .35rem; align-items: center; }
