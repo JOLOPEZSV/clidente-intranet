@@ -9,6 +9,11 @@
   let authClient = null;
   let currentSession = null;
   let currentUser = null;
+  // Capturar el hash antes de que supabase-js (detectSessionInUrl) lo consuma y limpie.
+  const initialHashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  // Aviso persistente del gate (p.ej. enlace vencido): sobrevive a los lockPortal('')
+  // que disparan los eventos INITIAL_SESSION/SIGNED_OUT de supabase-js.
+  let pendingGateNotice = null;
 
   function emailIsAllowed(email) {
     const normalized = normalizeEmail(email);
@@ -44,13 +49,20 @@
           <label>Correo autorizado
             <input id="authEmail" type="email" autocomplete="email" placeholder="tu-correo@dominio.com" required>
           </label>
-          <button id="authSubmit" class="auth-submit" type="submit">Enviar enlace de acceso</button>
+          <button id="authSubmit" class="auth-submit" type="submit">Enviar codigo de acceso</button>
+        </form>
+        <form class="auth-form auth-otp-form" id="authOtpForm" hidden>
+          <label>Codigo de 6 digitos del correo
+            <input id="authOtp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="123456" required>
+          </label>
+          <button id="authOtpSubmit" class="auth-submit" type="submit">Entrar con el codigo</button>
         </form>
         <div id="authMessage" class="auth-message"></div>
-        <div class="auth-footnote">Si tu correo no esta en la lista autorizada, el portal no abrira aunque tengas el enlace.</div>
+        <div class="auth-footnote">Recibiras un correo con un codigo de 6 digitos y un enlace: cualquiera de los dos sirve. Si tu correo no esta en la lista autorizada, el portal no abrira aunque tengas el enlace.</div>
       </section>`;
     document.body.appendChild(gate);
     document.getElementById('authForm')?.addEventListener('submit', handleLoginSubmit);
+    document.getElementById('authOtpForm')?.addEventListener('submit', handleOtpSubmit);
   }
 
   function lockPortal(message, state = 'info') {
@@ -58,6 +70,10 @@
     document.body.classList.remove('auth-checking', 'auth-ready');
     document.body.classList.add('auth-locked');
     document.getElementById('authGate')?.removeAttribute('hidden');
+    if (!message && pendingGateNotice) {
+      setMessage(pendingGateNotice.text, pendingGateNotice.state);
+      return;
+    }
     setMessage(message, state);
   }
 
@@ -93,6 +109,7 @@
 
   async function handleLoginSubmit(event) {
     event.preventDefault();
+    pendingGateNotice = null;
     const email = normalizeEmail(document.getElementById('authEmail')?.value);
     const button = document.getElementById('authSubmit');
     if (!emailIsAllowed(email)) {
@@ -111,10 +128,41 @@
     button.disabled = false;
 
     if (error) {
-      setMessage(`No se pudo enviar el enlace: ${error.message}`, 'error');
+      setMessage(`No se pudo enviar el codigo: ${error.message}`, 'error');
       return;
     }
-    setMessage('Listo. Revisa tu correo y abre el enlace de acceso.', 'success');
+    const otpForm = document.getElementById('authOtpForm');
+    if (otpForm) {
+      otpForm.removeAttribute('hidden');
+      document.getElementById('authOtp')?.focus();
+    }
+    setMessage('Listo. Revisa tu correo: escribe aqui el codigo de 6 digitos (recomendado) o abre el enlace.', 'success');
+  }
+
+  async function handleOtpSubmit(event) {
+    event.preventDefault();
+    const email = normalizeEmail(document.getElementById('authEmail')?.value);
+    const code = String(document.getElementById('authOtp')?.value || '').trim();
+    const button = document.getElementById('authOtpSubmit');
+    if (!emailIsAllowed(email)) {
+      setMessage('Este correo no esta autorizado para entrar al portal.', 'error');
+      return;
+    }
+    if (!/^\d{6}$/.test(code)) {
+      setMessage('El codigo debe tener 6 digitos.', 'error');
+      return;
+    }
+
+    button.disabled = true;
+    setMessage('Verificando codigo...', 'info');
+    const { error } = await authClient.auth.verifyOtp({ email, token: code, type: 'email' });
+    button.disabled = false;
+
+    if (error) {
+      setMessage(`Codigo invalido o vencido: ${error.message}. Pide un codigo nuevo si es necesario.`, 'error');
+      return;
+    }
+    setMessage('', 'info');
   }
 
   async function validateSession(session) {
@@ -169,6 +217,18 @@
 
     const { data } = await authClient.auth.getSession();
     await validateSession(data?.session || null);
+
+    if (initialHashParams.get('error')) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      if (!data?.session) {
+        const code = initialHashParams.get('error_code') || '';
+        const friendly = code === 'otp_expired'
+          ? 'El enlace del correo ya fue usado o vencio (los antivirus a veces lo consumen al escanearlo). Pide un codigo nuevo y usa el codigo de 6 digitos en lugar del enlace.'
+          : `No se pudo completar el acceso (${code || initialHashParams.get('error')}). Pide un codigo nuevo.`;
+        pendingGateNotice = { text: friendly, state: 'error' };
+        setMessage(friendly, 'error');
+      }
+    }
 
     authClient.auth.onAuthStateChange((_event, session) => {
       validateSession(session || null);

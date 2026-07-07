@@ -105,6 +105,22 @@ body.auth-ready .auth-gate {
   opacity: .7;
 }
 
+.auth-otp-form {
+  border-top: 1px dashed #dde3ec;
+  margin-top: .9rem;
+  padding-top: .9rem;
+}
+
+.auth-otp-form[hidden] {
+  display: none !important;
+}
+
+.auth-otp-form input {
+  font-size: 1.15rem;
+  letter-spacing: .35em;
+  text-align: center;
+}
+
 .auth-message {
   border-radius: 8px;
   display: none;
