@@ -52,13 +52,13 @@
           <button id="authSubmit" class="auth-submit" type="submit">Enviar codigo de acceso</button>
         </form>
         <form class="auth-form auth-otp-form" id="authOtpForm" hidden>
-          <label>Codigo de 6 digitos del correo
-            <input id="authOtp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="123456" required>
+          <label>Codigo del correo
+            <input id="authOtp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9\\s]{6,14}" maxlength="14" placeholder="12345678" required>
           </label>
           <button id="authOtpSubmit" class="auth-submit" type="submit">Entrar con el codigo</button>
         </form>
         <div id="authMessage" class="auth-message"></div>
-        <div class="auth-footnote">Recibiras un correo con un codigo de 6 digitos y un enlace: cualquiera de los dos sirve. Si tu correo no esta en la lista autorizada, el portal no abrira aunque tengas el enlace.</div>
+        <div class="auth-footnote">Recibiras un correo con un codigo numerico y un enlace: cualquiera de los dos sirve. Si tu correo no esta en la lista autorizada, el portal no abrira aunque tengas el enlace.</div>
       </section>`;
     document.body.appendChild(gate);
     document.getElementById('authForm')?.addEventListener('submit', handleLoginSubmit);
@@ -136,20 +136,20 @@
       otpForm.removeAttribute('hidden');
       document.getElementById('authOtp')?.focus();
     }
-    setMessage('Listo. Revisa tu correo: escribe aqui el codigo de 6 digitos (recomendado) o abre el enlace.', 'success');
+    setMessage('Listo. Revisa tu correo: escribe aqui el codigo que te llego (recomendado) o abre el enlace.', 'success');
   }
 
   async function handleOtpSubmit(event) {
     event.preventDefault();
     const email = normalizeEmail(document.getElementById('authEmail')?.value);
-    const code = String(document.getElementById('authOtp')?.value || '').trim();
+    const code = String(document.getElementById('authOtp')?.value || '').replace(/\D+/g, '');
     const button = document.getElementById('authOtpSubmit');
     if (!emailIsAllowed(email)) {
       setMessage('Este correo no esta autorizado para entrar al portal.', 'error');
       return;
     }
-    if (!/^\d{6}$/.test(code)) {
-      setMessage('El codigo debe tener 6 digitos.', 'error');
+    if (!/^\d{6,10}$/.test(code)) {
+      setMessage('Escribe el codigo numerico completo tal como aparece en el correo.', 'error');
       return;
     }
 
@@ -223,7 +223,7 @@
       if (!data?.session) {
         const code = initialHashParams.get('error_code') || '';
         const friendly = code === 'otp_expired'
-          ? 'El enlace del correo ya fue usado o vencio (los antivirus a veces lo consumen al escanearlo). Pide un codigo nuevo y usa el codigo de 6 digitos en lugar del enlace.'
+          ? 'El enlace del correo ya fue usado o vencio (los antivirus a veces lo consumen al escanearlo). Pide un codigo nuevo y usa el codigo numerico en lugar del enlace.'
           : `No se pudo completar el acceso (${code || initialHashParams.get('error')}). Pide un codigo nuevo.`;
         pendingGateNotice = { text: friendly, state: 'error' };
         setMessage(friendly, 'error');
