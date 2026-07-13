@@ -1460,7 +1460,7 @@ function renderDesarrolloPlan() {
       note: 'Tercer seguimiento quincenal. Periodo cubierto: 29 de junio al 12 de julio de 2026.',
       links: [
         { label: 'Control seguimiento consultoria 3 de 4', href: 'https://docs.google.com/document/d/1putJbfMBbaWrOT2BjbU5vNF61kHfYgnr/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
-        { label: 'Plan de trabajo 3 de 4', href: 'https://docs.google.com/document/d/1eEaotXP0mHGHOWuY3pTvo5psCKvj32ha/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
+        { label: 'Plan de trabajo 3 de 4', href: 'https://docs.google.com/document/d/1V2ienqNfv901RDRV0mkB1VuDg19qpiVw/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
       ],
     },
     {
