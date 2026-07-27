@@ -27,8 +27,8 @@ function renderCartelera() {
   const now    = new Date();
   const dateStr = `${days[now.getDay()]} ${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
   const diagnosticoDashboard = getIndiceDashboardSummary();
-  const daysToIseade = getDaysUntil('2026-06-01');
-  const daysToTutor = getDaysUntil('2026-05-26');
+  const daysToIseade = getDaysUntil('2026-08-31');
+  const daysToTutor = getDaysUntil('2026-08-16');
 
   return `
   <h1 class="section-title">Cartelera</h1>
@@ -38,19 +38,18 @@ function renderCartelera() {
     <div class="bulletin-card">
       <div class="bulletin-card-header"><i class="fas fa-bullhorn"></i> Aviso del Equipo</div>
       <div class="bulletin-card-body">
-        <p>📌 <strong>Entrega final ISEADE:</strong> 1 de junio de 2026 (físico anillado + digital a vbeltran@iseade.edu.sv).<br>
-        📌 <strong>Presentación al tutor:</strong> martes 26 de mayo de 2026 – Lic. Roberto Castro Castañeda.<br>
-        Cada consultor preparará 2–3 diapositivas con hallazgos por área.</p>
+        <p>📌 <strong>FASE 2 en recta final:</strong> cierre de trabajo de campo el 16 de agosto de 2026.<br>
+        📌 <strong>Informe Final de Consultoría:</strong> entrega a ISEADE el 31 de agosto de 2026.<br>
+        📌 <strong>Presentación ante jurado evaluador:</strong> del 7 al 18 de septiembre de 2026 (máx. 40 min).</p>
       </div>
     </div>
     <div class="bulletin-card">
       <div class="bulletin-card-header"><i class="fas fa-calendar-check"></i> Próximas Actividades</div>
       <div class="bulletin-card-body">
-        <p>📅 <strong>Visita de Campo 3</strong> – realizada el sábado 23 de mayo de 2026.<br>
-        📅 <strong>Visita de Campo 4</strong> – realizada por Elías el sábado 23 de mayo de 2026.<br>
-        📅 <strong>Reunión con Tutor #2</strong> – 26 de mayo de 2026.<br>
-        📅 <strong>Diagnóstico ambiental</strong> – Henry ya envió la información base.<br>
-        📅 <strong>Entrega ISEADE</strong> – 1 de junio de 2026.</p>
+        <p>📅 <strong>Reunión con Tutor #5</strong> – realizada el 14 de julio (estados financieros proyectados solicitados y entregados).<br>
+        📅 <strong>Presentación final a CLIDENTE</strong> – realizada el miércoles 22 de julio con la Dra. Vigil y el Ing. Corcio.<br>
+        📅 <strong>Informe Quincenal 4</strong> – enviado a Vanessa Beltrán el lunes 27 de julio.<br>
+        📅 <strong>Cierre de campo</strong> – 16 de agosto · <strong>Informe final</strong> – 31 de agosto.</p>
       </div>
     </div>
   </div>
@@ -67,18 +66,18 @@ function renderCartelera() {
   <!-- Alertas -->
   <div class="mp-alert">
     <span style="font-size:16px;flex-shrink:0">⚠️</span>
-    <div><strong>Sin pendientes críticos sin comenzar:</strong> Referencias APA 7 y Anexo Metodológico de IA con URLs de prompts ya están trabajados. El diagnóstico ambiental ya cuenta con métricas e insumo base para integrarse al informe.</div>
+    <div><strong>Pendientes de terceros:</strong> recálculo del aporte de la Meta Mínima (+123 px con 5 sub-meta; con Osegueda excluido quedan 4) a cargo de Ricardo, y decisión de la Dirección sobre la Meta Mínima v2.0 y WhatsApp Business API.</div>
   </div>
   <div class="mp-info">
     <span style="font-size:16px;flex-shrink:0">💡</span>
-    <div><strong>Nuevo esta semana:</strong> Henry entregó estados financieros formales y el diagnóstico ambiental base. Ricardo ya puede cerrar §VI.1 Finanzas y Elías puede integrar el diagnóstico ambiental.</div>
+    <div><strong>Nuevo esta quincena:</strong> base financiera única 870 px/mes (promedio abr–jun verificado) · estados financieros proyectados construidos (−$3,550 sin cambios vs +$3,884 en dic con estrategia) · directorio depurado con hallazgos de Henry (Valezka con código propio, especialistas fuera de comparativas) · presentación final a CLIDENTE realizada el 22 de julio.</div>
   </div>
 
   <!-- KPIs -->
   <div class="mp-kpi-row">
     <div class="mp-kpi green"><div class="mp-kpi-label">Avance global</div><div class="mp-kpi-value">${diagnosticoDashboard.global}%</div><div class="mp-kpi-sub">${diagnosticoDashboard.completed}/${diagnosticoDashboard.total} actividades al 100%</div></div>
-    <div class="mp-kpi red"><div class="mp-kpi-label">Días a entrega ISEADE</div><div class="mp-kpi-value">${getCountdownLabel(daysToIseade)}</div><div class="mp-kpi-sub">Lun 1 junio · anillado</div></div>
-    <div class="mp-kpi amber"><div class="mp-kpi-label">Días al tutor Roberto</div><div class="mp-kpi-value">${getCountdownLabel(daysToTutor)}</div><div class="mp-kpi-sub">Mar 26 mayo · online</div></div>
+    <div class="mp-kpi red"><div class="mp-kpi-label">Días a Informe Final</div><div class="mp-kpi-value">${getCountdownLabel(daysToIseade)}</div><div class="mp-kpi-sub">Lun 31 agosto · ISEADE</div></div>
+    <div class="mp-kpi amber"><div class="mp-kpi-label">Días a cierre de campo</div><div class="mp-kpi-value">${getCountdownLabel(daysToTutor)}</div><div class="mp-kpi-sub">Dom 16 agosto · Fase 2</div></div>
     <div class="mp-kpi blue"><div class="mp-kpi-label">Visitas realizadas</div><div class="mp-kpi-value">4/5</div><div class="mp-kpi-sub">Últimas: sáb 23 mayo</div></div>
   </div>
 
@@ -443,6 +442,34 @@ function renderReuniones() {
       ],
       resources: [
         { label: 'Transcripción Reunión 3', icon: 'fa-file-word', href: 'docs/Reunion-3-con-Tutor-9-Junio-2026.docx' },
+      ]
+    },
+    {
+      n: 4, title: 'Alineación de Entregables previo a Presentación al Cliente',
+      date: '30 de junio de 2026',
+      tutor: 'Lic. Roberto Arturo Castro Castañeda',
+      topics: [
+        'Revisión y alineación de la estrategia de profesionalización de las cuatro áreas de trabajo.',
+        'Ajustes a los entregables previo a la primera presentación de propuestas al cliente (3 de julio).',
+        'Validación del enfoque: comisión escalonada, meta mínima por silla, directorio único y flujo de caja semanal.',
+      ],
+      resources: []
+    },
+    {
+      n: 5, title: 'Coaching de Presentación Final y Estados Financieros Proyectados',
+      date: '14 de julio de 2026',
+      tutor: 'Lic. Roberto Arturo Castro Castañeda',
+      topics: [
+        'Estructura de la presentación final: máximo 40 minutos, PowerPoint minimalista, el líder abre y controla el escenario.',
+        'Reordenar la narrativa: antecedentes → situación actual → soluciones → estados financieros proyectados.',
+        'Requisito indispensable: construir Estado de Resultados y Flujo de Caja proyectados (balance general no necesario). ✔ Cumplido: escenarios "sin cambios" (−$3,550/mes) vs "estrategia completa" (+$3,884 en diciembre).',
+        'Separar Plan de Mercadeo del Plan de Ventas con objetivos e indicadores diferenciados. ✔ Cumplido.',
+        'Mover compras e inventarios al bloque de diagnóstico y agregar lámina de riesgos persona natural vs S.A.S. ✔ Cumplido.',
+        'Slide del equipo con fotos formales proyectando imagen ejecutiva; logística impecable el día del jurado.',
+      ],
+      resources: [
+        { label: 'Resumen Reunión 5', icon: 'fa-file-pdf', href: 'https://drive.google.com/file/d/1WOVWn9ftBM88BHAPi9U7vhwyuQTlZ5wt/view?usp=sharing' },
+        { label: 'Transcripción Reunión 5', icon: 'fa-file-pdf', href: 'https://drive.google.com/file/d/1rDATbgI2mfkGIXVcjPeO_2MYKMvsUlUW/view?usp=sharing' },
       ]
     },
   ];
@@ -1466,9 +1493,11 @@ function renderDesarrolloPlan() {
     {
       date: 'Lunes 27 de julio de 2026',
       label: 'Informe 4',
-      status: 'Programado',
-      note: 'Cuarto seguimiento quincenal previo al cierre de la Etapa II.',
-      links: [],
+      status: 'Entregado',
+      note: 'Cuarto seguimiento quincenal. Periodo cubierto: 13 al 26 de julio de 2026. Incluye la 5.a reunion con el tutor, la base financiera unica (870 px/mes), los estados financieros proyectados y la presentacion final a CLIDENTE del 22 de julio.',
+      links: [
+        { label: 'Control seguimiento consultoria 4 de 4', href: 'https://drive.google.com/file/d/14fDCA_HpCcVnBIt53v-Ti90WeBdJbNZl/view?usp=sharing', icon: 'file-pdf' },
+      ],
     },
   ];
 
@@ -1726,9 +1755,18 @@ const CRONOGRAMA_PLAN_TRABAJO_20260713_TASKS = [
   { id: 'cr-f2-20260713-001', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '29 jun-12 jul', actividad: 'Correccion del modelo de gestion comercial (componente operativo)', descripcion: 'Ajuste del componente operativo del modelo de gestion comercial, en paralelo a la correccion del objetivo financiero a cargo de Cecilia.', responsable: 'ELIAS', avance: 25, horas: 8, fechaInicio: '2026-06-29', fechaFin: '2026-07-12' },
   { id: 'cr-f2-20260713-002', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '29 jun-12 jul', actividad: 'Presentacion de propuestas de las cuatro areas a la Dra. Vigil y al Sr. Henry Corcio', descripcion: 'Exposicion de las propuestas de las areas financiera, administrativa, comercial y de operaciones ante la propietaria y el administrador de la clinica (3 de julio).', responsable: 'TODOS', avance: 100, horas: 8, fechaInicio: '2026-07-03', fechaFin: '2026-07-03' },
   { id: 'cr-f2-20260713-003', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '29 jun-12 jul', actividad: 'Diseno de clausula de garantias para la comision escalonada', descripcion: 'Clausula de garantias para la comision escalonada, atendiendo la observacion de la administracion de la clinica.', responsable: 'RICARDO', avance: 100, horas: 8, fechaInicio: '2026-06-29', fechaFin: '2026-07-12' },
-  { id: 'cr-f2-20260713-004', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '29 jun-12 jul', actividad: 'Formalizacion del directorio unico de doctores con codigo', descripcion: 'Directorio unico de doctores con codigo, construido sobre el codigo interno ya existente en la clinica. Pendiente confirmar anos de ingreso con Henry Corcio.', responsable: 'JAIME', avance: 75, horas: 8, fechaInicio: '2026-06-29', fechaFin: '2026-07-12' },
+  { id: 'cr-f2-20260713-004', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '29 jun-12 jul', actividad: 'Formalizacion del directorio unico de doctores con codigo', descripcion: 'Directorio unico de doctores con codigo. Actualizado el 22-24 jul con hallazgos de la administracion: Dra. Valezka con codigo propio, especialistas maxilofaciales identificados y regla de no reutilizacion de codigos.', responsable: 'JAIME', avance: 100, horas: 8, fechaInicio: '2026-06-29', fechaFin: '2026-07-12' },
   { id: 'cr-f2-20260713-005', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '29 jun-12 jul', actividad: 'Implementacion del flujo de caja semanal con datos reales', descripcion: 'Flujo de caja semanal en marcha desde el lunes 6 de julio de 2026, con apoyo del administrador de la clinica.', responsable: 'RICARDO', avance: 50, horas: 8, fechaInicio: '2026-07-06', fechaFin: '2026-07-12' },
-  { id: 'cr-f2-20260713-006', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '29 jun-12 jul', actividad: 'Preparacion de la presentacion de avances con el tutor del 14 de julio', descripcion: 'Consolidacion de cifras financieras y del plan de trabajo hacia el cierre de campo del 16 de agosto de 2026.', responsable: 'TODOS', avance: 75, horas: 8, fechaInicio: '2026-07-12', fechaFin: '2026-07-14' },
+  { id: 'cr-f2-20260713-006', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '29 jun-12 jul', actividad: 'Preparacion de la presentacion de avances con el tutor del 14 de julio', descripcion: 'Consolidacion de cifras financieras y del plan de trabajo hacia el cierre de campo del 16 de agosto de 2026.', responsable: 'TODOS', avance: 100, horas: 8, fechaInicio: '2026-07-12', fechaFin: '2026-07-14' },
+  { id: 'cr-f2-20260727-001', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Quinta reunion con el tutor: coaching de presentacion final', descripcion: 'Instrucciones: reordenar narrativa, construir estados financieros proyectados, separar plan de mercadeo y plan de ventas, lamina de riesgos persona natural vs S.A.S., maximo 40 minutos (14 de julio).', responsable: 'TODOS', avance: 100, horas: 8, fechaInicio: '2026-07-14', fechaFin: '2026-07-14' },
+  { id: 'cr-f2-20260727-002', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Adopcion de base financiera unica del proyecto (870 px/mes)', descripcion: 'Promedio abril-junio 2026, unicos meses con ingreso verificado contra caja; aplicada por las cuatro areas en laminas y proyecciones.', responsable: 'RICARDO', avance: 100, horas: 6, fechaInicio: '2026-07-19', fechaFin: '2026-07-21' },
+  { id: 'cr-f2-20260727-003', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Construccion de estados financieros proyectados', descripcion: 'Escenario sin cambios (flujo -$3,550/mes) vs estrategia completa (+$3,884/mes en diciembre con 40% de ocupacion), flujo proyectado jul-dic y VAN del flujo incremental.', responsable: 'RICARDO', avance: 100, horas: 12, fechaInicio: '2026-07-15', fechaFin: '2026-07-21' },
+  { id: 'cr-f2-20260727-004', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Depuracion de datos maestros con hallazgos de la administracion', descripcion: 'Especialistas maxilofaciales fuera de comparativas, salida de Dra. Nancy (1 may), fecha correcta de Dr. Oscar (6 may), Dra. Valezka con codigo propio e ingreso verificado enero-junio completo.', responsable: 'JAIME', avance: 100, horas: 8, fechaInicio: '2026-07-22', fechaFin: '2026-07-24' },
+  { id: 'cr-f2-20260727-005', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Separacion del Plan de Mercadeo y Plan de Ventas', descripcion: 'Rediseno del bloque comercial conforme a la instruccion del tutor, con objetivos e indicadores diferenciados.', responsable: 'CECILIA', avance: 100, horas: 8, fechaInicio: '2026-07-15', fechaFin: '2026-07-21' },
+  { id: 'cr-f2-20260727-006', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Elaboracion del Plan de Implementacion y Seguimiento', descripcion: 'Cuatro etapas: medidas en marcha desde el 6 de julio, decisiones de julio con la Direccion, cierre de consultoria en agosto y operacion autonoma de la clinica septiembre-diciembre.', responsable: 'JAIME', avance: 100, horas: 6, fechaInicio: '2026-07-22', fechaFin: '2026-07-24' },
+  { id: 'cr-f2-20260727-007', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Presentacion final de propuestas a CLIDENTE', descripcion: 'Exposicion del modelo completo a la Dra. Vigil y al Ing. Corcio: proyeccion financiera, meta minima $2,500/silla, comision escalonada con clausula de garantias, S.A.S., ERP, WhatsApp Business API y renegociacion con proveedores (22 de julio).', responsable: 'TODOS', avance: 100, horas: 6, fechaInicio: '2026-07-22', fechaFin: '2026-07-22' },
+  { id: 'cr-f2-20260727-008', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Compromisos derivados de la reunion del 22 de julio', descripcion: 'Verificacion del monto exacto de deuda mensual, plan de implementacion S.A.S. con asesoria legal, propuesta de ERP, negociacion de plazos con proveedores criticos (60-90 dias) y prueba piloto de costeo por visita.', responsable: 'TODOS', avance: 25, horas: 10, fechaInicio: '2026-07-23', fechaFin: '2026-08-16' },
+  { id: 'cr-f2-20260727-009', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Elaboracion y envio del Informe Quincenal 4', descripcion: 'Control de seguimiento 4 de 4 con periodo del 13 al 26 de julio, remitido a la coordinacion academica el lunes 27 de julio.', responsable: 'JAIME', avance: 100, horas: 4, fechaInicio: '2026-07-26', fechaFin: '2026-07-27' },
 ];
 
 const CRONOGRAMA_DEFAULT_TASKS = [
