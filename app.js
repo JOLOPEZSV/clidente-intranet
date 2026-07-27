@@ -1497,6 +1497,7 @@ function renderDesarrolloPlan() {
       note: 'Cuarto seguimiento quincenal. Periodo cubierto: 13 al 26 de julio de 2026. Incluye la 5.a reunion con el tutor, la base financiera unica (870 px/mes), los estados financieros proyectados y la presentacion final a CLIDENTE del 22 de julio.',
       links: [
         { label: 'Control seguimiento consultoria 4 de 4', href: 'https://docs.google.com/document/d/1xMV3MT6mKlIUqr4l97E5yQqiAYornxFn/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
+        { label: 'Plan de trabajo 4 de 4', href: 'https://docs.google.com/document/d/12y9tOpKMzT31aojwlELF_vdlWvEtJIcX/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
       ],
     },
   ];
