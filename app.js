@@ -473,6 +473,25 @@ function renderReuniones() {
         { label: 'Transcripción Reunión 5', icon: 'fa-file-pdf', href: 'https://drive.google.com/file/d/1rDATbgI2mfkGIXVcjPeO_2MYKMvsUlUW/view?usp=sharing' },
       ]
     },
+    {
+      n: 6, title: 'Revisión y Refinamiento de la Presentación Final',
+      date: '28 de julio de 2026',
+      tutor: 'Lic. Roberto Arturo Castro Castañeda',
+      topics: [
+        'Narrativa financiera unificada en torno al flujo de caja: el punto de equilibrio real se comunica sobre flujo de efectivo (878 pacientes), sin mezclar métricas del estado de resultados.',
+        'La "página uno" como guía maestra: tres bloques con código de color — situación actual, problemática central y soluciones propuestas.',
+        'Métricas homologadas: 7 sillas productivas, 870 pacientes/mes (29% de la capacidad), flujo −$3,550/mes en el Q2; todos los análisis estandarizados al trimestre abril–junio.',
+        'Formato: máximo 20 diapositivas, texto reducido a la mitad, exposición de 45 minutos; preparar versión completa de respaldo y versión ejecutiva para exponer.',
+        'Portada y estilo: título estandarizado "Modelo de profesionalización empresarial", logo ISEADE en esquina inferior derecha, cambiar "tutor asesor" por "asesor", contratar diseñador y sustituir foto pixelada del equipo.',
+        'Introducción con perfiles profesionales de los consultores y el valor económico estimado de la consultoría (~$60,000).',
+        'Validaciones: cláusula de calidad de garantías, migración a S.A.S., ID único por doctor, meta mínima de $2,500 por silla y plan comercial (digital 4%→6%, referidos +$5,073/mes, ocupación a 32.38%).',
+        'Próximo hito: enviar meeting request de la presentación final al asesor con 15 días de anticipación y cronometrar el ensayo.',
+      ],
+      resources: [
+        { label: 'Resumen Reunión 6', icon: 'fa-file-pdf', href: 'https://drive.google.com/file/d/137lf4oV7liOy-YRKe3Q9AUeG6zZ1aSs_/view?usp=sharing' },
+        { label: 'Transcripción Reunión 6', icon: 'fa-file-pdf', href: 'https://drive.google.com/file/d/1HrvawrOmUe37Pbgxqsu88YwauHbgtAEV/view?usp=sharing' },
+      ]
+    },
   ];
 
   return `
