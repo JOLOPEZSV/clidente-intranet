@@ -1581,8 +1581,8 @@ function renderInformeFinal() {
       icon: 'fa-file-powerpoint',
       title: 'Presentación final',
       desc: 'Slides de la presentación ante ISEADE FEPADE.',
-      url: '',
-      pdfUrl: '',
+      url: 'https://docs.google.com/presentation/d/1ZdC2hon8vosjAsBLJuIdWe36xdv1LTcFt37mQKm-GQs/edit?usp=sharing',
+      pdfUrl: 'https://docs.google.com/presentation/d/1ZdC2hon8vosjAsBLJuIdWe36xdv1LTcFt37mQKm-GQs/export/pdf',
     },
     {
       icon: 'fa-file-signature',
