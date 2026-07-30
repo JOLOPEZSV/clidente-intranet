@@ -1588,8 +1588,8 @@ function renderInformeFinal() {
       icon: 'fa-file-signature',
       title: 'Documento final (informe ISEADE)',
       desc: 'Informe final de la consultoría para entrega el 31 de agosto de 2026.',
-      url: '',
-      pdfUrl: '',
+      url: 'https://docs.google.com/document/d/1mFLrqkjB5AHt9n30CmG3VLHAv_5Oro9x/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true',
+      pdfUrl: 'https://docs.google.com/document/d/1mFLrqkjB5AHt9n30CmG3VLHAv_5Oro9x/export?format=pdf',
     },
   ];
   const guideItems = [
