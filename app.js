@@ -78,7 +78,7 @@ function renderCartelera() {
     <div class="mp-kpi green"><div class="mp-kpi-label">Avance global</div><div class="mp-kpi-value">${diagnosticoDashboard.global}%</div><div class="mp-kpi-sub">${diagnosticoDashboard.completed}/${diagnosticoDashboard.total} actividades al 100%</div></div>
     <div class="mp-kpi red"><div class="mp-kpi-label">Días a Informe Final</div><div class="mp-kpi-value">${getCountdownLabel(daysToIseade)}</div><div class="mp-kpi-sub">Lun 31 agosto · ISEADE</div></div>
     <div class="mp-kpi amber"><div class="mp-kpi-label">Días a cierre de campo</div><div class="mp-kpi-value">${getCountdownLabel(daysToTutor)}</div><div class="mp-kpi-sub">Dom 16 agosto · Fase 2</div></div>
-    <div class="mp-kpi blue"><div class="mp-kpi-label">Visitas realizadas</div><div class="mp-kpi-value">4/5</div><div class="mp-kpi-sub">Últimas: sáb 23 mayo</div></div>
+    <div class="mp-kpi blue"><div class="mp-kpi-label">Informes quincenales</div><div class="mp-kpi-value">4/4</div><div class="mp-kpi-sub">Etapa II documentada ✅</div></div>
   </div>
 
   <!-- Fila 1: Progreso + Cronograma -->
@@ -107,12 +107,12 @@ function renderCartelera() {
       <div style="padding:1rem 1.1rem">
         <ul class="mp-tl">
           ${[
-            ['#3B9EE0','MIÉ–VIE · 20–22 MAY','Redacción individual','Jaime → §III · Ricardo → §VI.1 Finanzas · Cecilia → §VI.1 Mercadeo · Elías → Diag. ambiental §1-2'],
-            ['#0D8A6E','SÁB · 23 MAY','Visita 3 — sin aviso realizada','Observación real efectuada para conteo de pacientes, ticket promedio, journey y cierre de brechas.'],
-            ['#0D8A6E','SÁB · 23 MAY','Visita 4 — Diagnóstico ambiental realizada por Elías','Henry ya envió la información base del diagnóstico ambiental para integrar al informe.'],
-            ['#C13030','MAR · 26 MAY — LÍMITE 1','Presentación al Tutor Roberto Castro','2-3 slides por consultor · Firma Carta de Aprobación del Tutor · Guardar URLs Claude para Anexo IA.'],
-            ['#677089','MIÉ–VIE · 28–30 MAY','Integración final','§VII completa · Revisión cruzada · Control de horas · Integración final de anexos.'],
-            ['#C13030','LUN · 1 JUN — LÍMITE 2','Entrega ISEADE (Jaime)','Físico anillado 9:30–18:30 + digital a vbeltran@iseade.edu.sv + sobre manila con 4 cartas sin perforar.'],
+            ['#0D8A6E','MAR · 28 JUL','6.ª reunión con el tutor — realizada','Revisión de la presentación final actualizada a la base 870 y de los avances de implementación.'],
+            ['#3B9EE0','AGO · 1–15','Redacción del informe final por área','Esqueleto con estructura oficial ISEADE listo en Google Docs · cada consultor completa su sección de productos (6.1–6.4).'],
+            ['#677089','SÁB · 16 AGO','Cierre de trabajo de campo — Fase 2','Última fecha para levantar datos y validar implementación con la clínica.'],
+            ['#C13030','DOM · 23 AGO — LÍMITE 1','Entrega interna del informe al tutor','Documento completo para revisión de Roberto Castro, 8 días antes de ISEADE.'],
+            ['#C13030','LUN · 31 AGO — LÍMITE 2','Entrega ISEADE del Informe Final','Documento final + digital a vbeltran@iseade.edu.sv conforme a la guía de la entrega.'],
+            ['#8B44C4','7–18 SEP','Presentación ante jurado evaluador','Máximo 40 minutos · Jaime abre y cierra · logística con 2 horas de anticipación.'],
           ].map(([col,d,t,s]) => `
           <li class="mp-tl-item">
             <div class="mp-tl-left"><div class="mp-tl-dot" style="background:${col}"></div><div class="mp-tl-line"></div></div>
@@ -128,16 +128,17 @@ function renderCartelera() {
     <div class="card">
       <div class="card-header" style="display:flex;align-items:center">
         <div class="card-title"><i class="fas fa-exclamation-triangle" style="margin-right:.5rem;color:#C13030"></i>Pendientes Críticos</div>
-        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">5 por cerrar</span>
+        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">7 por cerrar</span>
       </div>
       <div style="padding:1rem 1.1rem">
         ${[
-          ['warn','Elías',  'Diagnóstico Ambiental — integrar insumo de Henry',          'Henry ya envió la información base. Falta convertirla en texto del informe y recomendaciones.'],
-          ['no','Todo',   'Referencias bibliográficas APA 7',                            'Sección completamente vacía. Mínimo 5-8 fuentes académicas.'],
-          ['no','Jaime',  'Anexo IA — con URLs de cada conversación Claude',             'ISEADE exige el URL del prompt específico. Guardar links desde ahora.'],
-          ['no','Jaime',  '§VII: Alcances + Limitaciones + Metodología + Cronograma',   '4 subsecciones obligatorias no redactadas aún.'],
-          ['warn','Ricardo','§VI.1 Finanzas — cerrar con estados financieros',          'Ahora hay base documental (CPA + Auditor). Aclarar brecha ingresos formales vs operativos.'],
-          ['warn','Cecilia','Journey del paciente + mapa visual de procesos',           'Usar la observación real levantada en la Visita 3 del sábado 23.'],
+          ['no','Todos',  'Completar las secciones del informe final (6.1–6.4)',        'El esqueleto marca cada pendiente con [POR COMPLETAR — responsable]. Cada área desarrolla sus productos.'],
+          ['warn','Ricardo','Recalcular aporte de la Meta Mínima al puente 870→1,200',  'Con Osegueda excluido como especialista, los sub-meta pasan de 5 a 4; el +123 px debe actualizarse (afecta láminas 17 y 37).'],
+          ['warn','Ricardo','Lámina 10 — punto de partida a base 870',                  'Aún cita 28% de ocupación y flujo −$1,065; alinear a 29% / −$3,550.'],
+          ['warn','Cecilia','Láminas comerciales 19, 25 y 26 a base 870',               'Siguen calculadas con 841 pacientes / 28% de ocupación.'],
+          ['no','Jaime',  'Fotos formales del equipo en la lámina 2',                   'Pedido expreso del tutor: traje formal, imagen ejecutiva. Solo está la de Jaime.'],
+          ['no','Jaime',  'Anexo IA con URLs + control de horas Fase 2',                'ISEADE exige el URL de cada conversación de IA y el registro de horas efectivas al cierre.'],
+          ['warn','Equipo','Decisiones de la Dirección por documentar',                 'Meta Mínima v2.0 y WhatsApp Business API: registrar la resolución de la Dra. Vigil para el informe.'],
         ].map(([icon,who,title,sub]) => `
         <div class="mp-chk-item">
           <div class="mp-chk-icon mp-chk-${icon}">${icon==='no'?'✗':'!'}</div>
@@ -148,18 +149,18 @@ function renderCartelera() {
 
     <div class="card">
       <div class="card-header" style="display:flex;align-items:center">
-        <div class="card-title"><i class="fas fa-list-check" style="margin-right:.5rem"></i>Checklist de Entrega — 1 Junio</div>
-        <span class="mp-chip mp-chip-no" style="margin-left:auto;flex-shrink:0">1 de 7 listo</span>
+        <div class="card-title"><i class="fas fa-list-check" style="margin-right:.5rem"></i>Checklist de Entrega — 31 Agosto</div>
+        <span class="mp-chip mp-chip-warn" style="margin-left:auto;flex-shrink:0">3 de 7 listo</span>
       </div>
       <div style="padding:1rem 1.1rem">
         ${[
-          ['ok',  'Carta de Confidencialidad',                  'Firmada por Dra. Vigil el 6 de mayo ✅'],
-          ['warn','Carta Aceptación Diagnóstico (Dra. Vigil)',  'Generada ✅ — llevar impresa el sáb 23 en 2 originales para firma'],
-          ['no',  'Carta Aprobación Tutor (Roberto Castro)',    'Obtener firma en reunión del martes 26'],
-          ['no',  'Control de Horas Efectivas (4 integrantes)','Completar antes del 30 de mayo'],
-          ['no',  'Informe anillado (impreso B/N doble cara)',  'Después del 30 mayo cuando el documento esté cerrado'],
-          ['no',  'Sobre manila con cartas — SIN PERFORAR',    'Las 4 cartas van aparte del anillado'],
-          ['no',  'PDF digital a vbeltran@iseade.edu.sv',      'Horario 9:30–18:30 del 1 de junio'],
+          ['ok',  'Informes quincenales 1–4 entregados',            'Etapa II documentada completa ante la coordinación académica ✅'],
+          ['ok',  'Esqueleto del informe final en Google Docs',     'Estructura oficial ISEADE de 11 secciones, con pendientes marcados por responsable ✅'],
+          ['ok',  'Presentación final iniciada y enlazada',         'Google Slides conectada al portal con exportación PDF automática ✅'],
+          ['warn','Secciones del informe por área (6.1–6.4)',       'En redacción · cada consultor completa sus productos'],
+          ['no',  'Estados financieros y anexos integrados',        'Anexos A–G consolidados en el documento final'],
+          ['no',  'Revisión del tutor — entrega interna 23 ago',    'Documento completo para Roberto Castro, 8 días antes de ISEADE'],
+          ['no',  'Entrega oficial a vbeltran@iseade.edu.sv',       'Documento final conforme a la guía · lunes 31 de agosto'],
         ].map(([icon,title,sub]) => `
         <div class="mp-chk-item">
           <div class="mp-chk-icon mp-chk-${icon}">${icon==='ok'?'✓':icon==='warn'?'!':'✗'}</div>
@@ -177,10 +178,10 @@ function renderCartelera() {
     <div style="padding:.85rem 1.1rem">
       <div class="mp-person-grid">
         ${[
-          ['#1A5FA8','Jaime O. López · Líder',        [['done','Carta Aceptación generada'],['todo','Redactar §III completa'],['todo','§VII: Alcances, Limitaciones, Metodología'],['done','Visita 3 realizada · sáb 23'],['crit','Anexo IA — guardar URLs Claude desde hoy']]],
-          ['#8B44C4','Cecilia B. Chicas · Consultora', [['done','§VI.1 Mercadeo CRM — diagnóstico listo'],['todo','Completar análisis canales digitales'],['done','Visita 3 realizada · métricas + journey'],['crit','Diagrama visual mapa de procesos']]],
-          ['#C47A15','Ricardo A. Palacios · Consultor',[['done','Datos financieros recibidos (EERR + Balance)'],['todo','Redactar §VI.1 Finanzas con estados formales'],['todo','Aclarar brecha ingresos formales vs operativos']]],
-          ['#0D8A6E','Elías J. Núñez · Consultor',    [['done','Análisis de insumos documentado'],['done','Visita 4 ambiental realizada · sáb 23'],['done','Henry envió diagnóstico ambiental base'],['todo','Integrar diagnóstico ambiental al informe']]],
+          ['#1A5FA8','Jaime O. López · Líder',        [['done','Informe quincenal 4 enviado · 27 jul'],['done','Esqueleto del informe final creado'],['todo','Redactar sección 6.2 Administración'],['crit','Anexo IA con URLs + fotos formales lámina 2']]],
+          ['#8B44C4','Cecilia B. Chicas · Consultora', [['done','Modelo comercial en ejecución (F1 y F2)'],['todo','Redactar sección 6.3 Comercial'],['crit','Actualizar láminas 19, 25 y 26 a base 870']]],
+          ['#C47A15','Ricardo A. Palacios · Consultor',[['done','Estados financieros proyectados construidos'],['todo','Redactar sección 6.1 Finanzas'],['crit','Recalcular +123 px (4 sub-meta) · lámina 10 a base 870']]],
+          ['#0D8A6E','Elías J. Núñez · Consultor',    [['done','Propuesta WhatsApp Business API presentada'],['todo','Redactar sección 6.4 Operaciones'],['todo','Integrar recomendación ambiental al informe final']]],
         ].map(([color,name,tasks]) => `
         <div class="mp-person-card" style="border-top-color:${color}">
           <div class="mp-p-name" style="color:${color}">${name}</div>
