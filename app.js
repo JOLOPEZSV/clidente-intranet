@@ -2004,14 +2004,62 @@ async function seedCronogramaSupabaseIfEmpty() {
   });
 }
 
+// Correccion puntual de la columna SEMANA segun el calendario ISEADE:
+// semana 1 = lunes 4 de mayo 2026 · Etapa I = semanas 1-5 (entrega 1-jun) ·
+// Etapa II = semanas 6-15 (termina domingo 16-ago) · Etapa III = semanas 16-17 (entrega 31-ago).
+// Se aplica una sola vez al cargar y queda guardada en Supabase.
+const CRONOGRAMA_SEMANA_CORRECCIONES = {
+  'cr-f2-20260713-001': '9-10',
+  'cr-f2-20260713-002': '9',
+  'cr-f2-20260713-003': '9-10',
+  'cr-f2-20260713-004': '9-10',
+  'cr-f2-20260713-005': '10',
+  'cr-f2-20260713-006': '10-11',
+  'cr-f2-20260727-001': '11',
+  'cr-f2-20260727-002': '11-12',
+  'cr-f2-20260727-003': '11-12',
+  'cr-f2-20260727-004': '12',
+  'cr-f2-20260727-005': '11-12',
+  'cr-f2-20260727-006': '12',
+  'cr-f2-20260727-007': '12',
+  'cr-f2-20260727-008': '12-15',
+  'cr-f2-20260727-009': '12-13',
+  'cr-f2-20260811-001': '13',
+  'cr-f2-20260811-002': '13-14',
+  'cr-f2-20260811-003': '13-15',
+  'cr-f2-20260811-004': '14-15',
+  'cr-f2-20260811-005': '14-15',
+  'cr-f2-20260811-006': '15',
+  'cr-f2-20260811-007': '15',
+  'cr-f2-20260811-008': '15',
+  'cr-f2-20260811-009': '15',
+  'cr-f3-20260811-010': '15-16',
+  'cr-f3-20260811-011': '16',
+  'cr-f3-20260811-012': '16',
+  'cr-f3-20260811-013': '17',
+};
+
+function applyCronogramaSemanaCorrecciones(tasks) {
+  let cambios = 0;
+  tasks.forEach(task => {
+    const semanaCorrecta = CRONOGRAMA_SEMANA_CORRECCIONES[task.id];
+    if (semanaCorrecta && task.semana !== semanaCorrecta) {
+      task.semana = semanaCorrecta;
+      cambios += 1;
+    }
+  });
+  return cambios;
+}
+
 async function loadCronogramaFromSupabase() {
   await seedCronogramaSupabaseIfEmpty();
   const rows = await supabaseRequest(`${SUPABASE_CRONOGRAMA_TABLE}?select=*&order=sort_order.asc`);
   const tasks = getCronogramaTasksFromSupabaseRows(rows || []);
   const baseTasks = tasks.length ? tasks : normalizeCronogramaTasks(CRONOGRAMA_DEFAULT_TASKS);
   const mergedTasks = mergeCronogramaImportedTasks(baseTasks);
+  const semanaCambios = applyCronogramaSemanaCorrecciones(mergedTasks);
   saveCronogramaTasksLocal(mergedTasks);
-  if (mergedTasks.length !== baseTasks.length) {
+  if (mergedTasks.length !== baseTasks.length || semanaCambios > 0) {
     await saveCronogramaToSupabase(mergedTasks);
   }
   return mergedTasks;
