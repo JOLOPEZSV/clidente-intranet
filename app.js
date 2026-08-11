@@ -1788,6 +1788,20 @@ const CRONOGRAMA_PLAN_TRABAJO_20260713_TASKS = [
   { id: 'cr-f2-20260727-007', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Presentacion final de propuestas a CLIDENTE', descripcion: 'Exposicion del modelo completo a la Dra. Vigil y al Ing. Corcio: proyeccion financiera, meta minima $2,500/silla, comision escalonada con clausula de garantias, S.A.S., ERP, WhatsApp Business API y renegociacion con proveedores (22 de julio).', responsable: 'TODOS', avance: 100, horas: 6, fechaInicio: '2026-07-22', fechaFin: '2026-07-22' },
   { id: 'cr-f2-20260727-008', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Compromisos derivados de la reunion del 22 de julio', descripcion: 'Verificacion del monto exacto de deuda mensual, plan de implementacion S.A.S. con asesoria legal, propuesta de ERP, negociacion de plazos con proveedores criticos (60-90 dias) y prueba piloto de costeo por visita.', responsable: 'TODOS', avance: 25, horas: 10, fechaInicio: '2026-07-23', fechaFin: '2026-08-16' },
   { id: 'cr-f2-20260727-009', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '13-26 jul', actividad: 'Elaboracion y envio del Informe Quincenal 4', descripcion: 'Control de seguimiento 4 de 4 con periodo del 13 al 26 de julio, remitido a la coordinacion academica el lunes 27 de julio.', responsable: 'JAIME', avance: 100, horas: 4, fechaInicio: '2026-07-26', fechaFin: '2026-07-27' },
+  // --- Plan de Trabajo 5 (quincena 27 jul - 9 ago ejecutada + programacion 10-23 ago) ---
+  { id: 'cr-f2-20260811-001', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Sexta reunion con el asesor: revision y refinamiento de la propuesta', descripcion: 'Directrices del 28 de julio: maximo 20 laminas, texto a la mitad, codigo de color mostaza/azul, alinear cifras financieras, proyeccion anual, perfiles del equipo y denominacion "asesor".', responsable: 'TODOS', avance: 100, horas: 3, fechaInicio: '2026-07-28', fechaFin: '2026-07-28' },
+  { id: 'cr-f2-20260811-002', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Rediseno ejecutivo de la presentacion final', descripcion: 'Fusion de laminas por propuesta (S.A.S. con argumento de deduccion del 100%; Meta Minima con ciclo trimestral), numeracion de propuestas 1 a 7 y reduccion de 43 a 25 laminas.', responsable: 'TODOS', avance: 100, horas: 14, fechaInicio: '2026-07-29', fechaFin: '2026-08-09', documentos: 'https://drive.google.com/file/d/1l4nUuigi50Fx2BT6ZwyCYBlnMv0Il-S2/view' },
+  { id: 'cr-f2-20260811-003', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Alineacion financiera integral a la base del II trimestre', descripcion: 'ER y flujo mensualizados abril-junio (flujo -$2,050), punto de equilibrio de caja 956 px, proyeccion a diciembre en 4 escenarios (Meta 1: +$3,227) e indicadores financieros auditados.', responsable: 'RICARDO', avance: 100, horas: 10, fechaInicio: '2026-08-01', fechaFin: '2026-08-10' },
+  { id: 'cr-f2-20260811-004', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Lamina de equipo con perfiles profesionales y fotografias', descripcion: 'Perfiles resumidos (cargo actual y trayectoria) de los cuatro consultores, conforme a la instruccion del asesor.', responsable: 'TODOS', avance: 100, horas: 3, fechaInicio: '2026-08-05', fechaFin: '2026-08-10' },
+  { id: 'cr-f2-20260811-005', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Redaccion de Introduccion y Resumen Ejecutivo del informe final', descripcion: 'Sobre la estructura oficial de ISEADE, con cifras alineadas a la base del II trimestre.', responsable: 'JAIME', avance: 100, horas: 5, fechaInicio: '2026-08-08', fechaFin: '2026-08-10' },
+  { id: 'cr-f2-20260811-006', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '10-16 ago', actividad: 'Revision final de la presentacion con el asesor', descripcion: 'Sesion del martes 11 de agosto, 7:00 p.m.: validacion del cumplimiento de las directrices del 28 de julio.', responsable: 'TODOS', avance: 0, horas: 3, fechaInicio: '2026-08-11', fechaFin: '2026-08-11' },
+  { id: 'cr-f2-20260811-007', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '10-16 ago', actividad: 'Incorporacion de observaciones del asesor a la presentacion', descripcion: 'Ajustes derivados de la revision del 11 de agosto, incluyendo el recalculo del aporte de la Meta Minima con 4 profesionales sub-meta (Ricardo).', responsable: 'TODOS', avance: 0, horas: 8, fechaInicio: '2026-08-12', fechaFin: '2026-08-14' },
+  { id: 'cr-f2-20260811-008', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '10-16 ago', actividad: 'Envio del Informe Quincenal 5 y Plan de Trabajo 5', descripcion: 'Control de seguimiento con periodo del 27 de julio al 9 de agosto, remitido a la coordinacion academica.', responsable: 'JAIME', avance: 50, horas: 4, fechaInicio: '2026-08-10', fechaFin: '2026-08-11' },
+  { id: 'cr-f2-20260811-009', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '10-16 ago', actividad: 'Cierre del trabajo de campo con CLIDENTE', descripcion: 'Evaluacion de resultados con la empresa y transferencia de herramientas a la administracion. Fin de la Etapa II segun calendario ISEADE (16 de agosto).', responsable: 'TODOS', avance: 0, horas: 6, fechaInicio: '2026-08-14', fechaFin: '2026-08-16' },
+  { id: 'cr-f3-20260811-010', grupo: 'Fase 3 - Elaboracion Informe Final', semana: '10-23 ago', actividad: 'Redaccion de productos por area (secciones 6.1 a 6.4)', descripcion: 'Cada especialista redacta su seccion del informe final sobre el esqueleto oficial: Finanzas (Ricardo), Administracion (Jaime), Comercial (Cecilia), Operaciones (Elias).', responsable: 'TODOS', avance: 10, horas: 24, fechaInicio: '2026-08-12', fechaFin: '2026-08-22' },
+  { id: 'cr-f3-20260811-011', grupo: 'Fase 3 - Elaboracion Informe Final', semana: '17-23 ago', actividad: 'Integracion del informe final y revision interna', descripcion: 'Consolidacion de secciones, anexos (control de horas Fase 2 y declaracion de uso de IA con URLs) y entrega interna al asesor el 23 de agosto.', responsable: 'JAIME', avance: 0, horas: 10, fechaInicio: '2026-08-17', fechaFin: '2026-08-23' },
+  { id: 'cr-f3-20260811-012', grupo: 'Fase 3 - Elaboracion Informe Final', semana: '17-23 ago', actividad: 'Solicitud formal de sesion ante jurado (meeting request al asesor)', descripcion: 'Envio con la debida anticipacion a la presentacion ante jurado evaluador (7 al 18 de septiembre), segun action item de la reunion del 28 de julio.', responsable: 'JAIME', avance: 0, horas: 1, fechaInicio: '2026-08-18', fechaFin: '2026-08-21' },
+  { id: 'cr-f3-20260811-013', grupo: 'Fase 3 - Elaboracion Informe Final', semana: '24-31 ago', actividad: 'Ajustes finales y entrega del informe a ISEADE', descripcion: 'Version final del informe con todas las observaciones incorporadas, entregada el 31 de agosto segun calendario oficial.', responsable: 'TODOS', avance: 0, horas: 8, fechaInicio: '2026-08-24', fechaFin: '2026-08-31' },
 ];
 
 const CRONOGRAMA_DEFAULT_TASKS = [
@@ -1898,8 +1912,22 @@ function isCronogramaImportedTaskPresent(tasks, importedTask) {
 function mergeCronogramaImportedTasks(tasks) {
   const normalized = normalizeCronogramaTasks(tasks);
   const imported = normalizeCronogramaTasks([...CRONOGRAMA_PLAN_TRABAJO_20260615_TASKS, ...CRONOGRAMA_PLAN_TRABAJO_20260713_TASKS]);
-  const missing = imported.filter(task => !isCronogramaImportedTaskPresent(normalized, task));
-  return missing.length ? [...normalized, ...missing] : normalized;
+  const missing = imported.filter(task => {
+    // Lote del Plan de Trabajo 5 (20260811): comparar solo por id exacto —
+    // el comparador difuso los confunde con actividades anteriores parecidas.
+    if (String(task.id || '').includes('20260811')) {
+      return !normalized.some(existing => existing.id === task.id);
+    }
+    return !isCronogramaImportedTaskPresent(normalized, task);
+  });
+  if (!missing.length) return normalized;
+  // El lote del Plan 5 se inserta en la posicion 44 (indice 43), no al final:
+  // las actividades que hoy ocupan la 44 en adelante se corren despues del lote.
+  const lotePlan5 = missing.filter(task => String(task.id || '').includes('20260811'));
+  const resto = missing.filter(task => !String(task.id || '').includes('20260811'));
+  const result = [...normalized];
+  if (lotePlan5.length) result.splice(Math.min(43, result.length), 0, ...lotePlan5);
+  return resto.length ? [...result, ...resto] : result;
 }
 
 function getCronogramaTasks() {
