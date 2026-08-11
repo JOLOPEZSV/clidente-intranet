@@ -2100,7 +2100,8 @@ async function saveCronogramaToSupabase(tasks) {
 }
 
 function getCronogramaStatus(task) {
-  if (Number(task.avance) >= 100 && task.fechaRealizada) return ['done', 'Completado'];
+  // Una actividad al 100% esta completada aunque no tenga fecha realizada registrada.
+  if (Number(task.avance) >= 100) return ['done', 'Completado'];
   if (Number(task.avance) > 0) return ['wip', 'En progreso'];
   return ['pending', 'Pendiente'];
 }
@@ -2666,8 +2667,17 @@ async function exportCronogramaWord(tasks) {
   const summary = getCronogramaSummary(tasks);
   const groups = groupCronogramaTasks(tasks);
   const totalHours = tasks.reduce((sum, task) => sum + (Number(task.horas) || 0), 0);
-  const startDate = CRONOGRAMA_REPORT_PERIOD.start;
-  const endDate = CRONOGRAMA_REPORT_PERIOD.end;
+  // Periodo cubierto dinamico: la quincena de reporte en curso (quincenas ancladas al 1 de junio,
+  // igual que los informes: 1-14 jun, 15-28 jun, ... 27 jul-9 ago, 10-23 ago, ...).
+  const quincenaAncla = new Date('2026-06-01T00:00:00');
+  const hoy = new Date();
+  const diasTranscurridos = Math.max(0, Math.floor((hoy - quincenaAncla) / 86400000));
+  const quincenaIndice = Math.floor(diasTranscurridos / 14);
+  const inicioQuincena = new Date(quincenaAncla.getTime() + quincenaIndice * 14 * 86400000);
+  const finQuincena = new Date(inicioQuincena.getTime() + 13 * 86400000);
+  const toISO = (d) => d.toISOString().slice(0, 10);
+  const startDate = toISO(inicioQuincena);
+  const endDate = toISO(finQuincena);
   const phasesCount = Object.keys(groups).length;
   const [clidenteLogo, iseadeLogo] = await Promise.all([
     getAssetDataUri('LOGO CLIDENTE.jpeg'),
@@ -2705,7 +2715,9 @@ async function exportCronogramaWord(tasks) {
     .sort((a, b) => String(a.fechaFin || a.fechaInicio || '9999-12-31').localeCompare(String(b.fechaFin || b.fechaInicio || '9999-12-31')))
     .slice(0, 6)
     .map((task) => {
-      const [state, status] = getCronogramaStatus(task);
+      let [state, status] = getCronogramaStatus(task);
+      const fechaRef = String(task.fechaFin || task.fechaInicio || '');
+      if (state !== 'done' && fechaRef && fechaRef < startDate) status = 'Atrasada';
       return `
         <tr class="${getCronogramaProgressClass(task.avance, 'word')}">
           <td>${formatCronogramaDate(task.fechaFin || task.fechaInicio)}</td>
