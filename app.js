@@ -1526,8 +1526,8 @@ function renderDesarrolloPlan() {
       status: 'Entregado',
       note: 'Quinto y ultimo seguimiento quincenal de la Etapa II. Periodo cubierto: 27 de julio al 9 de agosto de 2026. Incluye la 6.a reunion con el asesor (28 de julio), el rediseno ejecutivo de la presentacion final, la alineacion financiera a la base del II trimestre y el inicio de la redaccion del informe final.',
       links: [
-        { label: 'Control seguimiento consultoria 5 de 5', href: 'https://docs.google.com/document/d/1vaMd--Qm5O507lMyQFSdCKHeYbmzd0LQ/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
-        { label: 'Plan de trabajo 5 de 5', href: 'https://docs.google.com/document/d/1KDftN5JVErzYlsdAxcosZzBvKZyFI_Gg/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
+        { label: 'Control seguimiento consultoria 5 de 5', href: 'https://docs.google.com/document/d/13FWwMyOsvugAn7ylqS80Bcfdvh5HBmNu/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
+        { label: 'Plan de trabajo 5 de 5', href: 'https://docs.google.com/document/d/1bef-C_v1obGEhsUquHTVPrRzWvIWxToP/edit?usp=sharing&ouid=100586482682251946947&rtpof=true&sd=true', icon: 'file-word' },
       ],
     },
   ];
