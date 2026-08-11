@@ -1521,7 +1521,7 @@ function renderDesarrolloPlan() {
       ],
     },
     {
-      date: 'Martes 11 de agosto de 2026',
+      date: 'Lunes 10 de agosto de 2026',
       label: 'Informe 5',
       status: 'Entregado',
       note: 'Quinto y ultimo seguimiento quincenal de la Etapa II. Periodo cubierto: 27 de julio al 9 de agosto de 2026. Incluye la 6.a reunion con el asesor (28 de julio), el rediseno ejecutivo de la presentacion final, la alineacion financiera a la base del II trimestre y el inicio de la redaccion del informe final.',
@@ -1802,6 +1802,9 @@ const CRONOGRAMA_PLAN_TRABAJO_20260713_TASKS = [
   { id: 'cr-f2-20260811-001', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Sexta reunion con el asesor: revision y refinamiento de la propuesta', descripcion: 'Directrices del 28 de julio: maximo 20 laminas, texto a la mitad, codigo de color mostaza/azul, alinear cifras financieras, proyeccion anual, perfiles del equipo y denominacion "asesor".', responsable: 'TODOS', avance: 100, horas: 3, fechaInicio: '2026-07-28', fechaFin: '2026-07-28' },
   { id: 'cr-f2-20260811-002', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Rediseno ejecutivo de la presentacion final', descripcion: 'Fusion de laminas por propuesta (S.A.S. con argumento de deduccion del 100%; Meta Minima con ciclo trimestral), numeracion de propuestas 1 a 7 y reduccion de 43 a 25 laminas.', responsable: 'TODOS', avance: 100, horas: 14, fechaInicio: '2026-07-29', fechaFin: '2026-08-09', documentos: 'https://drive.google.com/file/d/1l4nUuigi50Fx2BT6ZwyCYBlnMv0Il-S2/view' },
   { id: 'cr-f2-20260811-003', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Alineacion financiera integral a la base del II trimestre', descripcion: 'ER y flujo mensualizados abril-junio (flujo -$2,050), punto de equilibrio de caja 956 px, proyeccion a diciembre en 4 escenarios (Meta 1: +$3,227) e indicadores financieros auditados.', responsable: 'RICARDO', avance: 100, horas: 10, fechaInicio: '2026-08-01', fechaFin: '2026-08-10' },
+  { id: 'cr-f2-20260811-r01', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '14', actividad: 'Reunion individual del bloque financiero con el asesor', descripcion: 'Sesion del martes 4 de agosto: el asesor valido el enfoque general del bloque financiero y giro instrucciones para los ajustes finales de presentacion y modelo.', responsable: 'RICARDO', avance: 100, horas: 2, fechaInicio: '2026-08-04', fechaFin: '2026-08-04' },
+  { id: 'cr-f2-20260811-r02', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '14', actividad: 'Correcciones al bloque financiero segun instrucciones del asesor', descripcion: 'Actualizacion del criterio de semaforo, promedios trimestrales y media semestral en la lamina de facturacion, reestructuracion de indicadores financieros, desglose mensual real en el Estado de Resultados y lamina de proyeccion actualizada.', responsable: 'RICARDO', avance: 100, horas: 8, fechaInicio: '2026-08-04', fechaFin: '2026-08-09' },
+  { id: 'cr-f2-20260811-r03', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '14', actividad: 'Hoja "Indicadores por paciente" en el modelo financiero', descripcion: 'Libro de Excel con hojas, tablas y formulas auditables que traza cada indicador desde su fuente primaria, incluido el desglose del costo variable por paciente y el margen de contribucion unitario.', responsable: 'RICARDO', avance: 100, horas: 6, fechaInicio: '2026-08-05', fechaFin: '2026-08-09' },
   { id: 'cr-f2-20260811-004', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Lamina de equipo con perfiles profesionales y fotografias', descripcion: 'Perfiles resumidos (cargo actual y trayectoria) de los cuatro consultores, conforme a la instruccion del asesor.', responsable: 'TODOS', avance: 100, horas: 3, fechaInicio: '2026-08-05', fechaFin: '2026-08-10' },
   { id: 'cr-f2-20260811-005', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '27 jul-9 ago', actividad: 'Redaccion de Introduccion y Resumen Ejecutivo del informe final', descripcion: 'Sobre la estructura oficial de ISEADE, con cifras alineadas a la base del II trimestre.', responsable: 'JAIME', avance: 100, horas: 5, fechaInicio: '2026-08-08', fechaFin: '2026-08-10' },
   { id: 'cr-f2-20260811-006', grupo: 'Fase 2 - Desarrollo Plan de Trabajo', semana: '10-16 ago', actividad: 'Revision final de la presentacion con el asesor', descripcion: 'Sesion del martes 11 de agosto, 7:00 p.m.: validacion del cumplimiento de las directrices del 28 de julio.', responsable: 'TODOS', avance: 0, horas: 3, fechaInicio: '2026-08-11', fechaFin: '2026-08-11' },
@@ -1933,10 +1936,16 @@ function mergeCronogramaImportedTasks(tasks) {
   if (!missing.length) return normalized;
   // El lote del Plan 5 se inserta en la posicion 44 (indice 43), no al final:
   // las actividades que hoy ocupan la 44 en adelante se corren despues del lote.
-  const lotePlan5 = missing.filter(task => String(task.id || '').includes('20260811'));
+  const loteRicardo = missing.filter(task => String(task.id || '').includes('20260811-r'));
+  const lotePlan5 = missing.filter(task => String(task.id || '').includes('20260811') && !String(task.id || '').includes('20260811-r'));
   const resto = missing.filter(task => !String(task.id || '').includes('20260811'));
   const result = [...normalized];
   if (lotePlan5.length) result.splice(Math.min(43, result.length), 0, ...lotePlan5);
+  if (loteRicardo.length) {
+    // Las actividades de Ricardo se insertan justo despues de la alineacion financiera (posicion 46).
+    const ancla = result.findIndex(task => task.id === 'cr-f2-20260811-003');
+    result.splice(ancla >= 0 ? ancla + 1 : Math.min(46, result.length), 0, ...loteRicardo);
+  }
   return resto.length ? [...result, ...resto] : result;
 }
 
@@ -2037,6 +2046,9 @@ const CRONOGRAMA_SEMANA_CORRECCIONES = {
   'cr-f2-20260811-001': '13',
   'cr-f2-20260811-002': '13-14',
   'cr-f2-20260811-003': '13-15',
+  'cr-f2-20260811-r01': '14',
+  'cr-f2-20260811-r02': '14',
+  'cr-f2-20260811-r03': '14',
   'cr-f2-20260811-004': '14-15',
   'cr-f2-20260811-005': '14-15',
   'cr-f2-20260811-006': '15',
