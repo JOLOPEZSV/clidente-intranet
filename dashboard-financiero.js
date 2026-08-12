@@ -1473,6 +1473,10 @@ async function initDashboardFinanciero() {
      para que el dashboard nunca reciba al usuario con todo en cero. */
   if (ultimoConDatos && !fdMesElegidoPorUsuario) fdMesActivoSeleccionado = ultimoConDatos;
   fdSetMesControls('fd-dashboard', fdMesActivoSeleccionado, anios);
+  /* Este init puede correr antes de que la sesion de Supabase este lista, en
+     cuyo caso la consulta de arriba falla y no hay mes al que saltar. El salto
+     se reintenta una vez desde cargarVista, cuando ya hay token. */
+  let saltoMesAplicado = !!ultimoConDatos;
 
   /* Token de secuencia: si el usuario cambia mes/anio/vista mientras una carga
      anterior sigue en vuelo, solo la carga mas reciente puede pintar el DOM. */
@@ -1486,6 +1490,20 @@ async function initDashboardFinanciero() {
     const data = esAcumulado
       ? await fdCargarDatosAcumulados(mesSolicitado)
       : await fdCargarDatosDashboard(mesSolicitado);
+    if (token !== cargaToken) return;
+
+    /* Reintento del salto al ultimo mes con datos: solo si el usuario no ha
+       elegido mes, el actual salio vacio y aun no se intento. */
+    if (!esAcumulado && !fdMesElegidoPorUsuario && !saltoMesAplicado && !fdTieneDatos(data.mensual)) {
+      saltoMesAplicado = true;
+      const { ultimoConDatos: ultimo } = await fdCargarAniosDisponibles();
+      if (ultimo && ultimo !== mesSolicitado) {
+        fdMesActivoSeleccionado = ultimo;
+        fdSetMesControls('fd-dashboard', ultimo);
+        return cargarVista();
+      }
+    }
+
     let prev = null;
     let prevLabel = '';
     let prevDentistas = null;
