@@ -197,3 +197,95 @@
   .fd-view-toggle { width:100%; }
   .fd-view-toggle button { flex:1; }
 }
+
+/* Deltas vs mes anterior en tarjetas KPI */
+.fd-delta { display:block; font-size:.74rem; font-weight:700; margin-top:.45rem; color:var(--text-muted); }
+.fd-delta.up { color:#166534; }
+.fd-delta.down { color:#b91c1c; }
+
+/* Porcentaje sobre facturacion en filas de flujo de caja */
+.fd-pct { font-style:normal; font-size:.76rem; font-weight:700; color:var(--text-muted); margin-left:.3rem; }
+
+/* Graficas de evolucion mensual */
+.fd-chart-wrap { overflow-x:auto; }
+.fd-chart-wrap svg { min-width:560px; }
+.fd-chart-subtitle { color:var(--text); font-size:.85rem; font-weight:700; margin:0 0 .45rem; }
+
+/* Franja de cuadre FG Dental vs Excel caja en el formulario */
+.fd-cuadre { border-radius:10px; padding:.75rem .9rem; font-size:.86rem; font-weight:700; margin-top:.85rem; border:1px solid transparent; }
+.fd-cuadre.ok { background:#dcfce7; color:#166534; border-color:#bbf7d0; }
+.fd-cuadre.warn { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+.fd-cuadre.bad { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+
+/* Mix de cobro (efectivo / POS / transferencia) */
+.fd-mix-legend { display:flex; gap:.9rem; flex-wrap:wrap; margin-bottom:.85rem; }
+.fd-mix-chip { display:inline-flex; align-items:center; gap:.35rem; font-size:.74rem; font-weight:700; color:var(--text-muted); }
+.fd-mix-chip::before { content:''; width:10px; height:10px; border-radius:3px; }
+.fd-mix-chip.efectivo::before { background:#16a34a; }
+.fd-mix-chip.tarjeta::before { background:#1d4ed8; }
+.fd-mix-chip.transferencia::before { background:#7c3aed; }
+.fd-mix-chip.otros::before { background:#94a3b8; }
+.fd-mix-row { display:flex; align-items:center; gap:.7rem; margin-bottom:.3rem; }
+.fd-mix-detalle { margin:0 0 .85rem 52px; font-size:.76rem; color:var(--text-muted); font-weight:600; }
+.fd-mix-mes { width:44px; font-size:.8rem; font-weight:700; color:var(--text-muted); text-align:right; flex:none; }
+.fd-mix-bar { display:flex; flex:1; height:22px; border-radius:6px; overflow:hidden; background:var(--blue-light); }
+.fd-mix-seg { display:flex; align-items:center; justify-content:center; color:#fff; font-size:.7rem; font-weight:800; min-width:0; white-space:nowrap; overflow:hidden; }
+.fd-mix-seg.efectivo { background:#16a34a; }
+.fd-mix-seg.tarjeta { background:#1d4ed8; }
+.fd-mix-seg.transferencia { background:#7c3aed; }
+.fd-mix-seg.otros { background:#94a3b8; }
+.fd-mix-total { width:64px; font-size:.8rem; font-weight:800; color:var(--text); flex:none; }
+/* En segmentos angostos se oculta el porcentaje para que no se recorte a la mitad. */
+.fd-mix-seg { container-type:inline-size; }
+@container (max-width:38px) { .fd-mix-pct { display:none; } }
+@media(max-width:540px) {
+  .fd-mix-detalle { margin-left:0; }
+  .fd-mix-pct { display:none; }
+}
+
+/* Acciones del encabezado del dashboard */
+.fd-hero-acciones { display:flex; flex-direction:column; gap:.5rem; align-items:stretch; }
+.fd-btn-informe { background:#128c7e; box-shadow:0 6px 16px rgba(18,140,126,.25); }
+.fd-btn-informe:disabled { opacity:.6; cursor:progress; }
+@media(max-width:860px) { .fd-hero-acciones { width:100%; } }
+
+/* ══ Caja diaria (seccion 13, pestanas + grilla) ══ */
+.fd-tabs { margin-bottom:1rem; }
+.fd-import-row { display:flex; align-items:center; gap:.85rem; flex-wrap:wrap; margin-top:.5rem; }
+.fd-import-estado { font-size:.82rem; font-weight:700; color:var(--text-muted); }
+.fd-import-estado.cargando { color:#92400e; }
+.fd-import-estado.ok { color:#166534; }
+.fd-import-estado.error { color:#b91c1c; }
+
+/* Scrollport propio para que el encabezado sticky funcione de verdad */
+.fd-tabla-wrap-alto { max-height:62vh; overflow:auto; }
+.fd-tabla-diaria { font-size:.82rem; }
+.fd-tabla-diaria th { position:sticky; top:0; z-index:3; background:var(--blue); }
+.fd-tabla-diaria td:first-child, .fd-tabla-diaria th:first-child {
+  position:sticky; left:0; z-index:2; background:#fff;
+}
+.fd-tabla-diaria th:first-child { z-index:4; background:var(--blue); }
+.fd-fila-domingo td:first-child { background:#f8fafc; }
+.fd-fila-alerta td:first-child { background:#fef2f2; }
+.fd-tabla-diaria td { padding:.35rem .5rem; }
+.fd-tabla-diaria input { margin-top:0; padding:.4rem .5rem; min-width:88px; }
+.fd-dia-celda { white-space:nowrap; color:var(--text); }
+.fd-dow { color:var(--text-muted); font-size:.74rem; font-weight:700; margin-left:.2rem; }
+.fd-fila-domingo td { background:#f8fafc; }
+.fd-fila-alerta td { background:#fef2f2; }
+.cd-neto, .cd-saldo { font-weight:800; white-space:nowrap; text-align:right; }
+.cd-in-malo { border-color:#dc2626 !important; background:#fef2f2; }
+@media(max-width:640px) {
+  .fd-tabla-diaria input { min-width:74px; }
+  .fd-import-row .fd-secondary { width:100%; }
+}
+/* En pantallas chicas se oculta Neto (redundante con Acumulado) para bajar a 6 columnas */
+@media(max-width:480px) {
+  .fd-tabla-diaria .cd-col-neto, .fd-tabla-diaria .cd-neto { display:none; }
+}
+
+/* Tendencia por dentista vs mes anterior */
+.fd-trend { font-size:.78rem; font-weight:700; white-space:nowrap; }
+.fd-trend.up { color:#166534; }
+.fd-trend.down { color:#b91c1c; }
+.fd-trend.flat { color:var(--text-muted); }

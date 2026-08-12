@@ -3,17 +3,72 @@
 const FD_META_DENTISTA = 2500;
 const FD_PISO_RENTABILIDAD = 1800;
 const FD_MAX_BARRA = 6500;
-const FD_PUNTO_EQUILIBRIO = 418;
+/* Plan original del PPT (asume ~33% de costos variables). Se muestra como referencia;
+   el punto de equilibrio operativo se calcula con los costos reales de cada periodo. */
+const FD_PLAN_PPT = { punto_equilibrio_px: 418, punto_equilibrio_usd: 16243 };
+const FD_PUNTO_EQUILIBRIO = FD_PLAN_PPT.punto_equilibrio_px;
 const FD_META_PACIENTES = 878;
 const FD_CAPACIDAD_MENSUAL = 3000;
+const FD_MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 let fdVistaDashboard = 'mensual';
+
+/* Punto de equilibrio real: costos fijos / margen de contribucion observado.
+   Margen de contribucion = 1 - (comisiones + insumos) / facturacion.
+   motivo: 'sin_datos' (faltan cifras) o 'margen_negativo' (los costos variables
+   superan la facturacion: no existe punto de equilibrio alcanzable). */
+function fdPuntoEquilibrioReal(mensual) {
+  const facturacion = parseFloat(mensual?.facturacion_total || 0);
+  const comisiones = parseFloat(mensual?.comisiones || 0);
+  const insumos = parseFloat(mensual?.insumos || 0);
+  const costosFijos = parseFloat(mensual?.costos_fijos || 0);
+  const pacientes = parseInt(mensual?.pacientes_atendidos || 0, 10);
+  if (facturacion <= 0 || costosFijos <= 0) return { valido: false, motivo: 'sin_datos' };
+  const margenContribucion = 1 - (comisiones + insumos) / facturacion;
+  if (margenContribucion <= 0) return { valido: false, motivo: 'margen_negativo', margenContribucion };
+  const usd = costosFijos / margenContribucion;
+  const ticket = pacientes > 0 ? facturacion / pacientes : 0;
+  const px = ticket > 0 ? Math.ceil(usd / ticket) : null;
+  return { valido: true, usd, px, margenContribucion, ticket };
+}
+
+function fdMesAnteriorTexto(mesTexto) {
+  const parsed = fdParseMesActivo(mesTexto);
+  const idx = FD_MESES.indexOf(parsed.mes);
+  if (idx <= 0) return `Diciembre ${parsed.anio - 1}`;
+  return `${FD_MESES[idx - 1]} ${parsed.anio}`;
+}
+
+function fdTieneDatos(mensual) {
+  if (!mensual) return false;
+  return ['facturacion_total', 'pacientes_atendidos', 'comisiones', 'insumos', 'flujo_neto']
+    .some(k => parseFloat(mensual[k] || 0) !== 0);
+}
+
+function fdEscapeXml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function fdDolarCorto(n) {
+  const v = parseFloat(n || 0);
+  const abs = Math.abs(v);
+  const signo = v < 0 ? '-' : '';
+  if (abs >= 1000) {
+    return signo + '$' + (abs / 1000).toLocaleString('es-SV', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'k';
+  }
+  return signo + '$' + abs.toLocaleString('es-SV', { maximumFractionDigits: 0 });
+}
 
 const FD_MAYO_2026 = {
   mes: 'Mayo 2026',
   facturacion_total: 30443.34,
   pacientes_atendidos: 783,
   ticket_promedio: 38.87,
-  flujo_neto: -965,
+  flujo_neto: -964.66,
   costos_fijos: 10800,
   comisiones: 7611,
   insumos: 12997,
@@ -62,7 +117,13 @@ const FD_MESES = [
 ];
 
 const FD_ANIOS_BASE = [2026, 2027, 2028, 2029, 2030];
-let fdMesActivoSeleccionado = 'Mayo 2026';
+/* Mes actual en hora local (nunca via toISOString, que aplica UTC y en
+   El Salvador puede correr el dia). */
+function fdMesActualLocal() {
+  const h = new Date();
+  return `${FD_MESES[h.getMonth()]} ${h.getFullYear()}`;
+}
+let fdMesActivoSeleccionado = fdMesActualLocal();
 const FD_LOCAL_DASHBOARD_KEY = 'clidente_fd_dashboard_mensual';
 const FD_LOCAL_DENTISTAS_KEY = 'clidente_fd_produccion_dentistas';
 
@@ -128,6 +189,13 @@ function fdGetLocalMes(mes) {
 }
 
 function fdGuardarLocal(data) {
+  const pe = fdPuntoEquilibrioReal({
+    facturacion_total: data.facturacion,
+    comisiones: data.comisiones,
+    insumos: data.insumos,
+    costos_fijos: data.costos,
+    pacientes_atendidos: data.pacientes
+  });
   const mensualRows = fdGetLocalJson(FD_LOCAL_DASHBOARD_KEY).filter(row => row.mes !== data.mes);
   mensualRows.push({
     mes: data.mes,
@@ -138,7 +206,10 @@ function fdGuardarLocal(data) {
     costos_fijos: data.costos,
     comisiones: data.comisiones,
     insumos: data.insumos,
-    punto_equilibrio: FD_PUNTO_EQUILIBRIO,
+    punto_equilibrio: pe.valido && pe.px ? pe.px : FD_PUNTO_EQUILIBRIO,
+    efectivo: data.efectivo,
+    tarjeta: data.tarjeta,
+    transferencia: data.transferencia,
     local_only: true,
     created_at: new Date().toISOString()
   });
@@ -184,6 +255,22 @@ function fdEstadoDentista(valor, meta = FD_META_DENTISTA, piso = FD_PISO_RENTABI
 
 function fdFiltroMes(mes) {
   return `?mes=eq.${encodeURIComponent(mes)}`;
+}
+
+/* Rol propio segun portal_allowed_users (RLS solo deja leer la fila propia).
+   'viewer' = solo lectura (Vanessa, Roberto): se le ocultan los controles de
+   guardado; la barrera real sigue siendo RLS en Supabase. */
+let fdRolPropio = null;
+async function fdCargarRolPropio() {
+  if (fdRolPropio !== null) return fdRolPropio;
+  if (!fdSupabaseConfigurado()) return (fdRolPropio = 'editor');
+  try {
+    const rows = await fdSupabaseGetRows('portal_allowed_users?select=role&limit=1');
+    fdRolPropio = Array.isArray(rows) && rows.length ? (rows[0].role || 'editor') : 'editor';
+  } catch {
+    fdRolPropio = 'editor';
+  }
+  return fdRolPropio;
 }
 
 async function fdSupabaseGetRows(path) {
@@ -259,7 +346,7 @@ async function fdCargarAniosDisponibles() {
       .filter(Boolean);
     return [...new Set([...FD_ANIOS_BASE, ...anios])].sort((a, b) => a - b);
   } catch (err) {
-    console.error('No se pudieron cargar los aÃ±os:', err);
+    console.error('No se pudo cargar la lista de periodos:', err);
     return FD_ANIOS_BASE;
   }
 }
@@ -274,11 +361,17 @@ async function fdCargarDatosDashboard(mesActivo = fdMesActivoSeleccionado) {
   try {
     await seedMayo2026();
     const mensualRows = await fdSupabaseGetRows(`dashboard_mensual?select=*&mes=eq.${encodeURIComponent(mesActivo)}&limit=1`);
-    const localData = fdGetLocalMes(mesActivo);
-    const mensual = Array.isArray(mensualRows) && mensualRows.length ? mensualRows[0] : (localData?.mensual || fdBuildEmptyMensual(mesActivo));
     const dentistasRows = await fdSupabaseGetRows(`produccion_dentistas?select=*&mes=eq.${encodeURIComponent(mesActivo)}&order=facturacion.desc`);
-    const dentistas = Array.isArray(dentistasRows) && dentistasRows.length ? dentistasRows : (localData?.dentistas || fdDentistasCero(mesActivo));
-    return { mensual, dentistas, fallback: false, vista: 'mensual' };
+    fdDepurarLocalesSincronizados(mensualRows, dentistasRows);
+    const localData = fdGetLocalMes(mesActivo);
+    const remotoRow = Array.isArray(mensualRows) && mensualRows.length ? mensualRows[0] : null;
+    const localRow = localData?.mensual || null;
+    const usaLocal = !!(localRow && (!remotoRow || fdFechaRow(localRow) > fdFechaRow(remotoRow)));
+    const mensual = usaLocal ? localRow : (remotoRow || fdBuildEmptyMensual(mesActivo));
+    const dentistas = usaLocal
+      ? (localData?.dentistas || fdDentistasCero(mesActivo))
+      : (Array.isArray(dentistasRows) && dentistasRows.length ? dentistasRows : fdDentistasCero(mesActivo));
+    return { mensual, dentistas, fallback: usaLocal, vista: 'mensual' };
   } catch (err) {
     console.error('No se pudo cargar Supabase:', err);
     const localData = fdGetLocalMes(mesActivo);
@@ -328,22 +421,59 @@ function fdFiltrarMensualesAnio(rows, anio, mesLimite) {
     .sort((a, b) => fdMesIndice(a.mes) - fdMesIndice(b.mes));
 }
 
+function fdFechaRow(row) {
+  const t = Date.parse(row?.created_at || '');
+  return Number.isFinite(t) ? t : 0;
+}
+
+/* Supabase (fuente compartida) gana sobre el respaldo local, salvo que el respaldo
+   local sea mas reciente (guardado sin conexion que aun no llega a Supabase). */
 function fdMergeMensuales(remoteRows, localRows) {
   const map = new Map();
   (Array.isArray(remoteRows) ? remoteRows : []).forEach(row => map.set(row.mes, row));
-  (Array.isArray(localRows) ? localRows : []).forEach(row => map.set(row.mes, row));
+  (Array.isArray(localRows) ? localRows : []).forEach(row => {
+    const remoto = map.get(row.mes);
+    if (!remoto || fdFechaRow(row) > fdFechaRow(remoto)) map.set(row.mes, row);
+  });
   return [...map.values()];
 }
 
 function fdMergeDentistas(remoteRows, localRows) {
   const map = new Map();
-  const add = row => {
+  (Array.isArray(remoteRows) ? remoteRows : []).forEach(row => {
     if (!row || !row.mes || !row.nombre) return;
     map.set(`${row.mes}||${row.nombre}`, row);
-  };
-  (Array.isArray(remoteRows) ? remoteRows : []).forEach(add);
-  (Array.isArray(localRows) ? localRows : []).forEach(add);
+  });
+  (Array.isArray(localRows) ? localRows : []).forEach(row => {
+    if (!row || !row.mes || !row.nombre) return;
+    const key = `${row.mes}||${row.nombre}`;
+    const remoto = map.get(key);
+    if (!remoto || fdFechaRow(row) > fdFechaRow(remoto)) map.set(key, row);
+  });
   return [...map.values()];
+}
+
+/* Elimina respaldos locales que ya estan cubiertos por un registro remoto
+   igual de reciente o mas nuevo, para que ningun navegador se quede
+   mostrando cifras viejas despues de una correccion en Supabase. */
+function fdDepurarLocalesSincronizados(remoteMensual, remoteDentistas) {
+  const remotoMes = new Map((Array.isArray(remoteMensual) ? remoteMensual : []).map(row => [row.mes, fdFechaRow(row)]));
+  const localMes = fdGetLocalJson(FD_LOCAL_DASHBOARD_KEY);
+  const vivosMes = localMes.filter(row => !(remotoMes.has(row.mes) && remotoMes.get(row.mes) >= fdFechaRow(row)));
+  if (vivosMes.length !== localMes.length) fdSetLocalJson(FD_LOCAL_DASHBOARD_KEY, vivosMes);
+
+  const remotoDen = new Map((Array.isArray(remoteDentistas) ? remoteDentistas : []).map(row => [`${row.mes}||${row.nombre}`, fdFechaRow(row)]));
+  const localDen = fdGetLocalJson(FD_LOCAL_DENTISTAS_KEY);
+  const vivosDen = localDen.filter(row => {
+    const key = `${row.mes}||${row.nombre}`;
+    return !(remotoDen.has(key) && remotoDen.get(key) >= fdFechaRow(row));
+  });
+  if (vivosDen.length !== localDen.length) fdSetLocalJson(FD_LOCAL_DENTISTAS_KEY, vivosDen);
+}
+
+function fdDepurarLocalMes(mes) {
+  fdSetLocalJson(FD_LOCAL_DASHBOARD_KEY, fdGetLocalJson(FD_LOCAL_DASHBOARD_KEY).filter(row => row.mes !== mes));
+  fdSetLocalJson(FD_LOCAL_DENTISTAS_KEY, fdGetLocalJson(FD_LOCAL_DENTISTAS_KEY).filter(row => row.mes !== mes));
 }
 
 function fdRowsConMayoBase(rows, anio, mesLimite) {
@@ -378,8 +508,6 @@ function fdAgruparDentistas(rows, mesesRegistrados) {
 async function fdCargarDatosAcumulados(mesActivo = fdMesActivoSeleccionado) {
   const parsed = fdParseMesActivo(mesActivo);
   const mesLimite = fdMesIndice(mesActivo);
-  const localMensual = fdGetLocalJson(FD_LOCAL_DASHBOARD_KEY);
-  const localDentistas = fdGetLocalJson(FD_LOCAL_DENTISTAS_KEY);
   let remoteMensual = [];
   let remoteDentistas = [];
   let fallback = !fdSupabaseConfigurado();
@@ -389,11 +517,14 @@ async function fdCargarDatosAcumulados(mesActivo = fdMesActivoSeleccionado) {
       await seedMayo2026();
       remoteMensual = await fdSupabaseGetRows('dashboard_mensual?select=*&order=created_at.asc');
       remoteDentistas = await fdSupabaseGetRows('produccion_dentistas?select=*&order=created_at.asc');
+      fdDepurarLocalesSincronizados(remoteMensual, remoteDentistas);
     } catch (err) {
       console.error('No se pudo cargar acumulado desde Supabase:', err);
       fallback = true;
     }
   }
+  const localMensual = fdGetLocalJson(FD_LOCAL_DASHBOARD_KEY);
+  const localDentistas = fdGetLocalJson(FD_LOCAL_DENTISTAS_KEY);
 
   let mensuales = fdMergeMensuales(remoteMensual, localMensual);
   mensuales = fdRowsConMayoBase(mensuales, parsed.anio, mesLimite);
@@ -453,6 +584,521 @@ async function fdCargarDatosAcumulados(mesActivo = fdMesActivoSeleccionado) {
   };
 }
 
+/* Serie con todos los meses del anio que tienen datos (para las graficas de evolucion). */
+async function fdCargarSerieAnual(anio) {
+  let remoteMensual = [];
+  if (fdSupabaseConfigurado()) {
+    try {
+      remoteMensual = await fdSupabaseGetRows('dashboard_mensual?select=*&order=created_at.asc');
+    } catch (err) {
+      console.error('No se pudo cargar la serie anual:', err);
+    }
+  }
+  let rows = fdMergeMensuales(remoteMensual, fdGetLocalJson(FD_LOCAL_DASHBOARD_KEY));
+  rows = fdRowsConMayoBase(rows, anio, 12);
+  return fdFiltrarMensualesAnio(rows, anio, 12);
+}
+
+function fdSvgFacturacionVsPE(rows) {
+  const W = 760, H = 250, L = 58, R = 12, T = 26, B = 32;
+  const plotW = W - L - R, plotH = H - T - B;
+  const porMes = new Map(rows.map(row => [fdMesIndice(row.mes), row]));
+  const facturaciones = [...porMes.values()].map(row => Math.max(parseFloat(row.facturacion_total || 0), 0));
+  const maxFact = Math.max(...facturaciones, 1);
+  const valores = [maxFact];
+  porMes.forEach(row => {
+    const pe = fdPuntoEquilibrioReal(row);
+    /* Un PE desorbitado (margen casi cero) no debe aplastar la escala de todo
+       el anio; su linea simplemente queda fuera del chart y el tooltip lo dice. */
+    if (pe.valido && pe.usd <= maxFact * 3) valores.push(pe.usd);
+  });
+  const yMax = Math.max(Math.ceil((Math.max(...valores) * 1.12) / 5000) * 5000, 5000);
+  const y = v => T + plotH - (v / yMax) * plotH;
+  const slotW = plotW / 12;
+  const barW = Math.min(slotW * 0.56, 34);
+  let out = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Facturacion mensual contra punto de equilibrio real" style="width:100%;height:auto;display:block">`;
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const v = (yMax / ticks) * i;
+    out += `<line x1="${L}" y1="${y(v)}" x2="${W - R}" y2="${y(v)}" stroke="${i === 0 ? '#94a3b8' : '#e2e8f0'}" stroke-width="1"/>`;
+    out += `<text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#64748b">${fdDolarCorto(v)}</text>`;
+  }
+  const baseY = T + plotH;
+  for (let m = 1; m <= 12; m++) {
+    const x0 = L + slotW * (m - 1);
+    const cx = x0 + slotW / 2;
+    const row = porMes.get(m);
+    out += `<text x="${cx}" y="${H - 10}" text-anchor="middle" font-size="11" font-weight="${row ? '700' : '400'}" fill="${row ? '#475569' : '#94a3b8'}">${FD_MESES_CORTOS[m - 1]}</text>`;
+    if (!row) continue;
+    const fact = Math.max(parseFloat(row.facturacion_total || 0), 0);
+    const pe = fdPuntoEquilibrioReal(row);
+    const margenNegativo = !pe.valido && pe.motivo === 'margen_negativo';
+    const sobre = pe.valido ? fact >= pe.usd : (margenNegativo ? false : null);
+    const color = sobre === null ? '#94a3b8' : (sobre ? '#16a34a' : '#dc2626');
+    const hBar = Math.max(plotH * fact / yMax, 2);
+    const yRect = Math.min(y(fact), baseY - hBar);
+    const peFueraEscala = pe.valido && pe.usd > yMax;
+    const detalle = `${row.mes}: facturacion ${formatoDolar(fact)}${pe.valido ? ' | PE real ' + formatoDolar(pe.usd) + (sobre ? ' (sobre equilibrio)' : ' (bajo equilibrio)') + (peFueraEscala ? ' - fuera de escala' : '') : (margenNegativo ? ' | costos variables superan la facturacion: sin punto de equilibrio alcanzable' : '')}`;
+    out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${yRect.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" rx="3" fill="${color}"><title>${fdEscapeXml(detalle)}</title></rect>`;
+    if (pe.valido && !peFueraEscala) {
+      out += `<line x1="${(x0 + slotW * 0.08).toFixed(1)}" y1="${y(pe.usd).toFixed(1)}" x2="${(x0 + slotW * 0.92).toFixed(1)}" y2="${y(pe.usd).toFixed(1)}" stroke="#b45309" stroke-width="2" stroke-dasharray="5 3"><title>${fdEscapeXml(`Punto de equilibrio real ${row.mes}: ${formatoDolar(pe.usd)}`)}</title></line>`;
+    }
+    out += `<text x="${cx}" y="${(yRect - 6).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155" stroke="#ffffff" stroke-width="3" style="paint-order:stroke">${fdDolarCorto(fact)}</text>`;
+  }
+  out += '</svg>';
+  return out;
+}
+
+function fdSvgFlujoMensual(rows) {
+  const W = 760, H = 210, L = 58, R = 12, T = 22, B = 32;
+  const plotW = W - L - R, plotH = H - T - B;
+  const porMes = new Map(rows.map(row => [fdMesIndice(row.mes), row]));
+  let minV = 0, maxV = 0;
+  porMes.forEach(row => {
+    const f = parseFloat(row.flujo_neto || 0);
+    minV = Math.min(minV, f);
+    maxV = Math.max(maxV, f);
+  });
+  if (minV === 0 && maxV === 0) maxV = 1000;
+  const paso = 500;
+  let yMax = Math.max(Math.ceil((maxV * 1.15) / paso) * paso, 0);
+  /* Con todos los flujos negativos, headroom proporcional al rango para que
+     las etiquetas '$0' y la del tope no se encimen. */
+  if (yMax === 0) yMax = Math.max(paso, Math.ceil((Math.abs(minV) * 0.08) / paso) * paso);
+  const yMin = Math.min(Math.floor((minV * 1.15) / paso) * paso, 0);
+  const y = v => T + plotH * (yMax - v) / (yMax - yMin);
+  const slotW = plotW / 12;
+  const barW = Math.min(slotW * 0.56, 34);
+  let out = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Flujo neto mensual" style="width:100%;height:auto;display:block">`;
+  out += `<line x1="${L}" y1="${y(yMax)}" x2="${L}" y2="${y(yMin)}" stroke="#e2e8f0" stroke-width="1"/>`;
+  /* El '$0' se etiqueta primero; niveles cuya etiqueta quedaria a <12px de otra
+     ya dibujada conservan su gridline pero sin texto (evita encimados). */
+  const etiquetasY = [];
+  [0, yMin, yMax].filter((v, i, arr) => arr.indexOf(v) === i).forEach(v => {
+    out += `<line x1="${L}" y1="${y(v).toFixed(1)}" x2="${W - R}" y2="${y(v).toFixed(1)}" stroke="${v === 0 ? '#94a3b8' : '#e2e8f0'}" stroke-width="${v === 0 ? 1.5 : 1}"/>`;
+    const yv = y(v);
+    if (etiquetasY.every(prev => Math.abs(prev - yv) >= 12)) {
+      etiquetasY.push(yv);
+      out += `<text x="${L - 8}" y="${(yv + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#64748b">${fdDolarCorto(v)}</text>`;
+    }
+  });
+  for (let m = 1; m <= 12; m++) {
+    const x0 = L + slotW * (m - 1);
+    const cx = x0 + slotW / 2;
+    const row = porMes.get(m);
+    out += `<text x="${cx}" y="${H - 10}" text-anchor="middle" font-size="11" font-weight="${row ? '700' : '400'}" fill="${row ? '#475569' : '#94a3b8'}">${FD_MESES_CORTOS[m - 1]}</text>`;
+    if (!row) continue;
+    const f = parseFloat(row.flujo_neto || 0);
+    const positivo = f >= 0;
+    const hBar = Math.max(Math.abs(y(f) - y(0)), 2);
+    /* El stub minimo de 2px queda anclado en la linea cero, sin cruzarla. */
+    const yTop = positivo ? Math.min(y(f), y(0) - hBar) : y(0);
+    const color = f === 0 ? '#94a3b8' : (positivo ? '#16a34a' : '#dc2626');
+    out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" rx="3" fill="${color}"><title>${fdEscapeXml(`${row.mes}: flujo neto ${formatoDolar(f)}`)}</title></rect>`;
+    const yLabel = positivo ? yTop - 6 : y(f) + 14;
+    out += `<text x="${cx}" y="${yLabel.toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155" stroke="#ffffff" stroke-width="3" style="paint-order:stroke">${fdDolarCorto(f)}</text>`;
+  }
+  out += '</svg>';
+  return out;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   INFORME EJECUTIVO EN PDF
+   Una pagina para que Henry se lo mande por WhatsApp a la Dra. Olga.
+   Se dibuja con jsPDF (no captura de pantalla) para que salga nitido y
+   legible en un telefono.
+   ══════════════════════════════════════════════════════════════════════ */
+const FD_JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+
+function fdCargarJsPDF() {
+  if (window.jspdf?.jsPDF) return Promise.resolve(window.jspdf.jsPDF);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = FD_JSPDF_URL;
+    s.onload = () => window.jspdf?.jsPDF ? resolve(window.jspdf.jsPDF) : reject(new Error('jsPDF no quedo disponible'));
+    s.onerror = () => reject(new Error('No se pudo descargar el generador de PDF (revisa la conexion)'));
+    document.head.appendChild(s);
+  });
+}
+
+const FD_PDF_COLORES = {
+  navy: [15, 35, 64], dorado: [180, 83, 9], verde: [22, 163, 74], rojo: [220, 38, 38],
+  gris: [100, 116, 139], grisClaro: [241, 245, 249], texto: [30, 41, 59], blanco: [255, 255, 255]
+};
+
+function fdPdfKpi(doc, x, y, w, etiqueta, valor, color) {
+  doc.setFillColor(...FD_PDF_COLORES.grisClaro);
+  doc.roundedRect(x, y, w, 52, 4, 4, 'F');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...FD_PDF_COLORES.gris);
+  doc.setFont('helvetica', 'bold');
+  doc.text(String(etiqueta).toUpperCase(), x + 9, y + 16);
+  doc.setFontSize(15);
+  doc.setTextColor(...(color || FD_PDF_COLORES.navy));
+  doc.text(String(valor), x + 9, y + 38);
+}
+
+async function fdGenerarInformeEjecutivo(mesTexto) {
+  const jsPDF = await fdCargarJsPDF();
+  const datos = await fdCargarDatosDashboard(mesTexto);
+  const mensual = datos.mensual || {};
+  const dentistas = (datos.dentistas || []).slice()
+    .sort((a, b) => parseFloat(b.facturacion || 0) - parseFloat(a.facturacion || 0));
+  let diaria = { rows: [] };
+  try { diaria = await fdCargarCajaDiaria(mesTexto); } catch { /* opcional */ }
+  const caja = fdResumenCajaDiaria(diaria.rows.filter(r =>
+    parseFloat(r.ingreso || 0) || parseFloat(r.egreso || 0) || parseFloat(r.pago_banco || 0)));
+
+  const fact = parseFloat(mensual.facturacion_total || 0);
+  const pac = parseInt(mensual.pacientes_atendidos || 0, 10);
+  const ticket = pac > 0 ? fact / pac : 0;
+  const flujo = parseFloat(mensual.flujo_neto || 0);
+  const pe = fdPuntoEquilibrioReal(mensual);
+
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const W = doc.internal.pageSize.getWidth();
+  const M = 40;
+  const ancho = W - M * 2;
+
+  /* Encabezado */
+  doc.setFillColor(...FD_PDF_COLORES.navy);
+  doc.rect(0, 0, W, 82, 'F');
+  doc.setTextColor(...FD_PDF_COLORES.blanco);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(17);
+  doc.text('Clinica Dental Clidente', M, 36);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text(`Informe ejecutivo - ${mesTexto}`, M, 56);
+  doc.setFontSize(8);
+  doc.setTextColor(200, 214, 232);
+  doc.text('Preparado por la administracion', W - M, 36, { align: 'right' });
+  doc.text(`Generado el ${new Date().toLocaleDateString('es-SV')}`, W - M, 52, { align: 'right' });
+
+  let y = 108;
+
+  /* KPIs */
+  const wKpi = (ancho - 24) / 4;
+  fdPdfKpi(doc, M, y, wKpi, 'Facturacion', formatoDolar(fact));
+  fdPdfKpi(doc, M + wKpi + 8, y, wKpi, 'Pacientes', fdEntero(pac));
+  fdPdfKpi(doc, M + (wKpi + 8) * 2, y, wKpi, 'Ticket promedio', formatoDolar(ticket));
+  fdPdfKpi(doc, M + (wKpi + 8) * 3, y, wKpi, 'Resultado operativo', formatoDolar(flujo),
+    flujo >= 0 ? FD_PDF_COLORES.verde : FD_PDF_COLORES.rojo);
+  y += 72;
+
+  /* Punto de equilibrio */
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(...FD_PDF_COLORES.navy);
+  doc.text('Punto de equilibrio', M, y);
+  y += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...FD_PDF_COLORES.texto);
+  const lineaPE = pe.valido && pe.px
+    ? `Con el margen de contribucion de este mes (${fdPorcentaje(pe.margenContribucion * 100)}), la clinica cubre sus costos fijos a partir de ${fdEntero(pe.px)} pacientes (${formatoDolar(pe.usd)}). Este mes atendio ${fdEntero(pac)}: ${pac >= pe.px ? 'equilibrio cubierto' : 'faltaron ' + fdEntero(pe.px - pac) + ' pacientes'}.`
+    : 'No hay datos suficientes del mes para calcular el punto de equilibrio.';
+  doc.text(doc.splitTextToSize(lineaPE, ancho), M, y);
+  y += doc.getTextDimensions(doc.splitTextToSize(lineaPE, ancho)).h + 14;
+
+  /* Alerta de caja (lo que el cierre mensual no muestra) */
+  if (caja.diasConDatos) {
+    const critico = !!caja.peorSaldo.fecha;
+    doc.setFillColor(...(critico ? [254, 226, 226] : [220, 252, 231]));
+    const textoCaja = critico
+      ? `Alerta de caja: el saldo de efectivo se vuelve negativo el ${caja.peorSaldo.fecha} y toca fondo en ${formatoDolar(caja.peorSaldo.valor)}. El mes cierra con ${formatoDolar(caja.saldoFinal)} despues de ${formatoDolar(caja.banco)} de pagos al banco.`
+      : `Caja del mes: ingresos ${formatoDolar(caja.ingresos)}, egresos ${formatoDolar(caja.egresos)}, pagos al banco ${formatoDolar(caja.banco)}. El saldo acumulado nunca baja de cero y cierra en ${formatoDolar(caja.saldoFinal)}.`;
+    const lineas = doc.splitTextToSize(textoCaja, ancho - 20);
+    const alto = doc.getTextDimensions(lineas).h + 18;
+    doc.roundedRect(M, y, ancho, alto, 4, 4, 'F');
+    doc.setTextColor(...(critico ? [153, 27, 27] : [22, 101, 52]));
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(lineas, M + 10, y + 14);
+    y += alto + 16;
+  }
+
+  /* Produccion por dentista */
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.setTextColor(...FD_PDF_COLORES.navy);
+  doc.text('Produccion por dentista', M, y);
+  y += 14;
+  doc.setFillColor(...FD_PDF_COLORES.navy);
+  doc.rect(M, y, ancho, 18, 'F');
+  doc.setTextColor(...FD_PDF_COLORES.blanco);
+  doc.setFontSize(8);
+  doc.text('DENTISTA', M + 8, y + 12);
+  doc.text('FACTURACION', M + ancho * 0.52, y + 12);
+  doc.text('META $2,500', M + ancho * 0.75, y + 12);
+  y += 18;
+
+  const maxFact = Math.max(...dentistas.map(d => parseFloat(d.facturacion || 0)), 1);
+  doc.setFont('helvetica', 'normal');
+  dentistas.slice(0, 12).forEach((d, i) => {
+    const v = parseFloat(d.facturacion || 0);
+    if (i % 2 === 0) {
+      doc.setFillColor(248, 250, 252);
+      doc.rect(M, y, ancho, 17, 'F');
+    }
+    doc.setTextColor(...FD_PDF_COLORES.texto);
+    doc.setFontSize(8.5);
+    doc.text(String(d.nombre || '').slice(0, 34), M + 8, y + 12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(formatoDolar(v), M + ancho * 0.52, y + 12);
+    doc.setFont('helvetica', 'normal');
+    /* Barra proporcional con el color del estado */
+    const est = fdEstadoDentista(v);
+    const col = est.key === 'sobre_meta' ? FD_PDF_COLORES.verde : est.key === 'advertencia' ? FD_PDF_COLORES.dorado : FD_PDF_COLORES.rojo;
+    const wBarra = ancho * 0.2;
+    doc.setFillColor(226, 232, 240);
+    doc.roundedRect(M + ancho * 0.75, y + 5, wBarra, 7, 2, 2, 'F');
+    doc.setFillColor(...col);
+    const wLleno = Math.max(Math.min(v / maxFact, 1) * wBarra, 1.5);
+    doc.roundedRect(M + ancho * 0.75, y + 5, wLleno, 7, 2, 2, 'F');
+    y += 17;
+  });
+
+  y += 16;
+
+  /* Mix de cobro */
+  const ef = parseFloat(mensual.efectivo || 0);
+  const ta = parseFloat(mensual.tarjeta || 0);
+  const tr = parseFloat(mensual.transferencia || 0);
+  if (ef + ta + tr > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(...FD_PDF_COLORES.navy);
+    doc.text('Como cobro la clinica', M, y);
+    y += 14;
+    const totalCobros = ef + ta + tr;
+    const segmentos = [[ef, FD_PDF_COLORES.verde, 'Efectivo'], [ta, [29, 78, 216], 'POS'], [tr, [124, 58, 237], 'Transferencia']];
+    let x = M;
+    segmentos.forEach(([v, c]) => {
+      if (v <= 0) return;
+      const w = (v / totalCobros) * ancho;
+      doc.setFillColor(...c);
+      doc.rect(x, y, w, 14, 'F');
+      x += w;
+    });
+    y += 24;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...FD_PDF_COLORES.texto);
+    doc.text(segmentos.filter(s => s[0] > 0)
+      .map(([v, , n]) => `${n}: ${formatoDolar(v)} (${fdPorcentaje(v / totalCobros * 100)})`).join('     '), M, y);
+    y += 18;
+  }
+
+  /* Pie */
+  const alturaPag = doc.internal.pageSize.getHeight();
+  doc.setDrawColor(226, 232, 240);
+  doc.line(M, alturaPag - 46, W - M, alturaPag - 46);
+  doc.setFontSize(7.5);
+  doc.setTextColor(...FD_PDF_COLORES.gris);
+  doc.text('Fuentes: control de caja, FG Dental y contador externo. Confidencial - uso exclusivo de Clinica Dental Clidente.', M, alturaPag - 32);
+  doc.text('Generado desde el Portal de Gestion Clidente.', M, alturaPag - 21);
+
+  return { doc, nombre: `Informe Clidente ${mesTexto}.pdf` };
+}
+
+async function fdCompartirInformeEjecutivo() {
+  const btn = document.getElementById('fd-btn-informe');
+  const original = btn?.innerHTML;
+  try {
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...'; }
+    const mesTexto = fdVistaDashboard === 'acumulado'
+      ? fdReadMesControls('fd-dashboard')
+      : (fdMesActivoSeleccionado || fdReadMesControls('fd-dashboard'));
+    const { doc, nombre } = await fdGenerarInformeEjecutivo(mesTexto);
+    const blob = doc.output('blob');
+    const archivo = new File([blob], nombre, { type: 'application/pdf' });
+    /* En el telefono abre la hoja de compartir (WhatsApp incluido);
+       en escritorio simplemente descarga el PDF. */
+    if (navigator.canShare?.({ files: [archivo] })) {
+      await navigator.share({
+        files: [archivo],
+        title: `Informe Clidente ${mesTexto}`,
+        text: `Informe ejecutivo de ${mesTexto} - Clinica Dental Clidente`
+      });
+    } else {
+      doc.save(nombre);
+    }
+  } catch (err) {
+    if (err?.name === 'AbortError') return;   /* el usuario cerro la hoja de compartir */
+    console.error(err);
+    alert(`No se pudo generar el informe: ${err?.message || 'error desconocido'}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+  }
+}
+
+/* Curva de saldo acumulado del mes: el grafico de la propuesta 1.
+   Muestra con cuanto efectivo cuenta la clinica cada dia y marca los pagos
+   al banco, que son los que hunden el saldo. */
+function fdSvgCajaDiaria(detalle, mesTexto) {
+  const W = 760, H = 240, L = 58, R = 12, T = 22, B = 40;
+  const plotW = W - L - R, plotH = H - T - B;
+  const n = detalle.length;
+  if (!n) return '';
+  const saldos = detalle.map(r => r.saldo);
+  const maxS = Math.max(...saldos, 0);
+  const minS = Math.min(...saldos, 0);
+  const span = (maxS - minS) || 1;
+  const yMax = maxS + span * 0.12;
+  const yMin = minS - span * 0.12;
+  const y = v => T + plotH * (yMax - v) / (yMax - yMin);
+  /* Eje X en escala de calendario: un mes a medio capturar debe verse a medias,
+     no estirado a todo el ancho. */
+  const diasMes = fdDiasDelMes(mesTexto) || 31;
+  const diaDe = r => parseInt(String(r.fecha).slice(-2), 10) || 1;
+  const x = i => L + (plotW * (diaDe(detalle[i]) - 1)) / Math.max(diasMes - 1, 1);
+
+  let out = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Saldo de caja acumulado dia a dia" style="width:100%;height:auto;display:block">`;
+  [yMax, 0, yMin].filter((v, i, a) => a.indexOf(v) === i).forEach(v => {
+    out += `<line x1="${L}" y1="${y(v).toFixed(1)}" x2="${W - R}" y2="${y(v).toFixed(1)}" stroke="${v === 0 ? '#94a3b8' : '#e2e8f0'}" stroke-width="${v === 0 ? 1.5 : 1}"/>`;
+    out += `<text x="${L - 8}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="#64748b">${fdDolarCorto(v)}</text>`;
+  });
+
+  /* Area bajo la curva, partida en el cruce por cero para pintar en rojo
+     el tramo en que la clinica opera sin efectivo. */
+  const puntos = detalle.map((r, i) => `${x(i).toFixed(1)},${y(r.saldo).toFixed(1)}`).join(' ');
+  const y0 = y(0).toFixed(1);
+  out += `<defs><clipPath id="fd-clip-pos"><rect x="${L}" y="${T}" width="${plotW}" height="${(parseFloat(y0) - T).toFixed(1)}"/></clipPath>`;
+  out += `<clipPath id="fd-clip-neg"><rect x="${L}" y="${y0}" width="${plotW}" height="${(T + plotH - parseFloat(y0)).toFixed(1)}"/></clipPath></defs>`;
+  const area = `${x(0).toFixed(1)},${y0} ${puntos} ${x(n - 1).toFixed(1)},${y0}`;
+  out += `<polygon points="${area}" fill="#16a34a" opacity=".14" clip-path="url(#fd-clip-pos)"/>`;
+  out += `<polygon points="${area}" fill="#dc2626" opacity=".16" clip-path="url(#fd-clip-neg)"/>`;
+  out += `<polyline points="${puntos}" fill="none" stroke="#0f2340" stroke-width="2" stroke-linejoin="round"/>`;
+
+  detalle.forEach((r, i) => {
+    const dia = parseInt(String(r.fecha).slice(-2), 10);
+    const cx = x(i), cy = y(r.saldo);
+    if (r.pago_banco > 0) {
+      out += `<line x1="${cx.toFixed(1)}" y1="${T}" x2="${cx.toFixed(1)}" y2="${(T + plotH).toFixed(1)}" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4 3" opacity=".85"/>`;
+      out += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="#b45309" stroke="#fff" stroke-width="2"><title>${fdEscapeXml(`${r.fecha}: pago al banco ${formatoDolar(r.pago_banco)} - saldo ${formatoDolar(r.saldo)}`)}</title></circle>`;
+    } else {
+      out += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3" fill="${r.saldo < 0 ? '#dc2626' : '#0f2340'}"><title>${fdEscapeXml(`${r.fecha} (${fdDiaSemana(r.fecha)}): ingreso ${formatoDolar(r.ingreso)}, egreso ${formatoDolar(r.egreso)} - saldo ${formatoDolar(r.saldo)}`)}</title></circle>`;
+    }
+    if (dia === 1 || dia % 5 === 0) {
+      out += `<text x="${cx.toFixed(1)}" y="${(H - 14).toFixed(1)}" text-anchor="middle" font-size="10" fill="#64748b">${dia}</text>`;
+    }
+  });
+  out += `<text x="${(L + plotW / 2).toFixed(1)}" y="${H - 2}" text-anchor="middle" font-size="10" fill="#94a3b8">Dia del mes</text>`;
+  out += '</svg>';
+  return out;
+}
+
+async function fdRenderCajaDiariaDashboard(mesTexto, sigueVigente = () => true) {
+  const card = document.getElementById('fd-caja-diaria-card');
+  const cont = document.getElementById('fd-caja-diaria-chart');
+  if (!card || !cont) return;
+  let rows = [];
+  try {
+    const data = await fdCargarCajaDiaria(mesTexto);
+    rows = data.rows;
+  } catch (err) {
+    console.error('No se pudo cargar la caja diaria del dashboard:', err);
+  }
+  if (!sigueVigente()) return;
+  const conMovimiento = rows.filter(r => parseFloat(r.ingreso || 0) || parseFloat(r.egreso || 0) || parseFloat(r.pago_banco || 0));
+  if (!conMovimiento.length) {
+    card.style.display = 'none';
+    cont.innerHTML = '';
+    return;
+  }
+  card.style.display = '';
+  fdSetText('fd-caja-diaria-mes', mesTexto);
+  const res = fdResumenCajaDiaria(conMovimiento);
+  cont.innerHTML = fdSvgCajaDiaria(res.detalle, mesTexto);
+
+  fdSetText('fd-cd-ingresos', formatoDolar(res.ingresos));
+  fdSetText('fd-cd-egresos', formatoDolar(res.egresos));
+  fdSetText('fd-cd-banco', formatoDolar(res.banco));
+  fdSetText('fd-cd-saldo', formatoDolar(res.saldoFinal));
+  const elSaldo = document.getElementById('fd-cd-saldo');
+  elSaldo?.classList.toggle('fd-positive', res.saldoFinal >= 0);
+  elSaldo?.classList.toggle('fd-negative', res.saldoFinal < 0);
+
+  /* Dia de mayor y menor ingreso: el patron que el cierre mensual esconde. */
+  const ordenados = res.detalle.slice().sort((a, b) => b.ingreso - a.ingreso);
+  const mejor = ordenados[0];
+  const peor = ordenados[ordenados.length - 1];
+  const nota = document.getElementById('fd-cd-nota');
+  if (nota) {
+    const partes = [];
+    const diasMes = fdDiasDelMes(mesTexto);
+    if (res.diasConDatos < diasMes) {
+      partes.push(`<em>Acumulado con ${res.diasConDatos} de ${diasMes} dias capturados.</em>`);
+    }
+    if (res.primerNegativo) {
+      partes.push(`<strong class="fd-negative">A partir del ${res.primerNegativo} el mes consume mas efectivo del que genera; toca fondo el ${res.peorSaldo.fecha} en ${formatoDolar(res.peorSaldo.valor)}.</strong>`);
+    } else {
+      partes.push(`El acumulado nunca baja de cero: el periodo genera ${formatoDolar(res.saldoFinal)} de efectivo neto.`);
+    }
+    if (mejor && peor && mejor.fecha !== peor.fecha) {
+      partes.push(`Mejor dia: ${mejor.fecha} (${fdDiaSemana(mejor.fecha)}) con ${formatoDolar(mejor.ingreso)}; el mas flojo: ${peor.fecha} (${fdDiaSemana(peor.fecha)}) con ${formatoDolar(peor.ingreso)}.`);
+    }
+    nota.innerHTML = partes.join(' ');
+  }
+}
+
+function fdRenderMixCobro(rows, anio) {
+  const card = document.getElementById('fd-mix-card');
+  const cont = document.getElementById('fd-mix-rows');
+  if (!card || !cont) return;
+  fdSetText('fd-mix-anio', String(anio));
+  const conMix = (Array.isArray(rows) ? rows : []).filter(row =>
+    ['efectivo', 'tarjeta', 'transferencia'].some(k => parseFloat(row[k] || 0) > 0));
+  if (!conMix.length) {
+    card.style.display = 'none';
+    cont.innerHTML = '';
+    return;
+  }
+  card.style.display = '';
+  cont.innerHTML = conMix.map(row => {
+    const ef = parseFloat(row.efectivo || 0);
+    const ta = parseFloat(row.tarjeta || 0);
+    const tr = parseFloat(row.transferencia || 0);
+    const fact = parseFloat(row.facturacion_total || 0);
+    const cobrado = ef + ta + tr;
+    const total = Math.max(fact, cobrado);
+    const otros = Math.max(total - cobrado, 0);
+    const partes = [[ef, 'efectivo', 'Efectivo'], [ta, 'tarjeta', 'POS / tarjeta'], [tr, 'transferencia', 'Transferencia'], [otros, 'otros', 'Otros / ajustes']];
+    const seg = ([valor, clase, etiqueta]) => {
+      if (valor <= 0 || total <= 0) return '';
+      const pct = (valor / total) * 100;
+      const detalle = `${etiqueta}: ${formatoDolar(valor)} (${fdPorcentaje(pct)})`;
+      const texto = pct >= 12 ? `<span class="fd-mix-pct">${fdPorcentaje(pct)}</span>` : '';
+      return `<div class="fd-mix-seg ${clase}" style="width:${pct.toFixed(2)}%" role="img" aria-label="${fdEscapeXml(detalle)}" title="${fdEscapeXml(detalle)}">${texto}</div>`;
+    };
+    const desglose = partes.filter(p => p[0] > 0)
+      .map(([valor, , etiqueta]) => `${etiqueta} ${formatoDolar(valor)}`).join(' &middot; ');
+    const nombreMes = fdParseMesActivo(row.mes).mes;
+    return `<div class="fd-mix-row">
+      <span class="fd-mix-mes">${nombreMes.slice(0, 3)}</span>
+      <div class="fd-mix-bar" title="${fdEscapeXml(`${nombreMes}: ${desglose.replace(/&middot;/g, '-')}`)}">${partes.map(seg).join('')}</div>
+      <span class="fd-mix-total">${fdDolarCorto(total)}</span>
+    </div>
+    <p class="fd-mix-detalle">${desglose}</p>`;
+  }).join('');
+}
+
+function fdRenderTendencia(rows, anio) {
+  fdSetText('fd-tendencia-anio', String(anio));
+  const contFact = document.getElementById('fd-chart-facturacion');
+  const contFlujo = document.getElementById('fd-chart-flujo');
+  if (!contFact || !contFlujo) return;
+  fdRenderMixCobro(rows, anio);
+  if (!Array.isArray(rows) || !rows.length) {
+    contFact.innerHTML = `<p class="fd-note">Aun no hay meses registrados en ${anio}.</p>`;
+    contFlujo.innerHTML = '';
+    return;
+  }
+  contFact.innerHTML = `<p class="fd-chart-subtitle">Facturacion mensual vs punto de equilibrio real</p>` + fdSvgFacturacionVsPE(rows);
+  contFlujo.innerHTML = `<p class="fd-chart-subtitle">Flujo neto mensual</p>` + fdSvgFlujoMensual(rows);
+}
+
 function renderDashboardFinanciero() {
   return `
   <div id="dashboard-financiero-root" class="fd-shell">
@@ -473,33 +1119,70 @@ function renderDashboardFinanciero() {
           <span class="fd-source unified">Dashboard unificado</span>
         </div>
       </div>
-      <button class="fd-secondary" onclick="navigate('formulario-henry')">Ingresar datos del mes &rarr;</button>
+      <div class="fd-hero-acciones">
+        <button class="fd-save fd-btn-informe" id="fd-btn-informe" type="button"><i class="fab fa-whatsapp"></i> Informe ejecutivo PDF</button>
+        <button class="fd-secondary" id="fd-btn-ingresar" onclick="navigate('formulario-henry')">Ingresar datos del mes &rarr;</button>
+      </div>
     </div>
 
     <div id="fd-config-warning" class="fd-warning" style="display:none">
-      Supabase aun no esta disponible. El dashboard muestra los datos guardados localmente o la base de Mayo 2026.
+      Atencion: se estan mostrando datos guardados solo en este navegador o la base de Mayo 2026.
+      Verifica la conexion con Supabase para ver los datos compartidos del equipo.
     </div>
 
     <div class="fd-kpi-grid">
-      <div class="fd-kpi-card"><span id="fd-label-facturacion">Facturacion total</span><strong id="fd-kpi-facturacion">$0.00</strong></div>
-      <div class="fd-kpi-card"><span id="fd-label-pacientes">Pacientes atendidos</span><strong id="fd-kpi-pacientes">0</strong></div>
-      <div class="fd-kpi-card"><span>Ticket promedio</span><strong id="fd-kpi-ticket">$0.00</strong></div>
-      <div class="fd-kpi-card"><span id="fd-label-flujo">Flujo neto</span><strong id="fd-kpi-flujo">$0.00</strong></div>
+      <div class="fd-kpi-card"><span id="fd-label-facturacion">Facturacion total</span><strong id="fd-kpi-facturacion">$0.00</strong><small id="fd-delta-facturacion" class="fd-delta"></small></div>
+      <div class="fd-kpi-card"><span id="fd-label-pacientes">Pacientes atendidos</span><strong id="fd-kpi-pacientes">0</strong><small id="fd-delta-pacientes" class="fd-delta"></small></div>
+      <div class="fd-kpi-card"><span>Ticket promedio</span><strong id="fd-kpi-ticket">$0.00</strong><small id="fd-delta-ticket" class="fd-delta"></small></div>
+      <div class="fd-kpi-card"><span id="fd-label-flujo">Flujo neto</span><strong id="fd-kpi-flujo">$0.00</strong><small id="fd-delta-flujo" class="fd-delta"></small></div>
     </div>
 
     <div class="fd-insight-grid">
       <div class="fd-insight"><span>Ocupacion</span><strong id="fd-extra-ocupacion">0.0%</strong><small id="fd-extra-capacidad">0 de 0 capacidad</small></div>
-      <div class="fd-insight"><span>Punto equilibrio operativo</span><strong id="fd-extra-equilibrio">0 px</strong><small>$16,243/mes segun PPT</small></div>
+      <div class="fd-insight"><span>Punto de equilibrio real</span><strong id="fd-extra-equilibrio">0 px</strong><small id="fd-extra-equilibrio-note">Calculado con los costos del periodo</small></div>
       <div class="fd-insight"><span>Meta de pacientes</span><strong id="fd-extra-meta">0 px</strong><small id="fd-extra-meta-note">878 pacientes/mes</small></div>
       <div class="fd-insight"><span>Meses registrados</span><strong id="fd-extra-meses">1</strong><small id="fd-extra-periodo">Mes activo</small></div>
+    </div>
+
+    <div class="card fd-card-tight">
+      <div class="card-title"><i class="fas fa-chart-column" style="margin-right:.5rem"></i>Evolucion mensual <span id="fd-tendencia-anio"></span></div>
+      <div id="fd-chart-facturacion" class="fd-chart-wrap"></div>
+      <p class="fd-note">Barra verde: mes sobre su punto de equilibrio real. Barra roja: por debajo. Linea punteada ambar: punto de equilibrio real de cada mes (costos fijos entre margen de contribucion observado).</p>
+      <div id="fd-chart-flujo" class="fd-chart-wrap" style="margin-top:1.1rem"></div>
+    </div>
+
+    <div class="card fd-card-tight" id="fd-caja-diaria-card" style="display:none">
+      <div class="card-title"><i class="fas fa-chart-line" style="margin-right:.5rem"></i>Caja diaria &mdash; <span id="fd-caja-diaria-mes"></span></div>
+      <p class="fd-chart-subtitle">Efectivo acumulado dia a dia. Las lineas ambar marcan los pagos al banco.</p>
+      <div class="fd-kpi-grid compact">
+        <div class="fd-kpi-card"><span>Efectivo cobrado</span><strong id="fd-cd-ingresos">$0.00</strong></div>
+        <div class="fd-kpi-card"><span>Efectivo pagado</span><strong id="fd-cd-egresos">$0.00</strong></div>
+        <div class="fd-kpi-card"><span>Pagos al banco</span><strong id="fd-cd-banco">$0.00</strong></div>
+        <div class="fd-kpi-card"><span>Efectivo neto</span><strong id="fd-cd-saldo">$0.00</strong></div>
+      </div>
+      <div id="fd-caja-diaria-chart" class="fd-chart-wrap"></div>
+      <p id="fd-cd-nota" class="fd-note"></p>
+      <p class="fd-note">Base caja: solo movimientos de efectivo, incluye el pago al banco y arranca en cero cada mes. El "flujo neto" de las tarjetas de arriba es el resultado operativo (ingresos menos costos variables y fijos), sin el pago al banco: son dos medidas distintas.</p>
+    </div>
+
+    <div class="card fd-card-tight" id="fd-mix-card" style="display:none">
+      <div class="card-title"><i class="fas fa-wallet" style="margin-right:.5rem"></i>Mix de cobro <span id="fd-mix-anio"></span></div>
+      <div class="fd-mix-legend">
+        <span class="fd-mix-chip efectivo">Efectivo</span>
+        <span class="fd-mix-chip tarjeta">POS / tarjeta</span>
+        <span class="fd-mix-chip transferencia">Transferencia</span>
+        <span class="fd-mix-chip otros">Otros / ajustes</span>
+      </div>
+      <div id="fd-mix-rows"></div>
+      <p class="fd-note">Composicion de los cobros de cada mes segun el control de caja. "Otros / ajustes" es la diferencia entre la facturacion oficial del mes y lo cobrado registrado en caja.</p>
     </div>
 
     <div class="card fd-card-tight">
       <div class="card-title"><i class="fas fa-user-doctor" style="margin-right:.5rem"></i>Produccion por dentista</div>
       <div class="fd-table-wrap">
         <table class="fd-table">
-          <thead><tr><th>Nombre</th><th>Facturacion</th><th>Barra de progreso</th><th>Estado</th></tr></thead>
-          <tbody id="fd-dentistas-body"><tr><td colspan="4">Cargando datos...</td></tr></tbody>
+          <thead><tr><th>Nombre</th><th>Facturacion</th><th id="fd-th-tendencia">vs mes anterior</th><th>Barra de progreso</th><th>Estado</th></tr></thead>
+          <tbody id="fd-dentistas-body"><tr><td colspan="5">Cargando datos...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -517,9 +1200,10 @@ function renderDashboardFinanciero() {
       <div class="card fd-card-tight">
         <div class="card-title" id="fd-caja-title"><i class="fas fa-cash-register" style="margin-right:.5rem"></i>Flujo de caja del mes</div>
         <div class="fd-metric-row"><span>Facturacion bruta</span><strong id="fd-caja-facturacion">$0.00</strong></div>
-        <div class="fd-metric-row danger"><span>Comisiones</span><strong id="fd-caja-comisiones">$0.00</strong></div>
-        <div class="fd-metric-row danger"><span>Costos fijos</span><strong id="fd-caja-costos">$0.00</strong></div>
-        <div class="fd-metric-row danger"><span>Insumos</span><strong id="fd-caja-insumos">$0.00</strong></div>
+        <div class="fd-metric-row danger"><span>Comisiones <em id="fd-caja-comisiones-pct" class="fd-pct"></em></span><strong id="fd-caja-comisiones">$0.00</strong></div>
+        <div class="fd-metric-row danger"><span>Insumos <em id="fd-caja-insumos-pct" class="fd-pct"></em></span><strong id="fd-caja-insumos">$0.00</strong></div>
+        <div class="fd-metric-row"><span>Margen de contribucion <em id="fd-caja-margen-pct" class="fd-pct"></em></span><strong id="fd-caja-margen">$0.00</strong></div>
+        <div class="fd-metric-row danger"><span>Costos fijos <em id="fd-caja-costos-pct" class="fd-pct"></em></span><strong id="fd-caja-costos">$0.00</strong></div>
         <div class="fd-metric-row total"><span>Flujo neto</span><strong id="fd-caja-flujo">$0.00</strong></div>
       </div>
     </div>
@@ -528,7 +1212,7 @@ function renderDashboardFinanciero() {
       <div class="card-title"><i class="fas fa-gauge-high" style="margin-right:.5rem"></i>Meta de pacientes</div>
       <div class="fd-progress-label"><span id="fd-equilibrio-texto">0 de 878 pacientes - meta mensual</span><strong id="fd-equilibrio-pct">0.0%</strong></div>
       <div class="fd-big-track"><div id="fd-equilibrio-bar" class="fd-big-fill danger" style="width:0%"></div></div>
-      <p id="fd-equilibrio-note" class="fd-note">Punto de equilibrio operativo: 418 pacientes/mes.</p>
+      <p id="fd-equilibrio-note" class="fd-note">Calculando punto de equilibrio del periodo...</p>
     </div>
 
     <div class="card fd-card-tight">
@@ -547,21 +1231,27 @@ function fdSetText(id, value) {
   if (el) el.textContent = value;
 }
 
-function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboard) {
+function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboard, prevMensual = null, prevLabel = '', prevDentistas = null) {
   const isAcumulado = vista === 'acumulado';
-  const mesesRegistrados = Math.max(parseInt(mensual.meses_registrados || 1, 10), 1);
+  /* En acumulado el periodo puede tener 0 meses; las metas por dentista usan
+     al menos 1 mes para no degenerar en meta cero. */
+  const mesesRegistrados = isAcumulado ? (parseInt(mensual.meses_registrados, 10) || 0) : 1;
+  const mesesMetas = Math.max(mesesRegistrados, 1);
   const facturacion = parseFloat(mensual.facturacion_total || 0);
   const pacientes = parseInt(mensual.pacientes_atendidos || 0, 10);
   const ticket = pacientes > 0 ? facturacion / pacientes : 0;
   const flujo = parseFloat(mensual.flujo_neto || 0);
-  const metaPacientes = isAcumulado ? parseInt(mensual.meta_pacientes || FD_META_PACIENTES * mesesRegistrados, 10) : FD_META_PACIENTES;
-  const puntoOperativo = isAcumulado ? FD_PUNTO_EQUILIBRIO * mesesRegistrados : FD_PUNTO_EQUILIBRIO;
-  const capacidad = FD_CAPACIDAD_MENSUAL * mesesRegistrados;
+  const metaPacientes = isAcumulado ? (parseInt(mensual.meta_pacientes, 10) || FD_META_PACIENTES * mesesRegistrados) : FD_META_PACIENTES;
+  const pe = fdPuntoEquilibrioReal(mensual);
+  const pePxPlan = FD_PLAN_PPT.punto_equilibrio_px * mesesMetas;
+  const peUsdPlan = FD_PLAN_PPT.punto_equilibrio_usd * mesesMetas;
+  const capacidad = FD_CAPACIDAD_MENSUAL * mesesMetas;
   const metaPct = metaPacientes > 0 ? (pacientes / metaPacientes) * 100 : 0;
   const ocupacionPct = capacidad > 0 ? (pacientes / capacidad) * 100 : 0;
-  const metaDentista = FD_META_DENTISTA * mesesRegistrados;
-  const pisoDentista = FD_PISO_RENTABILIDAD * mesesRegistrados;
-  const maxBarra = FD_MAX_BARRA * mesesRegistrados;
+  const metaDentista = FD_META_DENTISTA * mesesMetas;
+  const pisoDentista = FD_PISO_RENTABILIDAD * mesesMetas;
+  const maxBarra = FD_MAX_BARRA * mesesMetas;
+  const periodoVacio = isAcumulado && mesesRegistrados === 0;
 
   fdMesActivoSeleccionado = mensual.mes_activo || mensual.mes || fdMesActivoSeleccionado;
   fdSetMesControls('fd-dashboard', fdMesActivoSeleccionado);
@@ -575,31 +1265,102 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   fdSetText('fd-kpi-flujo', formatoDolar(flujo));
   fdSetText('fd-extra-ocupacion', fdPorcentaje(ocupacionPct));
   fdSetText('fd-extra-capacidad', `${fdEntero(pacientes)} de ${fdEntero(capacidad)} capacidad`);
-  fdSetText('fd-extra-equilibrio', `${fdEntero(puntoOperativo)} px`);
+  if (periodoVacio) {
+    fdSetText('fd-extra-equilibrio', '-');
+    fdSetText('fd-extra-equilibrio-note', 'Sin meses registrados en el periodo');
+  } else if (pe.valido && pe.px) {
+    fdSetText('fd-extra-equilibrio', `${fdEntero(pe.px)} px`);
+    fdSetText('fd-extra-equilibrio-note', `aprox. ${formatoDolar(pe.usd)} con margen de contribucion de ${fdPorcentaje(pe.margenContribucion * 100)} - Plan PPT: ${fdEntero(pePxPlan)} px (${fdDolarCorto(peUsdPlan)})`);
+  } else if (pe.valido && !pe.px) {
+    fdSetText('fd-extra-equilibrio', fdDolarCorto(pe.usd));
+    fdSetText('fd-extra-equilibrio-note', `PE real en dolares (margen de contribucion ${fdPorcentaje(pe.margenContribucion * 100)}); falta el dato de pacientes para expresarlo en px - Plan PPT: ${fdEntero(pePxPlan)} px`);
+  } else if (pe.motivo === 'margen_negativo') {
+    fdSetText('fd-extra-equilibrio', 'No alcanzable');
+    fdSetText('fd-extra-equilibrio-note', `Los costos variables superan la facturacion (margen de contribucion ${fdPorcentaje((pe.margenContribucion || 0) * 100)}); no existe punto de equilibrio este periodo - Plan PPT: ${fdEntero(pePxPlan)} px`);
+  } else {
+    fdSetText('fd-extra-equilibrio', `${fdEntero(pePxPlan)} px`);
+    fdSetText('fd-extra-equilibrio-note', `Valor del plan PPT (${fdDolarCorto(peUsdPlan)}); sin datos suficientes del periodo para calcular el real`);
+  }
   fdSetText('fd-extra-meta', `${fdEntero(metaPacientes)} px`);
   fdSetText('fd-extra-meta-note', isAcumulado ? `${mesesRegistrados} x 878 pacientes/mes` : '878 pacientes/mes');
   fdSetText('fd-extra-meses', isAcumulado ? fdEntero(mensual.meses_registrados || 0) : '1');
   fdSetText('fd-extra-periodo', isAcumulado ? (mensual.periodo_detalle || 'Meses del periodo con datos') : 'Mes activo');
 
+  const cmp = !isAcumulado && prevMensual && fdTieneDatos(prevMensual) ? prevMensual : null;
+  const pintarDelta = (id, actual, previo, esDinero) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!cmp || previo === null) {
+      el.textContent = '';
+      el.classList.remove('up', 'down');
+      return;
+    }
+    const diff = actual - previo;
+    if (diff === 0) {
+      el.textContent = `= sin cambio vs ${prevLabel}`;
+      el.classList.remove('up', 'down');
+      return;
+    }
+    const flecha = diff > 0 ? '▲' : '▼';
+    let texto;
+    if (esDinero === 'monto') {
+      texto = `${flecha} ${diff > 0 ? '+' : '-'}${formatoDolar(Math.abs(diff))} vs ${prevLabel}`;
+    } else {
+      if (!previo) { el.textContent = ''; el.classList.remove('up', 'down'); return; }
+      const pct = (diff / Math.abs(previo)) * 100;
+      texto = `${flecha} ${pct > 0 ? '+' : '-'}${fdPorcentaje(Math.abs(pct))} vs ${prevLabel}`;
+    }
+    el.textContent = texto;
+    el.classList.toggle('up', diff > 0);
+    el.classList.toggle('down', diff < 0);
+  };
+  const prevFact = cmp ? parseFloat(cmp.facturacion_total || 0) : null;
+  const prevPac = cmp ? parseInt(cmp.pacientes_atendidos || 0, 10) : null;
+  const prevTicket = cmp && prevPac > 0 ? prevFact / prevPac : null;
+  const prevFlujo = cmp ? parseFloat(cmp.flujo_neto || 0) : null;
+  pintarDelta('fd-delta-facturacion', facturacion, prevFact, 'pct');
+  pintarDelta('fd-delta-pacientes', pacientes, prevPac, 'pct');
+  pintarDelta('fd-delta-ticket', ticket, prevTicket, 'pct');
+  pintarDelta('fd-delta-flujo', flujo, prevFlujo, 'monto');
+
   document.getElementById('fd-vista-mensual')?.classList.toggle('active', !isAcumulado);
   document.getElementById('fd-vista-acumulado')?.classList.toggle('active', isAcumulado);
   document.getElementById('fd-kpi-flujo')?.classList.toggle('fd-positive', flujo >= 0);
   document.getElementById('fd-kpi-flujo')?.classList.toggle('fd-negative', flujo < 0);
-  document.getElementById('fd-config-warning').style.display = fallback ? 'block' : 'none';
+  const configWarning = document.getElementById('fd-config-warning');
+  if (configWarning) configWarning.style.display = fallback ? 'block' : 'none';
 
   const tbody = document.getElementById('fd-dentistas-body');
   const dentistasOrdenados = (Array.isArray(dentistas) ? dentistas : [])
     .slice()
     .sort((a, b) => parseFloat(b.facturacion || 0) - parseFloat(a.facturacion || 0));
+  const prevPorNombre = new Map((Array.isArray(prevDentistas) ? prevDentistas : [])
+    .map(d => [d.nombre, parseFloat(d.facturacion || 0)]));
+  const hayComparativo = !isAcumulado && prevPorNombre.size > 0;
+  fdSetText('fd-th-tendencia', hayComparativo ? `vs ${prevLabel || 'mes anterior'}` : 'vs mes anterior');
   if (tbody) {
     tbody.innerHTML = dentistasOrdenados.map(d => {
       const valor = parseFloat(d.facturacion || 0);
       const estado = fdEstadoDentista(valor, metaDentista, pisoDentista);
       const width = Math.min((valor / maxBarra) * 100, 100);
       const suffix = estado.key === 'advertencia' ? ' &#9888;' : estado.key === 'critico' ? ' &times;' : '';
+      let celdaTend = '<span class="fd-trend flat">&mdash;</span>';
+      if (hayComparativo && prevPorNombre.has(d.nombre)) {
+        const previo = prevPorNombre.get(d.nombre);
+        const diff = valor - previo;
+        if (Math.abs(diff) < 0.01) {
+          celdaTend = '<span class="fd-trend flat">= igual</span>';
+        } else {
+          const clase = diff > 0 ? 'up' : 'down';
+          const flecha = diff > 0 ? '&#9650;' : '&#9660;';
+          const pct = previo > 0 ? ` (${diff > 0 ? '+' : '-'}${fdPorcentaje(Math.abs(diff / previo) * 100)})` : '';
+          celdaTend = `<span class="fd-trend ${clase}">${flecha} ${diff > 0 ? '+' : '-'}${formatoDolar(Math.abs(diff))}${pct}</span>`;
+        }
+      }
       return `<tr>
         <td>${d.nombre}</td>
         <td><strong>${formatoDolar(valor)}</strong></td>
+        <td>${celdaTend}</td>
         <td><div class="fd-mini-track"><div class="fd-mini-fill ${estado.css}" style="width:${width}%"></div></div></td>
         <td><span class="fd-status ${estado.css}">${estado.label}${suffix}</span></td>
       </tr>`;
@@ -609,25 +1370,41 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   const promedioDentista = dentistasOrdenados.length ? dentistasOrdenados.reduce((sum, d) => sum + parseFloat(d.facturacion || 0), 0) / dentistasOrdenados.length : 0;
   const negativos = dentistasOrdenados.filter(d => parseFloat(d.facturacion || 0) < pisoDentista);
   const brechaPiso = negativos.reduce((sum, d) => sum + Math.max(pisoDentista - parseFloat(d.facturacion || 0), 0), 0);
-  fdSetText('fd-silla-costo', isAcumulado ? `${formatoDolar(1350 * mesesRegistrados)} acumulado` : '$1,350/mes');
+  fdSetText('fd-silla-costo', isAcumulado ? `${formatoDolar(1350 * mesesMetas)} acumulado` : '$1,350/mes');
   fdSetText('fd-silla-piso', isAcumulado ? `${formatoDolar(pisoDentista)} acumulado` : '$1,800/mes');
   fdSetText('fd-silla-media', isAcumulado ? `${formatoDolar(promedioDentista)} acumulado` : `${formatoDolar(promedioDentista)}/mes`);
   fdSetText('fd-silla-meta', isAcumulado ? `${formatoDolar(metaDentista)} acumulado` : '$2,500/mes');
   fdSetText('fd-silla-neg-label', `${negativos.length} silla(s) bajo piso`);
   fdSetText('fd-silla-neg-valor', brechaPiso ? '-' + formatoDolar(brechaPiso) : formatoDolar(0));
 
+  const comisionesVal = parseFloat(mensual.comisiones || 0);
+  const insumosVal = parseFloat(mensual.insumos || 0);
+  const costosVal = parseFloat(mensual.costos_fijos || 0);
+  const margenContribucionUsd = facturacion - comisionesVal - insumosVal;
+  const pctDe = valor => facturacion > 0 ? `(${fdPorcentaje((valor / facturacion) * 100)})` : '';
   fdSetText('fd-caja-title', isAcumulado ? 'Flujo de caja acumulado' : 'Flujo de caja del mes');
   fdSetText('fd-caja-facturacion', formatoDolar(facturacion));
-  fdSetText('fd-caja-comisiones', '-' + formatoDolar(mensual.comisiones || 0));
-  fdSetText('fd-caja-costos', '-' + formatoDolar(mensual.costos_fijos || 0));
-  fdSetText('fd-caja-insumos', '-' + formatoDolar(mensual.insumos || 0));
+  fdSetText('fd-caja-comisiones', '-' + formatoDolar(comisionesVal));
+  fdSetText('fd-caja-comisiones-pct', pctDe(comisionesVal));
+  fdSetText('fd-caja-insumos', '-' + formatoDolar(insumosVal));
+  fdSetText('fd-caja-insumos-pct', pctDe(insumosVal));
+  fdSetText('fd-caja-margen', formatoDolar(margenContribucionUsd));
+  fdSetText('fd-caja-margen-pct', pctDe(margenContribucionUsd));
+  fdSetText('fd-caja-costos', '-' + formatoDolar(costosVal));
+  fdSetText('fd-caja-costos-pct', pctDe(costosVal));
   fdSetText('fd-caja-flujo', formatoDolar(flujo));
+  document.getElementById('fd-caja-margen')?.classList.toggle('fd-positive', margenContribucionUsd >= 0);
+  document.getElementById('fd-caja-margen')?.classList.toggle('fd-negative', margenContribucionUsd < 0);
   document.getElementById('fd-caja-flujo')?.classList.toggle('fd-positive', flujo >= 0);
   document.getElementById('fd-caja-flujo')?.classList.toggle('fd-negative', flujo < 0);
 
   fdSetText('fd-equilibrio-texto', `${fdEntero(pacientes)} de ${fdEntero(metaPacientes)} pacientes - ${isAcumulado ? 'meta acumulada' : 'meta mensual'}`);
   fdSetText('fd-equilibrio-pct', fdPorcentaje(metaPct));
-  fdSetText('fd-equilibrio-note', `Punto de equilibrio operativo: ${fdEntero(puntoOperativo)} pacientes${isAcumulado ? ' acumulados' : '/mes'}; meta comercial: ${fdEntero(metaPacientes)} pacientes.`);
+  fdSetText('fd-equilibrio-note', pe.valido && pe.px
+    ? `Punto de equilibrio real: ${fdEntero(pe.px)} pacientes${isAcumulado ? ' acumulados' : '/mes'} (${formatoDolar(pe.usd)}); plan PPT: ${fdEntero(pePxPlan)} px; meta comercial: ${fdEntero(metaPacientes)} pacientes.`
+    : (pe.motivo === 'margen_negativo'
+      ? `Los costos variables superan la facturacion: no hay punto de equilibrio alcanzable este periodo; plan PPT: ${fdEntero(pePxPlan)} px; meta comercial: ${fdEntero(metaPacientes)} pacientes.`
+      : `Punto de equilibrio (plan PPT): ${fdEntero(pePxPlan)} pacientes${isAcumulado ? ' acumulados' : '/mes'}; meta comercial: ${fdEntero(metaPacientes)} pacientes.`));
   const bar = document.getElementById('fd-equilibrio-bar');
   if (bar) {
     bar.style.width = Math.min(metaPct, 100) + '%';
@@ -640,11 +1417,18 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   const nombresNegativos = negativos.slice(0, 4).map(d => d.nombre.replace(/^Dr\.\s+|^Dra\.\s+/, '')).join(', ');
   const alertas = document.getElementById('fd-alertas');
   if (alertas) {
+    const alertaEquilibrio = pe.valido && pe.px
+      ? `<div class="fd-alert ${pacientes < pe.px ? 'red' : 'green'}">${fdEntero(pacientes)} pacientes vs punto de equilibrio real de ${fdEntero(pe.px)} px (${formatoDolar(pe.usd)}) - ${pacientes < pe.px ? 'faltan ' + fdEntero(pe.px - pacientes) + ' px para cubrir costos' : 'equilibrio cubierto'}</div>`
+      : (pe.motivo === 'margen_negativo'
+        ? `<div class="fd-alert red">Los costos variables (${formatoDolar(parseFloat(mensual.comisiones || 0) + parseFloat(mensual.insumos || 0))}) superan la facturacion (${formatoDolar(facturacion)}): no hay punto de equilibrio alcanzable</div>`
+        : (pe.valido && !pe.px
+          ? `<div class="fd-alert yellow">PE real: ${formatoDolar(pe.usd)}; falta registrar pacientes del periodo para expresarlo en px</div>`
+          : `<div class="fd-alert yellow">Punto de equilibrio real no calculable: faltan datos de facturacion o costos del periodo</div>`));
     alertas.innerHTML = `
       <div class="fd-alert ${negativos.length ? 'red' : 'green'}">${negativos.length} silla(s) bajo piso de rentabilidad${nombresNegativos ? ` - ${nombresNegativos}` : ''}: ${brechaPiso ? '-' + formatoDolar(brechaPiso) : formatoDolar(0)}</div>
       <div class="fd-alert ${flujo < 0 ? 'red' : 'green'}">Flujo ${flujo < 0 ? 'negativo' : 'positivo'} - ${isAcumulado ? 'el periodo cerro en' : 'el mes cerro en'} ${formatoDolar(flujo)}</div>
-      <div class="fd-alert ${bajoMeta.length ? 'yellow' : 'green'}">${bajoMeta.length} dentista(s) bajo meta ${formatoDolar(metaDentista)} - brecha total: ${formatoDolar(brechaMeta)}</div>
-      <div class="fd-alert green">Potencial referidos + reactivacion - +$4,904/mes proyectado</div>`;
+      ${alertaEquilibrio}
+      <div class="fd-alert ${bajoMeta.length ? 'yellow' : 'green'}">${bajoMeta.length} dentista(s) bajo meta ${formatoDolar(metaDentista)} - brecha total: ${formatoDolar(brechaMeta)}</div>`;
   }
 }
 
@@ -657,17 +1441,59 @@ async function initDashboardFinanciero() {
   const yearSelect = document.getElementById('fd-dashboard-anio');
   const btnMensual = document.getElementById('fd-vista-mensual');
   const btnAcumulado = document.getElementById('fd-vista-acumulado');
+  fdCargarRolPropio().then(rol => {
+    if (rol === 'viewer') {
+      const btnIngresar = document.getElementById('fd-btn-ingresar');
+      if (btnIngresar) btnIngresar.style.display = 'none';
+    }
+  });
   const anios = await fdCargarAniosDisponibles();
   fdSetMesControls('fd-dashboard', fdMesActivoSeleccionado, anios);
 
+  /* Token de secuencia: si el usuario cambia mes/anio/vista mientras una carga
+     anterior sigue en vuelo, solo la carga mas reciente puede pintar el DOM. */
+  let cargaToken = 0;
   const cargarVista = async () => {
+    const token = ++cargaToken;
     fdMesActivoSeleccionado = fdReadMesControls('fd-dashboard');
-    const data = fdVistaDashboard === 'acumulado'
-      ? await fdCargarDatosAcumulados(fdMesActivoSeleccionado)
-      : await fdCargarDatosDashboard(fdMesActivoSeleccionado);
-    fdRenderDashboard(data.mensual, data.dentistas, data.fallback, data.vista || fdVistaDashboard);
+    const mesSolicitado = fdMesActivoSeleccionado;
+    const parsed = fdParseMesActivo(mesSolicitado);
+    const esAcumulado = fdVistaDashboard === 'acumulado';
+    const data = esAcumulado
+      ? await fdCargarDatosAcumulados(mesSolicitado)
+      : await fdCargarDatosDashboard(mesSolicitado);
+    let prev = null;
+    let prevLabel = '';
+    let prevDentistas = null;
+    if (!esAcumulado) {
+      try {
+        const mesPrev = fdMesAnteriorTexto(mesSolicitado);
+        const dataPrev = await fdCargarDatosDashboard(mesPrev);
+        if (fdTieneDatos(dataPrev.mensual)) {
+          prev = dataPrev.mensual;
+          prevDentistas = dataPrev.dentistas;
+        }
+        prevLabel = fdParseMesActivo(mesPrev).mes;
+      } catch (err) {
+        console.error('No se pudo cargar el mes anterior:', err);
+      }
+    }
+    if (token !== cargaToken) return;
+    fdRenderDashboard(data.mensual, data.dentistas, data.fallback, data.vista || fdVistaDashboard, prev, prevLabel, prevDentistas);
+    const serie = await fdCargarSerieAnual(parsed.anio);
+    if (token !== cargaToken) return;
+    fdRenderTendencia(serie, parsed.anio);
+    /* La caja diaria se muestra solo en vista mensual: el saldo acumulado
+       de varios meses encadenados no seria legible. */
+    const cardDiaria = document.getElementById('fd-caja-diaria-card');
+    if (esAcumulado) {
+      if (cardDiaria) cardDiaria.style.display = 'none';
+    } else {
+      await fdRenderCajaDiariaDashboard(mesSolicitado, () => token === cargaToken);
+    }
   };
 
+  document.getElementById('fd-btn-informe')?.addEventListener('click', fdCompartirInformeEjecutivo);
   monthSelect?.addEventListener('change', cargarVista);
   yearSelect?.addEventListener('change', cargarVista);
   btnMensual?.addEventListener('click', () => { fdVistaDashboard = 'mensual'; cargarVista(); });
@@ -675,6 +1501,132 @@ async function initDashboardFinanciero() {
 
   await cargarVista();
 }
+/* ══════════════════════════════════════════════════════════════════════
+   CAJA DIARIA (propuesta 1 de la consultoria)
+   La clinica ya registra dia a dia en sus Excel; aqui ese detalle vive en
+   el portal. El cierre mensual puede calcularse desde estos dias.
+   ══════════════════════════════════════════════════════════════════════ */
+const FD_LOCAL_CAJA_DIARIA_KEY = 'clidente_fd_caja_diaria';
+const FD_DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+const FD_SHEETJS_URL = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+
+function fdDiasDelMes(mesTexto) {
+  const { mes, anio } = fdParseMesActivo(mesTexto);
+  return new Date(anio, FD_MESES.indexOf(mes) + 1, 0).getDate();
+}
+
+/* 'Junio 2026' + dia 7 -> '2026-06-07' (fecha local, sin saltos de zona horaria) */
+function fdFechaISO(mesTexto, dia) {
+  const { mes, anio } = fdParseMesActivo(mesTexto);
+  const m = String(FD_MESES.indexOf(mes) + 1).padStart(2, '0');
+  return `${anio}-${m}-${String(dia).padStart(2, '0')}`;
+}
+
+function fdDiaSemana(fechaISO) {
+  const [a, m, d] = String(fechaISO).split('-').map(Number);
+  return FD_DIAS_SEMANA[new Date(a, m - 1, d).getDay()];
+}
+
+function fdRangoMes(mesTexto) {
+  return { desde: fdFechaISO(mesTexto, 1), hasta: fdFechaISO(mesTexto, fdDiasDelMes(mesTexto)) };
+}
+
+function fdCajaDiariaLocal(mesTexto) {
+  const { desde, hasta } = fdRangoMes(mesTexto);
+  return fdGetLocalJson(FD_LOCAL_CAJA_DIARIA_KEY).filter(r => r.fecha >= desde && r.fecha <= hasta);
+}
+
+/* Elimina el respaldo local ya cubierto por una fila remota igual de reciente o
+   mas nueva, para que una copia offline no siga suplantando a una correccion
+   hecha en Supabase. Mismo criterio que fdDepurarLocalesSincronizados. */
+function fdDepurarCajaDiariaSincronizada(remotas) {
+  const remoto = new Map((Array.isArray(remotas) ? remotas : []).map(r => [String(r.fecha), fdFechaRow(r)]));
+  const local = fdGetLocalJson(FD_LOCAL_CAJA_DIARIA_KEY);
+  const vivos = local.filter(r => !(remoto.has(String(r.fecha)) && remoto.get(String(r.fecha)) >= fdFechaRow(r)));
+  if (vivos.length !== local.length) fdSetLocalJson(FD_LOCAL_CAJA_DIARIA_KEY, vivos);
+}
+
+async function fdCargarCajaDiaria(mesTexto) {
+  const { desde, hasta } = fdRangoMes(mesTexto);
+  let remotas = [];
+  let fallback = !fdSupabaseConfigurado();
+  /* lecturaOk distingue "no hay datos" de "no se pudieron leer": sin esta
+     diferencia, un GET fallido deja la grilla vacia y el guardado borraria
+     el historico que nunca llego a cargarse. */
+  let lecturaOk = false;
+  if (fdSupabaseConfigurado()) {
+    try {
+      remotas = await fdSupabaseGetRows(`caja_diaria?select=*&fecha=gte.${desde}&fecha=lte.${hasta}&order=fecha.asc`);
+      fdDepurarCajaDiariaSincronizada(remotas);
+      lecturaOk = true;
+    } catch (err) {
+      console.error('No se pudo cargar la caja diaria:', err);
+      fallback = true;
+    }
+  }
+  /* Igual criterio que el resto del portal: gana el registro mas reciente. */
+  const map = new Map();
+  (Array.isArray(remotas) ? remotas : []).forEach(r => map.set(String(r.fecha), r));
+  fdCajaDiariaLocal(mesTexto).forEach(r => {
+    const remoto = map.get(String(r.fecha));
+    if (!remoto || fdFechaRow(r) > fdFechaRow(remoto)) map.set(String(r.fecha), r);
+  });
+  const rows = [...map.values()].sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+  return { rows, fallback: fallback || rows.some(r => r.local_only), lecturaOk };
+}
+
+function fdGuardarCajaDiariaLocal(rows, mesTexto) {
+  const { desde, hasta } = fdRangoMes(mesTexto);
+  const otros = fdGetLocalJson(FD_LOCAL_CAJA_DIARIA_KEY).filter(r => r.fecha < desde || r.fecha > hasta);
+  const ahora = new Date().toISOString();
+  fdSetLocalJson(FD_LOCAL_CAJA_DIARIA_KEY, otros.concat(rows.map(r => ({ ...r, local_only: true, created_at: ahora }))));
+}
+
+function fdDepurarCajaDiariaLocal(mesTexto) {
+  const { desde, hasta } = fdRangoMes(mesTexto);
+  fdSetLocalJson(FD_LOCAL_CAJA_DIARIA_KEY,
+    fdGetLocalJson(FD_LOCAL_CAJA_DIARIA_KEY).filter(r => r.fecha < desde || r.fecha > hasta));
+}
+
+/* Snapshot de lo que la grilla realmente cargo: el guardado solo puede borrar
+   dias que estaban presentes y el usuario dejo en cero. Sin esto, una lectura
+   fallida (grilla vacia) borraria el mes entero al guardar. */
+let fdCajaDiariaSnapshot = { mes: null, fechasConDatos: new Set(), lecturaOk: false };
+
+/* Flujo de efectivo acumulado del mes. OJO: arranca en cero cada mes, asi que
+   NO es el saldo bancario de la clinica sino cuanto efectivo genera o consume
+   la operacion en el periodo. */
+function fdResumenCajaDiaria(rows) {
+  let saldo = 0;
+  let peorSaldo = { valor: 0, fecha: null };
+  let primerNegativo = null;
+  const detalle = (Array.isArray(rows) ? rows : [])
+    .slice()
+    .sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)))
+    .map(r => {
+      const ing = parseFloat(r.ingreso || 0);
+      const egr = parseFloat(r.egreso || 0);
+      const banco = parseFloat(r.pago_banco || 0);
+      const neto = ing - egr - banco;
+      saldo += neto;
+      if (saldo < 0 && !primerNegativo) primerNegativo = r.fecha;
+      if (saldo < peorSaldo.valor) peorSaldo = { valor: saldo, fecha: r.fecha };
+      return { ...r, ingreso: ing, egreso: egr, pago_banco: banco, neto, saldo };
+    });
+  const suma = k => detalle.reduce((s, r) => s + (parseFloat(r[k]) || 0), 0);
+  return {
+    detalle,
+    ingresos: suma('ingreso'),
+    egresos: suma('egreso'),
+    banco: suma('pago_banco'),
+    pacientes: detalle.reduce((s, r) => s + (parseInt(r.pacientes, 10) || 0), 0),
+    saldoFinal: saldo,
+    peorSaldo,
+    primerNegativo,
+    diasConDatos: detalle.filter(r => r.ingreso || r.egreso || r.pago_banco).length
+  };
+}
+
 function fdSlug(texto) {
   return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
@@ -684,29 +1636,79 @@ function renderFormularioHenry() {
   <div id="formulario-henry-root" class="fd-shell fd-form-shell">
     <div class="fd-hero card">
       <div>
-        <h1 class="section-title" style="margin-bottom:.35rem">Ingreso mensual de datos â€” Dashboard Clidente</h1>
-        <p class="fd-subtitle">Completa los 3 pasos una vez al mes. Tiempo estimado: 15 minutos.</p>
+        <h1 class="section-title" style="margin-bottom:.35rem">Registro de datos &mdash; Dashboard Clidente</h1>
+        <p class="fd-subtitle">Registra la caja dia a dia, o cierra el mes completo. Los dos alimentan el mismo dashboard.</p>
       </div>
       <label class="fd-month-badge">Mes activo <span class="fd-month-pair"><select id="henry-mes">${fdMesOptions()}</select><select id="henry-anio">${fdAnioOptions()}</select></span></label>
+    </div>
+
+    <div class="fd-view-toggle fd-tabs" role="group" aria-label="Modo de registro">
+      <button type="button" id="henry-tab-diario" class="active">Caja diaria</button>
+      <button type="button" id="henry-tab-mensual">Cierre mensual</button>
     </div>
 
     <div id="henry-config-warning" class="fd-warning" style="display:none">
       Para guardar, revisa que la conexion Supabase del portal este disponible.
     </div>
 
+    <!-- ══ PESTANA 1: CAJA DIARIA ══════════════════════════════════ -->
+    <div id="henry-panel-diario">
+      <div class="card fd-card-tight">
+        <div class="card-title"><i class="fas fa-calendar-day" style="margin-right:.5rem"></i>Caja diaria <span class="fd-source green">Excel caja</span></div>
+        <p class="fd-subtitle">Anota lo que entra y sale cada dia. El acumulado muestra cuanto efectivo genera o consume la operacion a lo largo del mes &mdash; y en que dia el mes empieza a consumir mas de lo que produce. Arranca en cero cada mes: es flujo del periodo, no el saldo bancario.</p>
+
+        <div class="fd-import-row">
+          <button type="button" id="henry-btn-import" class="fd-secondary"><i class="fas fa-file-import"></i> Importar Excel de caja del mes</button>
+          <input type="file" id="henry-file-excel" accept=".xlsx,.xlsm" style="display:none">
+          <span id="henry-import-estado" class="fd-import-estado"></span>
+        </div>
+
+        <div class="fd-kpi-grid compact" style="margin-top:1rem">
+          <div class="fd-kpi-card"><span>Efectivo cobrado</span><strong id="cd-kpi-ingresos">$0.00</strong><small id="cd-kpi-dias" class="fd-delta"></small></div>
+          <div class="fd-kpi-card"><span>Efectivo pagado</span><strong id="cd-kpi-egresos">$0.00</strong></div>
+          <div class="fd-kpi-card"><span>Pagos al banco</span><strong id="cd-kpi-banco">$0.00</strong></div>
+          <div class="fd-kpi-card"><span>Efectivo neto del mes</span><strong id="cd-kpi-saldo">$0.00</strong><small id="cd-kpi-peor" class="fd-delta"></small></div>
+        </div>
+
+        <div id="cd-aviso-lectura" class="fd-warning" style="display:none"></div>
+        <div id="cd-alerta" class="fd-cuadre" style="display:none"></div>
+
+        <div class="fd-table-wrap fd-tabla-wrap-alto" style="margin-top:1rem">
+          <table class="fd-table fd-input-table fd-tabla-diaria">
+            <thead><tr>
+              <th>Dia</th><th>Ingreso ($)</th><th>Egreso ($)</th><th>Pago banco ($)</th><th>Pacientes</th><th class="cd-col-neto">Neto</th><th>Acumulado</th>
+            </tr></thead>
+            <tbody id="cd-body"><tr><td colspan="7">Cargando dias...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="fd-actions">
+        <button id="cd-guardar" class="fd-save">Guardar caja diaria</button>
+        <button type="button" id="cd-usar-en-mes" class="fd-secondary"><i class="fas fa-arrow-right"></i> Pasar totales al cierre mensual</button>
+        <button class="fd-secondary" onclick="navigate('dashboard-financiero')">Volver al dashboard</button>
+      </div>
+    </div>
+
+    <!-- ══ PESTANA 2: CIERRE MENSUAL ═══════════════════════════════ -->
+    <div id="henry-panel-mensual" style="display:none">
     <div class="card fd-card-tight">
-      <div class="card-title">Paso 1 â€” Datos generales <span class="fd-source green">Excel caja</span></div>
+      <div class="card-title">Paso 1 &mdash; Datos generales <span class="fd-source green">Excel caja</span></div>
       <div class="fd-form-grid">
         <label>Facturacion total del mes ($)<input id="henry-facturacion" type="number" min="0" step="0.01" placeholder="0.00"></label>
         <label>Pacientes atendidos<input id="henry-pacientes" type="number" min="0" step="1" placeholder="0"></label>
         <label>Total comisiones pagadas ($)<input id="henry-comisiones" type="number" min="0" step="0.01" placeholder="0.00"></label>
         <label>Total insumos del mes ($)<input id="henry-insumos" type="number" min="0" step="0.01" placeholder="0.00"></label>
         <label>Costos fijos del mes ($)<input id="henry-costos" type="number" min="0" step="0.01" value="10800"></label>
+        <label>Cobrado en efectivo ($)<input id="henry-efectivo" type="number" min="0" step="0.01" placeholder="0.00"></label>
+        <label>Cobrado con POS / tarjeta ($)<input id="henry-tarjeta" type="number" min="0" step="0.01" placeholder="0.00"></label>
+        <label>Cobrado por transferencia ($)<input id="henry-transferencia" type="number" min="0" step="0.01" placeholder="0.00"></label>
       </div>
+      <div id="henry-cuadre-cobros" class="fd-cuadre" style="display:none"></div>
     </div>
 
     <div class="card fd-card-tight">
-      <div class="card-title">Paso 2 â€” Facturacion por dentista <span class="fd-source blue">FG Dental</span></div>
+      <div class="card-title">Paso 2 &mdash; Facturacion por dentista <span class="fd-source blue">FG Dental</span></div>
       <div class="fd-table-wrap">
         <table class="fd-table fd-input-table">
           <thead><tr><th>Nombre</th><th>Campo de facturacion ($)</th><th>Badge de estado</th></tr></thead>
@@ -722,10 +1724,11 @@ function renderFormularioHenry() {
           </tbody>
         </table>
       </div>
+      <div id="henry-cuadre" class="fd-cuadre" style="display:none"></div>
     </div>
 
     <div class="card fd-card-tight">
-      <div class="card-title">Paso 3 â€” Vista previa antes de guardar</div>
+      <div class="card-title">Paso 3 &mdash; Vista previa antes de guardar</div>
       <div class="fd-kpi-grid compact">
         <div class="fd-kpi-card"><span>Facturacion</span><strong id="prev-facturacion">$0.00</strong></div>
         <div class="fd-kpi-card"><span>Pacientes</span><strong id="prev-pacientes">0</strong></div>
@@ -742,13 +1745,369 @@ function renderFormularioHenry() {
       <button id="henry-guardar" class="fd-save">Guardar datos de Mayo 2026</button>
       <button class="fd-secondary" onclick="navigate('dashboard-financiero')">Volver al dashboard</button>
     </div>
+    </div><!-- /panel mensual -->
   </div>`;
+}
+
+/* ══ Grilla de caja diaria ══ */
+function fdRenderTablaDiaria(mesTexto, rows) {
+  const tbody = document.getElementById('cd-body');
+  if (!tbody) return;
+  const porFecha = new Map((Array.isArray(rows) ? rows : []).map(r => [String(r.fecha), r]));
+  const dias = fdDiasDelMes(mesTexto);
+  let html = '';
+  for (let d = 1; d <= dias; d++) {
+    const fecha = fdFechaISO(mesTexto, d);
+    const r = porFecha.get(fecha) || {};
+    const dow = fdDiaSemana(fecha);
+    const finde = dow === 'Dom';
+    html += `<tr class="${finde ? 'fd-fila-domingo' : ''}" data-fecha="${fecha}">
+      <td class="fd-dia-celda"><strong>${d}</strong> <span class="fd-dow">${dow}</span></td>
+      <td><input class="cd-in" data-campo="ingreso" type="number" min="0" step="0.01" placeholder="0.00" value="${r.ingreso != null ? r.ingreso : ''}"></td>
+      <td><input class="cd-in" data-campo="egreso" type="number" min="0" step="0.01" placeholder="0.00" value="${r.egreso != null ? r.egreso : ''}"></td>
+      <td><input class="cd-in" data-campo="pago_banco" type="number" min="0" step="0.01" placeholder="0.00" value="${r.pago_banco ? r.pago_banco : ''}"></td>
+      <td><input class="cd-in" data-campo="pacientes" type="number" min="0" step="1" placeholder="0" value="${r.pacientes ? r.pacientes : ''}"></td>
+      <td class="cd-neto">&mdash;</td>
+      <td class="cd-saldo">&mdash;</td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function fdLeerTablaDiaria(mesTexto) {
+  return Array.from(document.querySelectorAll('#cd-body tr')).map(tr => {
+    const val = campo => {
+      const el = tr.querySelector(`.cd-in[data-campo="${campo}"]`);
+      /* Un monto pegado como "1,842.61" o "$1,842.61" llega vacio a un input
+         number; se normaliza para no perderlo en silencio. */
+      let bruto = el?.value ?? '';
+      if (bruto === '' && el?.validity?.badInput) bruto = '';
+      const limpio = String(bruto).replace(/[$\s]/g, '').replace(/,/g, '');
+      const v = parseFloat(limpio);
+      return Number.isFinite(v) ? v : 0;
+    };
+    return {
+      fecha: tr.dataset.fecha,
+      ingreso: val('ingreso'),
+      egreso: val('egreso'),
+      pago_banco: val('pago_banco'),
+      pacientes: Math.trunc(val('pacientes'))
+    };
+  });
+}
+
+function fdActualizarTablaDiaria() {
+  const mesTexto = fdReadMesControls('henry');
+  const filas = fdLeerTablaDiaria(mesTexto);
+  const res = fdResumenCajaDiaria(filas);
+  const porFecha = new Map(res.detalle.map(r => [r.fecha, r]));
+
+  document.querySelectorAll('#cd-body tr').forEach(tr => {
+    const r = porFecha.get(tr.dataset.fecha);
+    if (!r) return;
+    const celdaNeto = tr.querySelector('.cd-neto');
+    const celdaSaldo = tr.querySelector('.cd-saldo');
+    const vacio = !r.ingreso && !r.egreso && !r.pago_banco;
+    if (celdaNeto) {
+      celdaNeto.textContent = vacio ? '—' : formatoDolar(r.neto);
+      celdaNeto.className = `cd-neto ${vacio ? '' : (r.neto >= 0 ? 'fd-positive' : 'fd-negative')}`;
+    }
+    if (celdaSaldo) {
+      celdaSaldo.textContent = formatoDolar(r.saldo);
+      celdaSaldo.className = `cd-saldo ${r.saldo < 0 ? 'fd-negative' : 'fd-positive'}`;
+    }
+    tr.classList.toggle('fd-fila-alerta', r.saldo < 0);
+  });
+
+  fdSetText('cd-kpi-ingresos', formatoDolar(res.ingresos));
+  fdSetText('cd-kpi-egresos', formatoDolar(res.egresos));
+  fdSetText('cd-kpi-banco', formatoDolar(res.banco));
+  fdSetText('cd-kpi-saldo', formatoDolar(res.saldoFinal));
+  fdSetText('cd-kpi-dias', res.diasConDatos ? `${res.diasConDatos} dia(s) con movimiento` : 'sin movimientos aun');
+  const kpiSaldo = document.getElementById('cd-kpi-saldo');
+  kpiSaldo?.classList.toggle('fd-positive', res.saldoFinal >= 0);
+  kpiSaldo?.classList.toggle('fd-negative', res.saldoFinal < 0);
+  fdSetText('cd-kpi-peor', res.peorSaldo.fecha
+    ? `punto mas bajo ${formatoDolar(res.peorSaldo.valor)} el ${res.peorSaldo.fecha}`
+    : '');
+
+  const alerta = document.getElementById('cd-alerta');
+  if (alerta) {
+    if (!res.diasConDatos) {
+      alerta.style.display = 'none';
+    } else if (res.primerNegativo) {
+      alerta.className = 'fd-cuadre bad';
+      alerta.style.display = 'block';
+      alerta.textContent = `Alerta de caja: a partir del ${res.primerNegativo} el mes consume mas efectivo del que genera, y toca fondo el ${res.peorSaldo.fecha} en ${formatoDolar(res.peorSaldo.valor)}. Desde ese dia la operacion depende del efectivo con que se haya empezado el mes.`;
+    } else if (res.banco > 0 && res.saldoFinal < res.banco * 0.15) {
+      alerta.className = 'fd-cuadre warn';
+      alerta.style.display = 'block';
+      alerta.textContent = `El mes genera ${formatoDolar(res.saldoFinal)} de efectivo neto despues de pagar ${formatoDolar(res.banco)} al banco: margen muy justo para imprevistos.`;
+    } else {
+      alerta.className = 'fd-cuadre ok';
+      alerta.style.display = 'block';
+      alerta.textContent = `El acumulado nunca baja de cero: el mes genera ${formatoDolar(res.saldoFinal)} de efectivo neto.`;
+    }
+  }
+  return res;
+}
+
+async function fdGuardarCajaDiaria() {
+  if (fdRolPropio === 'viewer') {
+    alert('Tu usuario es de solo lectura: el guardado esta reservado a los editores del equipo.');
+    return;
+  }
+  const mesTexto = fdReadMesControls('henry');
+  const filas = fdLeerTablaDiaria(mesTexto);
+  if (filas.some(r => r.ingreso < 0 || r.egreso < 0 || r.pago_banco < 0 || r.pacientes < 0)) {
+    alert('Hay valores negativos en la tabla. Corrige los montos antes de guardar.');
+    return;
+  }
+  /* Solo se guardan los dias con algun movimiento: un mes a medio capturar
+     no debe llenar la base de filas en cero. */
+  const conDatos = filas.filter(r => r.ingreso || r.egreso || r.pago_banco || r.pacientes);
+  if (!conDatos.length) {
+    alert('No hay ningun dia con movimientos para guardar.');
+    return;
+  }
+
+  if (!fdSupabaseConfigurado()) {
+    fdGuardarCajaDiariaLocal(conDatos, mesTexto);
+    alert(`Sin conexion a Supabase: los ${conDatos.length} dia(s) quedaron guardados solo en este navegador.`);
+    return;
+  }
+
+  /* Solo se pueden borrar dias que la grilla LEYO con datos y el usuario dejo
+     en cero. Si la lectura remota fallo (o es de otro mes), no se borra nada:
+     una grilla vacia por error de red no debe arrasar el historico. */
+  const snapshotVigente = fdCajaDiariaSnapshot.mes === mesTexto && fdCajaDiariaSnapshot.lecturaOk;
+  const conDatosAhora = new Set(conDatos.map(r => r.fecha));
+  const aBorrar = snapshotVigente
+    ? [...fdCajaDiariaSnapshot.fechasConDatos].filter(f => !conDatosAhora.has(f))
+    : [];
+  if (aBorrar.length > 3 && !confirm(`Vas a borrar ${aBorrar.length} dia(s) que tenian movimientos registrados (${aBorrar.slice(0, 3).join(', ')}...). Continuar?`)) return;
+
+  const ahora = new Date().toISOString();
+  const payload = conDatos.map(r => ({ ...r, origen: 'manual', created_at: ahora }));
+  try {
+    await fdSupabaseUpsert('caja_diaria', payload, 'fecha');
+    if (aBorrar.length) {
+      await fdSupabaseDelete('caja_diaria', `?fecha=in.(${aBorrar.join(',')})`);
+    }
+    fdDepurarCajaDiariaLocal(mesTexto);
+    fdCajaDiariaSnapshot = { mes: mesTexto, fechasConDatos: new Set(conDatosAhora), lecturaOk: true };
+    alert(`Caja diaria de ${mesTexto} guardada: ${conDatos.length} dia(s) con movimiento.${aBorrar.length ? ` Se borraron ${aBorrar.length} dia(s) que quedaron en cero.` : ''}`);
+  } catch (err) {
+    console.error(err);
+    if (fdErrorDePermisos(err)) {
+      alert('Supabase rechazo el guardado por permisos. Si tu usuario es de solo lectura, pide a un editor del equipo que registre la caja.');
+      return;
+    }
+    if (/caja_diaria/i.test(err?.message || '') && /does not exist|PGRST205|42P01/i.test(err?.message || '')) {
+      alert('La tabla de caja diaria todavia no existe en la base. Ejecutar supabase-caja-diaria.sql en Supabase.\n\nMientras tanto, los dias quedaron guardados en este navegador.');
+      fdGuardarCajaDiariaLocal(conDatos, mesTexto);
+      return;
+    }
+    fdGuardarCajaDiariaLocal(conDatos, mesTexto);
+    alert(`No se pudo conectar con Supabase (${err?.message || 'error desconocido'}). Los dias quedaron guardados temporalmente en este navegador.`);
+  }
+}
+
+/* ══ Importador del Excel de caja ══
+   Lee las hojas diarias 1..31 (fila "TOTALES BRUTOS" = ingreso del dia,
+   filas de pacientes con cobro = conteo) y la matriz categoria x dia de la
+   hoja EGRESOS (fila "TOTAL EGRESO EN EFECTIVO"). */
+function fdCargarSheetJS() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = FD_SHEETJS_URL;
+    s.onload = () => window.XLSX ? resolve(window.XLSX) : reject(new Error('SheetJS no quedo disponible'));
+    s.onerror = () => reject(new Error('No se pudo descargar el lector de Excel (revisa la conexion)'));
+    document.head.appendChild(s);
+  });
+}
+
+/* "CAJA MAYO 2026.xlsx" -> "Mayo 2026". Devuelve null si el nombre no lo dice. */
+function fdMesDesdeNombreArchivo(nombre) {
+  if (!nombre) return null;
+  const limpio = String(nombre).toUpperCase();
+  const mes = FD_MESES.find(m => limpio.includes(m.toUpperCase()));
+  if (!mes) return null;
+  const anio = (limpio.match(/(20\d{2})/) || [])[1];
+  return anio ? `${mes} ${anio}` : null;
+}
+
+function fdCeldaTexto(hoja, XLSX, fila, col) {
+  const ref = XLSX.utils.encode_cell({ r: fila, c: col });
+  const celda = hoja[ref];
+  return celda ? String(celda.v ?? '') : '';
+}
+
+function fdCeldaNumero(hoja, XLSX, fila, col) {
+  const ref = XLSX.utils.encode_cell({ r: fila, c: col });
+  const celda = hoja[ref];
+  return celda && typeof celda.v === 'number' ? celda.v : 0;
+}
+
+function fdParsearLibroCaja(libro, XLSX) {
+  const porDia = {};
+  for (let d = 1; d <= 31; d++) {
+    const hoja = libro.Sheets[String(d)];
+    if (!hoja) continue;
+    const rango = XLSX.utils.decode_range(hoja['!ref'] || 'A1');
+    let ingreso = 0;
+    let pacientes = 0;
+    let filaTotales = -1;
+    for (let r = rango.s.r; r <= rango.e.r; r++) {
+      if (fdCeldaTexto(hoja, XLSX, r, 0).trim().toUpperCase().startsWith('TOTALES BRUTOS')) { filaTotales = r; break; }
+    }
+    if (filaTotales >= 0) {
+      for (let c = 2; c <= Math.min(rango.e.c, 49); c++) ingreso += fdCeldaNumero(hoja, XLSX, filaTotales, c);
+    }
+    /* Pacientes = filas con nombre completo (2+ palabras) antes de TOTALES BRUTOS.
+       Contrastado contra las cifras oficiales del informe: coincide dentro de
+       +-2% en 5 de los 6 meses. Si no aparece TOTALES BRUTOS no se cuenta nada,
+       porque debajo de esa fila empieza la estructura contable y el conteo se
+       dispararia. */
+    if (filaTotales >= 0) {
+      for (let r = 2; r < filaTotales; r++) {
+        const nombre = fdCeldaTexto(hoja, XLSX, r, 1).trim();
+        if (nombre.split(/\s+/).filter(Boolean).length < 2) continue;
+        pacientes++;
+      }
+    }
+    porDia[d] = { ingreso: Math.round(ingreso * 100) / 100, egreso: 0, pacientes, sinTotales: filaTotales < 0 };
+  }
+
+  const egresos = libro.Sheets['EGRESOS'];
+  if (egresos) {
+    const rango = XLSX.utils.decode_range(egresos['!ref'] || 'A1');
+    for (let r = rango.s.r; r <= Math.min(rango.e.r, 60); r++) {
+      if (fdCeldaTexto(egresos, XLSX, r, 1).trim().toUpperCase().startsWith('TOTAL EGRESO')) {
+        for (let d = 1; d <= 31; d++) {
+          const v = fdCeldaNumero(egresos, XLSX, r, 3 + d); // col E (indice 4) = dia 1
+          if (porDia[d]) porDia[d].egreso = Math.round(v * 100) / 100;
+        }
+        break;
+      }
+    }
+  }
+  return porDia;
+}
+
+async function fdImportarExcelCaja(archivo) {
+  const estado = document.getElementById('henry-import-estado');
+  const mesTexto = fdReadMesControls('henry');
+  const poner = (txt, clase = '') => { if (estado) { estado.textContent = txt; estado.className = `fd-import-estado ${clase}`; } };
+  try {
+    poner('Leyendo el archivo...', 'cargando');
+    const XLSX = await fdCargarSheetJS();
+    const buffer = await archivo.arrayBuffer();
+    const libro = XLSX.read(buffer, { type: 'array' });
+    const hojasDia = Array.from({ length: 31 }, (_, i) => String(i + 1)).filter(n => libro.Sheets[n]).length;
+    if (!hojasDia) throw new Error('El archivo no tiene hojas diarias (1..31). Verifica que sea un CAJA <MES> 2026.xlsx.');
+    const porDia = fdParsearLibroCaja(libro, XLSX);
+
+    const diasMes = fdDiasDelMes(mesTexto);
+    const conMov = Object.keys(porDia).map(Number)
+      .filter(d => porDia[d].ingreso || porDia[d].egreso)
+      .sort((a, b) => a - b);
+    if (!conMov.length) throw new Error('El archivo no tiene movimientos en sus hojas diarias.');
+
+    /* El Excel no dice de que mes es (las hojas se llaman 1..31), asi que se
+       valida contra la forma del mes elegido antes de tocar la grilla: volcar
+       un mes sobre otro corrompe los datos en silencio. */
+    const mesArchivo = fdMesDesdeNombreArchivo(archivo?.name);
+    if (mesArchivo && mesArchivo !== mesTexto) {
+      poner(`El archivo parece de ${mesArchivo} y tienes seleccionado ${mesTexto}. Cambia el mes activo antes de importar.`, 'error');
+      return;
+    }
+    const fuera = conMov.filter(d => d > diasMes);
+    if (fuera.length) {
+      poner(`El archivo tiene movimientos el dia ${fuera.join(', ')}, pero ${mesTexto} tiene ${diasMes} dias. Es de otro mes: cambia el mes activo antes de importar.`, 'error');
+      return;
+    }
+    if (diasMes === 31 && !conMov.some(d => d >= 29)) {
+      if (!confirm(`El archivo no trae movimientos del 29 al 31, pero ${mesTexto} tiene 31 dias. Parece de otro mes. Continuar de todos modos?`)) {
+        poner('Importacion cancelada.', '');
+        return;
+      }
+    }
+    if (!confirm(`Se cargaran ${conMov.length} dia(s) sobre ${mesTexto}, reemplazando lo que haya en la grilla. Continuar?`)) {
+      poner('Importacion cancelada.', '');
+      return;
+    }
+
+    let cargados = 0;
+    let totalIngreso = 0;
+    document.querySelectorAll('#cd-body tr').forEach(tr => {
+      const dia = parseInt(String(tr.dataset.fecha).slice(-2), 10);
+      const info = porDia[dia];
+      /* Siempre se escribe (aunque sea vacio) para no dejar residuos del mes
+         anterior en las celdas que el archivo no cubre. */
+      const set = (campo, valor) => {
+        const el = tr.querySelector(`.cd-in[data-campo="${campo}"]`);
+        if (el) el.value = valor || '';
+      };
+      set('ingreso', info?.ingreso);
+      set('egreso', info?.egreso);
+      set('pacientes', info?.pacientes);
+      if (info && (info.ingreso || info.egreso)) cargados++;
+      totalIngreso += info?.ingreso || 0;
+    });
+    fdActualizarTablaDiaria();
+    poner(`Listo: ${cargados} dia(s) cargados sobre ${mesTexto}, ${formatoDolar(totalIngreso)} de ingresos. El pago al banco no viene en el Excel: anotalo antes de guardar.`, 'ok');
+  } catch (err) {
+    console.error(err);
+    poner(`No se pudo leer el archivo: ${err?.message || 'error desconocido'}`, 'error');
+  }
+}
+
+/* Pasa los totales de la caja diaria al formulario de cierre mensual. */
+function fdPasarDiarioAMensual() {
+  const res = fdActualizarTablaDiaria();
+  if (!res.diasConDatos) {
+    alert('Todavia no hay dias con movimientos en la caja diaria.');
+    return;
+  }
+  const poner = (id, valor) => {
+    const el = document.getElementById(id);
+    if (el) { el.value = valor; el.dispatchEvent(new Event('input', { bubbles: true })); }
+  };
+  /* Lo cobrado en caja NO es lo mismo que la facturacion del mes (en mayo 2026
+     difieren en ~$3,700), asi que se advierte antes de pisar el dato oficial. */
+  const factActual = fdNumber('henry-facturacion');
+  const aviso = factActual > 0
+    ? `Vas a reemplazar la facturacion registrada (${formatoDolar(factActual)}) por lo COBRADO en caja (${formatoDolar(res.ingresos)}). Son bases distintas: la caja registra cobros, la facturacion registra lo producido. Continuar?`
+    : `Se pasara al cierre mensual lo COBRADO en caja (${formatoDolar(res.ingresos)}) como facturacion del mes. Ojo: cobrado y facturado pueden diferir. Continuar?`;
+  if (!confirm(aviso)) return;
+
+  poner('henry-facturacion', res.ingresos.toFixed(2));
+  poner('henry-pacientes', res.pacientes);
+  fdMostrarPanelHenry('mensual');
+  alert(`Listo: facturacion ${formatoDolar(res.ingresos)} y ${fdEntero(res.pacientes)} pacientes, calculados desde ${res.diasConDatos} dia(s) de caja.\n\nFALTA completar comisiones, insumos y la produccion por dentista: sin ellos el flujo neto y el punto de equilibrio salen inflados.`);
+}
+
+function fdMostrarPanelHenry(cual) {
+  const diario = document.getElementById('henry-panel-diario');
+  const mensual = document.getElementById('henry-panel-mensual');
+  const tabD = document.getElementById('henry-tab-diario');
+  const tabM = document.getElementById('henry-tab-mensual');
+  if (diario) diario.style.display = cual === 'diario' ? '' : 'none';
+  if (mensual) mensual.style.display = cual === 'mensual' ? '' : 'none';
+  tabD?.classList.toggle('active', cual === 'diario');
+  tabM?.classList.toggle('active', cual === 'mensual');
 }
 
 function fdNumber(id) {
   const el = document.getElementById(id);
   return parseFloat(el?.value || 0) || 0;
 }
+
+/* Mes anterior al seleccionado en el formulario, para comparar mejoras. */
+let fdHenryPrev = null;
+let fdHenryPrevLabel = '';
 
 function fdCollectHenryData() {
   const mes = fdReadMesControls('henry');
@@ -757,6 +2116,9 @@ function fdCollectHenryData() {
   const comisiones = fdNumber('henry-comisiones');
   const insumos = fdNumber('henry-insumos');
   const costos = fdNumber('henry-costos') || 10800;
+  const efectivo = fdNumber('henry-efectivo');
+  const tarjeta = fdNumber('henry-tarjeta');
+  const transferencia = fdNumber('henry-transferencia');
   const flujo = facturacion - comisiones - costos - insumos;
   const ticket = pacientes > 0 ? facturacion / pacientes : 0;
   const dentistas = Array.from(document.querySelectorAll('.fd-dentista-input')).map(input => {
@@ -764,7 +2126,7 @@ function fdCollectHenryData() {
     const estado = fdEstadoDentista(valor);
     return { mes, nombre: input.dataset.name, facturacion: valor, meta: FD_META_DENTISTA, estado: estado.key };
   });
-  return { mes, facturacion, pacientes, comisiones, insumos, costos, flujo, ticket, dentistas };
+  return { mes, facturacion, pacientes, comisiones, insumos, costos, flujo, ticket, efectivo, tarjeta, transferencia, dentistas };
 }
 
 function fdUpdateHenryPreview() {
@@ -777,7 +2139,8 @@ function fdUpdateHenryPreview() {
   fdSetText('prev-flujo', formatoDolar(data.flujo));
   fdSetText('prev-equilibrio-texto', `${fdEntero(data.pacientes)} de ${FD_META_PACIENTES} pacientes - meta mensual`);
   fdSetText('prev-equilibrio-pct', fdPorcentaje(equilibrioPct));
-  fdSetText('henry-guardar', `Guardar datos de ${data.mes}`);
+  const btnGuardarPrev = document.getElementById('henry-guardar');
+  if (btnGuardarPrev && !btnGuardarPrev.disabled) btnGuardarPrev.textContent = `Guardar datos de ${data.mes}`;
 
   document.getElementById('prev-flujo')?.classList.toggle('fd-positive', data.flujo >= 0);
   document.getElementById('prev-flujo')?.classList.toggle('fd-negative', data.flujo < 0);
@@ -797,47 +2160,170 @@ function fdUpdateHenryPreview() {
     }
   });
 
+  const sumaDentistas = data.dentistas.reduce((sum, d) => sum + d.facturacion, 0);
+  const cuadre = document.getElementById('henry-cuadre');
+  if (cuadre) {
+    if (data.facturacion <= 0 && sumaDentistas <= 0) {
+      cuadre.style.display = 'none';
+    } else {
+      const diff = sumaDentistas - data.facturacion;
+      const baseCuadre = Math.max(data.facturacion, sumaDentistas);
+      const pctDiff = baseCuadre > 0 ? (Math.abs(diff) / baseCuadre) * 100 : 0;
+      const nivel = pctDiff <= 1 ? 'ok' : pctDiff <= 5 ? 'warn' : 'bad';
+      const veredicto = nivel === 'ok' ? 'Las dos fuentes cuadran.' : nivel === 'warn' ? 'Diferencia leve: revisar antes de guardar.' : 'No cuadra: revisar FG Dental y Excel caja.';
+      cuadre.className = `fd-cuadre ${nivel}`;
+      cuadre.style.display = 'block';
+      cuadre.textContent = `Cuadre de fuentes - suma por dentista (FG Dental): ${formatoDolar(sumaDentistas)} vs facturacion total (Excel caja): ${formatoDolar(data.facturacion)} - diferencia ${formatoDolar(Math.abs(diff))} (${fdPorcentaje(pctDiff)}). ${veredicto}`;
+    }
+  }
+
+  const sumaCobros = data.efectivo + data.tarjeta + data.transferencia;
+  const cuadreCobros = document.getElementById('henry-cuadre-cobros');
+  if (cuadreCobros) {
+    if (sumaCobros <= 0) {
+      cuadreCobros.style.display = 'none';
+    } else {
+      const baseCobros = Math.max(data.facturacion, sumaCobros);
+      const pctCobros = baseCobros > 0 ? (Math.abs(sumaCobros - data.facturacion) / baseCobros) * 100 : 0;
+      const nivelCobros = pctCobros <= 1 ? 'ok' : pctCobros <= 5 ? 'warn' : 'bad';
+      cuadreCobros.className = `fd-cuadre ${nivelCobros}`;
+      cuadreCobros.style.display = 'block';
+      cuadreCobros.textContent = `Mix de cobro: efectivo ${formatoDolar(data.efectivo)} + POS ${formatoDolar(data.tarjeta)} + transferencia ${formatoDolar(data.transferencia)} = ${formatoDolar(sumaCobros)} vs facturacion total ${formatoDolar(data.facturacion)} (diferencia ${fdPorcentaje(pctCobros)}).`;
+    }
+  }
+
+  const pe = fdPuntoEquilibrioReal({
+    facturacion_total: data.facturacion,
+    comisiones: data.comisiones,
+    insumos: data.insumos,
+    costos_fijos: data.costos,
+    pacientes_atendidos: data.pacientes
+  });
   const bajoMeta = data.dentistas.filter(d => d.facturacion < FD_META_DENTISTA);
   const brecha = bajoMeta.reduce((sum, d) => sum + Math.max(FD_META_DENTISTA - d.facturacion, 0), 0);
   const alertas = document.getElementById('prev-alertas');
   if (alertas) {
+    const alertaEquilibrio = pe.valido && pe.px
+      ? `<div class="fd-alert ${data.pacientes < pe.px ? 'red' : 'green'}">${fdEntero(data.pacientes)} pacientes vs punto de equilibrio real de ${fdEntero(pe.px)} px (${formatoDolar(pe.usd)})</div>`
+      : (pe.motivo === 'margen_negativo'
+        ? `<div class="fd-alert red">Los costos variables (${formatoDolar(data.comisiones + data.insumos)}) superan la facturacion (${formatoDolar(data.facturacion)}): no hay punto de equilibrio alcanzable</div>`
+        : `<div class="fd-alert ${data.pacientes < FD_PUNTO_EQUILIBRIO ? 'red' : 'green'}">${fdEntero(data.pacientes)} pacientes vs punto de equilibrio del plan PPT de ${FD_PUNTO_EQUILIBRIO}</div>`);
     alertas.innerHTML = `
-      <div class="fd-alert ${data.flujo < 0 ? 'red' : 'green'}">Flujo ${data.flujo < 0 ? 'negativo' : 'positivo'} â€” ${formatoDolar(data.flujo)}</div>
-      <div class="fd-alert ${data.pacientes < FD_PUNTO_EQUILIBRIO ? 'red' : 'green'}">${fdEntero(data.pacientes)} pacientes vs punto de equilibrio operativo de ${FD_PUNTO_EQUILIBRIO}</div>
+      <div class="fd-alert ${data.flujo < 0 ? 'red' : 'green'}">Flujo ${data.flujo < 0 ? 'negativo' : 'positivo'} - ${formatoDolar(data.flujo)}</div>
+      ${alertaEquilibrio}
       <div class="fd-alert ${data.pacientes < FD_META_PACIENTES ? 'yellow' : 'green'}">${fdEntero(data.pacientes)} pacientes vs meta mensual de ${FD_META_PACIENTES}</div>
-      <div class="fd-alert ${bajoMeta.length ? 'yellow' : 'green'}">${bajoMeta.length} dentistas bajo meta $2,500 â€” brecha total: ${formatoDolar(brecha)}</div>`;
+      <div class="fd-alert ${bajoMeta.length ? 'yellow' : 'green'}">${bajoMeta.length} dentistas bajo meta $2,500 - brecha total: ${formatoDolar(brecha)}</div>`;
   }
 
-  const mejoras = [];
-  if (data.facturacion > FD_MAYO_2026.facturacion_total) mejoras.push(`Facturacion +${formatoDolar(data.facturacion - FD_MAYO_2026.facturacion_total)}`);
-  if (data.pacientes > FD_MAYO_2026.pacientes_atendidos) mejoras.push(`Pacientes +${fdEntero(data.pacientes - FD_MAYO_2026.pacientes_atendidos)}`);
-  if (data.ticket > FD_MAYO_2026.ticket_promedio) mejoras.push(`Ticket promedio +${formatoDolar(data.ticket - FD_MAYO_2026.ticket_promedio)}`);
-  if (data.flujo > FD_MAYO_2026.flujo_neto) mejoras.push(`Flujo neto mejora ${formatoDolar(data.flujo - FD_MAYO_2026.flujo_neto)}`);
+  const base = fdHenryPrev && fdTieneDatos(fdHenryPrev) ? fdHenryPrev : null;
   const mejorasBox = document.getElementById('prev-mejoras');
   if (mejorasBox) {
-    mejorasBox.style.display = mejoras.length ? 'block' : 'none';
-    mejorasBox.innerHTML = mejoras.length ? `<strong>Mejoras frente a Mayo 2026:</strong> ${mejoras.join(' Â· ')}` : '';
+    if (!base) {
+      mejorasBox.style.display = 'none';
+      mejorasBox.innerHTML = '';
+    } else {
+      const baseFact = parseFloat(base.facturacion_total || 0);
+      const basePac = parseInt(base.pacientes_atendidos || 0, 10);
+      const baseTicket = basePac > 0 ? baseFact / basePac : 0;
+      const baseFlujo = parseFloat(base.flujo_neto || 0);
+      const mejoras = [];
+      if (data.facturacion > baseFact) mejoras.push(`Facturacion +${formatoDolar(data.facturacion - baseFact)}`);
+      if (data.pacientes > basePac) mejoras.push(`Pacientes +${fdEntero(data.pacientes - basePac)}`);
+      if (data.ticket > baseTicket) mejoras.push(`Ticket promedio +${formatoDolar(data.ticket - baseTicket)}`);
+      if (data.flujo > baseFlujo) mejoras.push(`Flujo neto mejora ${formatoDolar(data.flujo - baseFlujo)}`);
+      mejorasBox.style.display = mejoras.length ? 'block' : 'none';
+      mejorasBox.innerHTML = mejoras.length ? `<strong>Mejoras frente a ${fdHenryPrevLabel}:</strong> ${mejoras.join(' &middot; ')}` : '';
+    }
   }
 }
 
 
-function fdMostrarErrorSupabase(err) {
-  const detail = err?.message || String(err || 'Error desconocido');
-  const friendly = [
-    'No se pudieron guardar los datos en Supabase.',
-    '',
-    'Detalle tecnico:',
-    detail,
-    '',
-    'Si dice "relation does not exist", falta ejecutar supabase-schema.sql.',
-    'Si dice "row-level security" o "permission denied", faltan politicas/permisos en Supabase.'
-  ].join('\n');
-  alert(friendly);
+/* Errores de permisos (RLS/sesion): NO deben caer al respaldo local, porque una
+   copia local con created_at nuevo suplantaria a los datos compartidos en este
+   navegador de forma permanente. */
+function fdErrorDePermisos(err) {
+  return /42501|row-level security|permission denied|Supabase 40[13]/i.test(err?.message || '');
 }
+
+async function fdSupabaseUpsert(tabla, datos, onConflict) {
+  if (typeof supabaseRequest !== 'function') throw new Error('No hay cliente Supabase disponible');
+  await supabaseRequest(`${tabla}?on_conflict=${encodeURIComponent(onConflict)}`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(datos)
+  });
+  return true;
+}
+
+function fdErrorSinConstraint(err) {
+  return /no unique|exclusion constraint|42P10/i.test(err?.message || '');
+}
+
+/* Guardado sin ventana de perdida: upsert por mes. Si las tablas aun no tienen
+   la restriccion UNIQUE (falta ejecutar supabase-migracion-20260811.sql), cae
+   al esquema anterior de borrado + insercion. */
+/* Si la tabla aun no tiene las columnas del mix de cobro (falta la migracion),
+   PostgREST responde PGRST204 nombrando la columna: se reintenta sin esos campos
+   y se avisa al usuario, porque esos montos NO quedan guardados. */
+function fdErrorColumnaMix(err) {
+  const msg = err?.message || '';
+  return /PGRST204/.test(msg) && /'(efectivo|tarjeta|transferencia)'/.test(msg);
+}
+
+function fdSinColumnasMix(row) {
+  const { efectivo, tarjeta, transferencia, ...resto } = row;
+  return resto;
+}
+
+/* Bandera del guardado en curso: la escritura cayo al modo sin columnas de mix. */
+let fdUltimoGuardadoSinMix = false;
+
+async function fdEscribirMensual(mensualRow, escribir) {
+  try {
+    return await escribir(mensualRow);
+  } catch (err) {
+    if (!fdErrorColumnaMix(err)) throw err;
+    console.warn('Tabla sin columnas de mix de cobro; guardando sin ellas. Ejecutar supabase-migracion-20260811.sql.', err);
+    fdUltimoGuardadoSinMix = true;
+    return escribir(fdSinColumnasMix(mensualRow));
+  }
+}
+
+async function fdGuardarMesSupabase(data, mensual) {
+  const filtro = fdFiltroMes(data.mes);
+  /* created_at viene del reloj del cliente para que el merge local-vs-remoto
+     pueda comparar recencia. Riesgo aceptado: un desfase de reloj entre equipos
+     solo importaria si dos usuarios guardan el MISMO mes dentro de esa ventana. */
+  const ahora = new Date().toISOString();
+  const mensualRow = { ...mensual, created_at: ahora };
+  const dentistasRows = data.dentistas.map(d => ({ ...d, created_at: ahora }));
+  try {
+    /* Dentistas primero y el registro mensual al final como "commit": si algo
+       falla a mitad, el mes no aparece actualizado a medias para el resto. */
+    await fdSupabaseUpsert('produccion_dentistas', dentistasRows, 'mes,nombre');
+    const lista = data.dentistas.map(d => `"${d.nombre}"`).join(',');
+    await fdSupabaseDelete('produccion_dentistas', `${filtro}&nombre=not.in.(${encodeURIComponent(lista)})`);
+    await fdEscribirMensual(mensualRow, row => fdSupabaseUpsert('dashboard_mensual', row, 'mes'));
+    return;
+  } catch (err) {
+    if (!fdErrorSinConstraint(err)) throw err;
+    console.warn('Tablas sin restriccion UNIQUE; usando borrado + insercion. Ejecutar supabase-migracion-20260811.sql para el guardado seguro.', err);
+  }
+  await fdSupabaseDelete('dashboard_mensual', filtro);
+  await fdSupabaseDelete('produccion_dentistas', filtro);
+  const okMensual = await fdEscribirMensual(mensualRow, row => fdSupabaseInsert('dashboard_mensual', row));
+  const okDentistas = await fdSupabaseInsert('produccion_dentistas', dentistasRows);
+  if (!okMensual || !okDentistas) throw new Error('Supabase rechazo el guardado');
+}
+
 async function fdGuardarHenry() {
   if (!fdSupabaseConfigurado()) {
     document.getElementById('henry-config-warning').style.display = 'block';
     alert('Primero revisa que la conexion Supabase del portal este disponible.');
+    return;
+  }
+  if (fdRolPropio === 'viewer') {
+    alert('Tu usuario es de solo lectura: el guardado esta reservado a los editores del equipo.');
     return;
   }
 
@@ -847,6 +2333,30 @@ async function fdGuardarHenry() {
     return;
   }
 
+  const negativos = [data.facturacion, data.pacientes, data.comisiones, data.insumos, data.costos, data.efectivo, data.tarjeta, data.transferencia]
+    .concat(data.dentistas.map(d => d.facturacion))
+    .some(v => v < 0);
+  if (negativos) {
+    alert('Hay valores negativos en el formulario. Corrige los montos antes de guardar.');
+    return;
+  }
+
+  const sumaDentistas = data.dentistas.reduce((sum, d) => sum + d.facturacion, 0);
+  if (data.facturacion <= 0 && data.pacientes <= 0 && sumaDentistas <= 0) {
+    if (!confirm(`Todos los valores de ${data.mes} estan en cero. Deseas guardarlo asi?`)) return;
+  }
+  const baseCuadre = Math.max(data.facturacion, sumaDentistas);
+  if (baseCuadre > 0) {
+    const pctDiff = (Math.abs(sumaDentistas - data.facturacion) / baseCuadre) * 100;
+    if (pctDiff > 5 && !confirm(`La suma por dentista (${formatoDolar(sumaDentistas)}) difiere de la facturacion total (${formatoDolar(data.facturacion)}) en ${fdPorcentaje(pctDiff)}. Deseas guardar de todos modos?`)) return;
+  }
+  /* Sin costos variables el flujo neto y el punto de equilibrio quedan inflados
+     y el dashboard mostraria un mes falsamente sano. */
+  if (data.facturacion > 0 && (data.comisiones <= 0 || data.insumos <= 0)) {
+    const faltan = [data.comisiones <= 0 ? 'comisiones' : null, data.insumos <= 0 ? 'insumos' : null].filter(Boolean).join(' y ');
+    if (!confirm(`Vas a guardar ${data.mes} sin ${faltan}. El flujo neto y el punto de equilibrio saldran inflados (el dashboard mostrara el mes mas sano de lo que es). Guardar de todos modos?`)) return;
+  }
+
   try {
     await seedMayo2026();
     const filtro = fdFiltroMes(data.mes);
@@ -854,10 +2364,15 @@ async function fdGuardarHenry() {
     if (Array.isArray(existentes) && existentes.length > 0) {
       const okOverwrite = confirm(`Ya existen datos para ${data.mes}. Deseas sobreescribirlos?`);
       if (!okOverwrite) return;
-      await fdSupabaseDelete('dashboard_mensual', filtro);
-      await fdSupabaseDelete('produccion_dentistas', filtro);
     }
 
+    const pe = fdPuntoEquilibrioReal({
+      facturacion_total: data.facturacion,
+      comisiones: data.comisiones,
+      insumos: data.insumos,
+      costos_fijos: data.costos,
+      pacientes_atendidos: data.pacientes
+    });
     const mensual = {
       mes: data.mes,
       facturacion_total: data.facturacion,
@@ -867,18 +2382,33 @@ async function fdGuardarHenry() {
       costos_fijos: data.costos,
       comisiones: data.comisiones,
       insumos: data.insumos,
-      punto_equilibrio: FD_PUNTO_EQUILIBRIO
+      punto_equilibrio: pe.valido && pe.px ? pe.px : FD_PUNTO_EQUILIBRIO,
+      efectivo: data.efectivo,
+      tarjeta: data.tarjeta,
+      transferencia: data.transferencia
     };
 
-    const okMensual = await fdSupabaseInsert('dashboard_mensual', mensual);
-    const okDentistas = await fdSupabaseInsert('produccion_dentistas', data.dentistas);
-    if (!okMensual || !okDentistas) throw new Error('Supabase rechazo el guardado');
+    fdUltimoGuardadoSinMix = false;
+    await fdGuardarMesSupabase(data, mensual);
 
     fdMesActivoSeleccionado = data.mes;
-    alert(`Datos de ${data.mes} guardados correctamente.`);
+    const hayMix = (data.efectivo + data.tarjeta + data.transferencia) > 0;
+    if (fdUltimoGuardadoSinMix && hayMix) {
+      /* Los montos del mix no llegaron a Supabase: se conservan en este navegador
+         para no perderlos y se avisa que falta ejecutar la migracion. */
+      fdGuardarLocal(data);
+      alert(`Las cifras de ${data.mes} se guardaron, PERO el desglose de cobros (efectivo, POS y transferencia) NO se pudo guardar porque a la base todavia le faltan esas columnas.\n\nQuedaron respaldados en este navegador. Para guardarlos de verdad: ejecutar supabase-migracion-20260811.sql en Supabase y volver a guardar el mes.`);
+    } else {
+      fdDepurarLocalMes(data.mes);
+      alert(`Datos de ${data.mes} guardados correctamente.`);
+    }
     navigate('dashboard-financiero');
   } catch (err) {
     console.error(err);
+    if (fdErrorDePermisos(err)) {
+      alert('Supabase rechazo el guardado por permisos. Si tu usuario es de solo lectura (Vanessa o Roberto), pide a un editor del equipo (Jaime, Cecilia, Ricardo o Elias) que registre estas cifras. Si eres editor, recarga la pagina e inicia sesion de nuevo.');
+      return;
+    }
     fdGuardarLocal(data);
     fdMesActivoSeleccionado = data.mes;
     alert(`No se pudo conectar con Supabase (${err?.message || 'error desconocido'}). Los datos de ${data.mes} quedaron guardados temporalmente en este navegador. Para que se compartan con otros equipos, hay que corregir la conexion Supabase.`);
@@ -892,9 +2422,115 @@ function initFormularioHenry() {
   root.dataset.ready = 'true';
   document.getElementById('henry-config-warning').style.display = fdSupabaseConfigurado() ? 'none' : 'block';
   fdSetMesControls('henry', fdMesActivoSeleccionado);
+
+  fdCargarRolPropio().then(rol => {
+    if (rol !== 'viewer') return;
+    ['henry-guardar', 'cd-guardar'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (!btn) return;
+      btn.disabled = true;
+      btn.style.opacity = '.5';
+      btn.style.cursor = 'not-allowed';
+      btn.textContent = 'Solo lectura - no puedes guardar';
+    });
+    const btnImport = document.getElementById('henry-btn-import');
+    if (btnImport) btnImport.style.display = 'none';
+    const warning = document.getElementById('henry-config-warning');
+    if (warning) {
+      warning.style.display = 'block';
+      warning.textContent = 'Tu usuario es de solo lectura: puedes revisar los datos, pero el guardado esta reservado a los editores del equipo (Jaime, Cecilia, Ricardo y Elias).';
+    }
+  });
+
+  let prevToken = 0;
+  const cargarMesAnterior = async () => {
+    const token = ++prevToken;
+    const mesPrev = fdMesAnteriorTexto(fdReadMesControls('henry'));
+    let prevRow = null;
+    try {
+      const dataPrev = await fdCargarDatosDashboard(mesPrev);
+      prevRow = fdTieneDatos(dataPrev.mensual) ? dataPrev.mensual : null;
+    } catch (err) {
+      console.error('No se pudo cargar el mes anterior:', err);
+    }
+    if (token !== prevToken) return;
+    fdHenryPrevLabel = mesPrev;
+    fdHenryPrev = prevRow;
+    fdUpdateHenryPreview();
+  };
+
+  /* La grilla diaria se re-arma con cada cambio de mes (dias distintos y datos
+     distintos); el token evita que una carga lenta pise a una mas reciente. */
+  let diarioToken = 0;
+  const cargarDiario = async () => {
+    const token = ++diarioToken;
+    const mesTexto = fdReadMesControls('henry');
+    /* Mientras carga, el snapshot queda invalidado: guardar en ese momento
+       no puede borrar nada. */
+    fdCajaDiariaSnapshot = { mes: null, fechasConDatos: new Set(), lecturaOk: false };
+    const estadoImport = document.getElementById('henry-import-estado');
+    if (estadoImport) { estadoImport.textContent = ''; estadoImport.className = 'fd-import-estado'; }
+    fdRenderTablaDiaria(mesTexto, []);
+    fdActualizarTablaDiaria();
+    let rows = [];
+    let lecturaOk = false;
+    try {
+      const data = await fdCargarCajaDiaria(mesTexto);
+      rows = data.rows;
+      lecturaOk = !!data.lecturaOk;
+    } catch (err) {
+      console.error('No se pudo cargar la caja diaria:', err);
+    }
+    if (token !== diarioToken) return;
+    fdCajaDiariaSnapshot = {
+      mes: mesTexto,
+      lecturaOk,
+      fechasConDatos: new Set(rows
+        .filter(r => parseFloat(r.ingreso || 0) || parseFloat(r.egreso || 0) || parseFloat(r.pago_banco || 0) || parseInt(r.pacientes || 0, 10))
+        .map(r => String(r.fecha)))
+    };
+    fdRenderTablaDiaria(mesTexto, rows);
+    fdActualizarTablaDiaria();
+    const aviso = document.getElementById('cd-aviso-lectura');
+    if (aviso) {
+      const hayProblema = fdSupabaseConfigurado() && !lecturaOk;
+      aviso.style.display = hayProblema ? 'block' : 'none';
+      if (hayProblema) {
+        aviso.textContent = 'No se pudieron leer los datos guardados de este mes (problema de conexion o permisos). Lo que escribas se guardara, pero para evitar perdidas no se borrara ningun dia existente. Recarga la pagina antes de hacer correcciones.';
+      }
+    }
+  };
+
   root.querySelectorAll('input, select').forEach(input => input.addEventListener('input', fdUpdateHenryPreview));
   root.querySelectorAll('select').forEach(input => input.addEventListener('change', fdUpdateHenryPreview));
+  document.getElementById('henry-mes')?.addEventListener('change', () => { cargarMesAnterior(); cargarDiario(); });
+  document.getElementById('henry-anio')?.addEventListener('change', () => { cargarMesAnterior(); cargarDiario(); });
   document.getElementById('henry-guardar')?.addEventListener('click', fdGuardarHenry);
+
+  /* Pestanas */
+  document.getElementById('henry-tab-diario')?.addEventListener('click', () => fdMostrarPanelHenry('diario'));
+  document.getElementById('henry-tab-mensual')?.addEventListener('click', () => fdMostrarPanelHenry('mensual'));
+
+  /* Caja diaria: recalculo en vivo, guardado, importador y puente al cierre */
+  document.getElementById('cd-body')?.addEventListener('input', ev => {
+    if (!ev.target.classList.contains('cd-in')) return;
+    /* Marca en rojo lo que el navegador no pudo leer como numero (p. ej. texto
+       o un monto con separador que quedo invalido), en vez de tratarlo como 0. */
+    ev.target.classList.toggle('cd-in-malo', !!ev.target.validity?.badInput);
+    fdActualizarTablaDiaria();
+  });
+  document.getElementById('cd-guardar')?.addEventListener('click', fdGuardarCajaDiaria);
+  document.getElementById('cd-usar-en-mes')?.addEventListener('click', fdPasarDiarioAMensual);
+  const fileInput = document.getElementById('henry-file-excel');
+  document.getElementById('henry-btn-import')?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', ev => {
+    const archivo = ev.target.files?.[0];
+    if (archivo) fdImportarExcelCaja(archivo);
+    ev.target.value = '';
+  });
+
   fdUpdateHenryPreview();
+  cargarMesAnterior();
+  cargarDiario();
 }
 

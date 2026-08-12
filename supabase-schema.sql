@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS dashboard_mensual (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  mes VARCHAR(20) NOT NULL,
+  mes VARCHAR(20) NOT NULL UNIQUE,
   facturacion_total NUMERIC(10,2),
   pacientes_atendidos INTEGER,
   ticket_promedio NUMERIC(8,2),
@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS dashboard_mensual (
   comisiones NUMERIC(10,2),
   insumos NUMERIC(10,2),
   punto_equilibrio INTEGER DEFAULT 418,
+  efectivo NUMERIC(10,2),
+  tarjeta NUMERIC(10,2),
+  transferencia NUMERIC(10,2),
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -22,14 +25,18 @@ CREATE TABLE IF NOT EXISTS produccion_dentistas (
   facturacion NUMERIC(10,2),
   meta NUMERIC(10,2) DEFAULT 2500,
   estado VARCHAR(20),
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (mes, nombre)
 );
+
+-- Nota: en proyectos que ya tenian estas tablas sin UNIQUE,
+-- ejecutar supabase-migracion-20260811.sql (dedupe + indices unicos).
 
 INSERT INTO dashboard_mensual (
   mes, facturacion_total, pacientes_atendidos, ticket_promedio, flujo_neto,
   costos_fijos, comisiones, insumos, punto_equilibrio
 )
-SELECT 'Mayo 2026', 30443.34, 783, 38.87, -965, 10800, 7611, 12997, 418
+SELECT 'Mayo 2026', 30443.34, 783, 38.87, -964.66, 10800, 7611, 12997, 418
 WHERE NOT EXISTS (SELECT 1 FROM dashboard_mensual WHERE mes = 'Mayo 2026');
 
 INSERT INTO produccion_dentistas (mes, nombre, facturacion, meta, estado)
