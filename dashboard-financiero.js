@@ -724,6 +724,77 @@ function fdSvgFlujoMensual(rows) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   ESTADO DE RESULTADOS Y FLUJO DE EFECTIVO
+   Replica el cuadro de la presentacion. Solo se guardan las lineas de
+   entrada; las derivadas se calculan aqui para que nunca descuadren.
+   ══════════════════════════════════════════════════════════════════════ */
+const FD_LOCAL_ER_KEY = 'clidente_fd_estado_resultados';
+const FD_ER_LINEAS = ['ingresos', 'costos_variables', 'costos_fijos', 'gastos_financieros', 'pago_bancos'];
+
+function fdCalcularER(row) {
+  const n = k => parseFloat(row?.[k] || 0);
+  const ingresos = n('ingresos');
+  const cv = n('costos_variables');
+  const cf = n('costos_fijos');
+  const gf = n('gastos_financieros');
+  const banco = n('pago_bancos');
+  const utilidadBruta = ingresos - cv;
+  const resultadoOperativo = utilidadBruta - cf;
+  const utilidadNeta = resultadoOperativo - gf;
+  /* El Estado de Resultados carga solo los intereses; el flujo carga la cuota
+     completa al banco (capital + intereses). De ahi que se pueda tener
+     utilidad neta positiva y flujo de efectivo negativo. */
+  const flujoEfectivo = resultadoOperativo - banco;
+  const pct = v => ingresos > 0 ? (v / ingresos) * 100 : 0;
+  return {
+    ingresos, costosVariables: cv, costosFijos: cf, gastosFinancieros: gf, pagoBancos: banco,
+    utilidadBruta, resultadoOperativo, utilidadNeta, flujoEfectivo,
+    margenBruto: pct(utilidadBruta), margenOperativo: pct(resultadoOperativo),
+    margenNeto: pct(utilidadNeta), pctVariables: pct(cv), pctFijos: pct(cf),
+    pctFinancieros: pct(gf), pctBancos: pct(banco), pctFlujo: pct(flujoEfectivo)
+  };
+}
+
+async function fdCargarER(mesTexto) {
+  const locales = fdGetLocalJson(FD_LOCAL_ER_KEY);
+  const local = locales.find(r => r.mes === mesTexto) || null;
+  if (!fdSupabaseConfigurado()) return { row: local, fallback: true, lecturaOk: false };
+  try {
+    const rows = await fdSupabaseGetRows(`estado_resultados?select=*&mes=eq.${encodeURIComponent(mesTexto)}&limit=1`);
+    const remoto = Array.isArray(rows) && rows.length ? rows[0] : null;
+    const usaLocal = !!(local && (!remoto || fdFechaRow(local) > fdFechaRow(remoto)));
+    return { row: usaLocal ? local : remoto, fallback: usaLocal, lecturaOk: true };
+  } catch (err) {
+    console.error('No se pudo cargar el estado de resultados:', err);
+    return { row: local, fallback: true, lecturaOk: false };
+  }
+}
+
+async function fdCargarSerieER(anio) {
+  if (!fdSupabaseConfigurado()) return [];
+  try {
+    const rows = await fdSupabaseGetRows('estado_resultados?select=*');
+    return (Array.isArray(rows) ? rows : [])
+      .filter(r => fdParseMesActivo(r.mes).anio === Number(anio))
+      .sort((a, b) => fdMesIndice(a.mes) - fdMesIndice(b.mes));
+  } catch (err) {
+    console.error('No se pudo cargar la serie del estado de resultados:', err);
+    return [];
+  }
+}
+
+async function fdCargarClasificacionEgresos() {
+  if (!fdSupabaseConfigurado()) return {};
+  try {
+    const rows = await fdSupabaseGetRows('clasificacion_egresos?select=categoria,tipo');
+    return Object.fromEntries((Array.isArray(rows) ? rows : []).map(r => [String(r.categoria).toUpperCase(), r.tipo]));
+  } catch (err) {
+    console.error('No se pudo cargar la clasificacion de egresos:', err);
+    return {};
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    INFORME EJECUTIVO EN PDF
    Una pagina para que Henry se lo mande por WhatsApp a la Dra. Olga.
    Se dibuja con jsPDF (no captura de pantalla) para que salga nitido y
@@ -1010,6 +1081,105 @@ function fdSvgCajaDiaria(detalle, mesTexto) {
   return out;
 }
 
+/* Cascada del flujo de efectivo: ingresos -> costos -> pago a bancos -> flujo,
+   igual que el grafico de la presentacion. */
+function fdSvgCascadaFlujo(er) {
+  const W = 720, H = 250, L = 12, R = 12, T = 30, B = 44;
+  const plotW = W - L - R, plotH = H - T - B;
+  const costos = er.costosVariables + er.costosFijos;
+  const pasos = [
+    { etiqueta: 'Ingresos', valor: er.ingresos, base: 0, color: '#1d4ed8' },
+    { etiqueta: 'Costos', valor: costos, base: er.ingresos - costos, color: '#b45309' },
+    { etiqueta: 'Pago a bancos', valor: er.pagoBancos, base: er.ingresos - costos - er.pagoBancos, color: '#b45309' },
+    { etiqueta: 'Flujo de efectivo', valor: Math.abs(er.flujoEfectivo), base: Math.min(er.flujoEfectivo, 0), color: er.flujoEfectivo >= 0 ? '#16a34a' : '#dc2626' }
+  ];
+  const tope = Math.max(er.ingresos, 1) * 1.08;
+  const piso = Math.min(er.flujoEfectivo, 0) * 1.6 - tope * 0.02;
+  const y = v => T + plotH * (tope - v) / (tope - piso);
+  const slot = plotW / pasos.length;
+  const ancho = Math.min(slot * 0.5, 96);
+
+  let out = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cascada del flujo de efectivo" style="width:100%;height:auto;display:block">`;
+  out += `<line x1="${L}" y1="${y(0).toFixed(1)}" x2="${W - R}" y2="${y(0).toFixed(1)}" stroke="#94a3b8" stroke-width="1.5"/>`;
+  pasos.forEach((p, i) => {
+    const cx = L + slot * i + slot / 2;
+    const yTop = y(p.base + p.valor);
+    const alto = Math.max(Math.abs(y(p.base) - y(p.base + p.valor)), 2);
+    out += `<rect x="${(cx - ancho / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${ancho.toFixed(1)}" height="${alto.toFixed(1)}" rx="3" fill="${p.color}"><title>${fdEscapeXml(`${p.etiqueta}: ${formatoDolar(p.valor)}`)}</title></rect>`;
+    const dentro = alto > 26;
+    const etiquetaY = dentro ? yTop + alto / 2 + 4 : yTop - 7;
+    out += `<text x="${cx.toFixed(1)}" y="${etiquetaY.toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="800" fill="${dentro ? '#ffffff' : '#334155'}"${dentro ? '' : ' stroke="#ffffff" stroke-width="3" style="paint-order:stroke"'}>${fdDolarCorto(p.etiqueta === 'Flujo de efectivo' ? er.flujoEfectivo : p.valor)}</text>`;
+    out += `<text x="${cx.toFixed(1)}" y="${(H - 16).toFixed(1)}" text-anchor="middle" font-size="11" fill="#475569">${fdEscapeXml(p.etiqueta)}</text>`;
+  });
+  out += '</svg>';
+  return out;
+}
+
+function fdFilaER(etiqueta, valor, pct, clase = '') {
+  const negativo = /costos|gastos|pago/i.test(etiqueta);
+  const monto = negativo && valor > 0 ? `(${formatoDolar(valor)})` : formatoDolar(valor);
+  return `<tr class="${clase}">
+    <td>${etiqueta}</td>
+    <td class="num ${valor < 0 ? 'fd-negative' : ''}">${monto}</td>
+    <td class="num">${negativo && pct > 0 ? '(' + fdPorcentaje(pct) + ')' : fdPorcentaje(pct)}</td>
+  </tr>`;
+}
+
+async function fdRenderEstadoResultados(mesTexto, sigueVigente = () => true) {
+  const card = document.getElementById('fd-er-card');
+  const body = document.getElementById('fd-er-body');
+  if (!card || !body) return;
+  let row = null;
+  try {
+    const data = await fdCargarER(mesTexto);
+    row = data.row;
+  } catch (err) {
+    console.error('No se pudo cargar el estado de resultados:', err);
+  }
+  if (!sigueVigente()) return;
+  if (!row || !parseFloat(row.ingresos || 0)) {
+    card.style.display = 'none';
+    body.innerHTML = '';
+    return;
+  }
+  card.style.display = '';
+  fdSetText('fd-er-mes', mesTexto);
+  const er = fdCalcularER(row);
+
+  body.innerHTML =
+    `<tr class="fd-er-seccion"><td colspan="3">ESTADO DE RESULTADOS</td></tr>` +
+    fdFilaER('Ingresos', er.ingresos, 100) +
+    fdFilaER('Costos variables', er.costosVariables, er.pctVariables) +
+    fdFilaER('Utilidad bruta', er.utilidadBruta, er.margenBruto, 'fd-er-subtotal') +
+    fdFilaER('Costos fijos', er.costosFijos, er.pctFijos) +
+    fdFilaER('Resultado operativo', er.resultadoOperativo, er.margenOperativo, 'fd-er-subtotal') +
+    fdFilaER('Gastos financieros', er.gastosFinancieros, er.pctFinancieros) +
+    fdFilaER('Utilidad neta', er.utilidadNeta, er.margenNeto, 'fd-er-total') +
+    `<tr class="fd-er-seccion"><td colspan="3">FLUJO DE EFECTIVO &middot; movimiento de caja del mes</td></tr>` +
+    fdFilaER('Ingresos', er.ingresos, 100) +
+    fdFilaER('Costos variables', er.costosVariables, er.pctVariables) +
+    fdFilaER('Costos fijos', er.costosFijos, er.pctFijos) +
+    fdFilaER('Pago mensual a los bancos', er.pagoBancos, er.pctBancos) +
+    fdFilaER('Flujo de efectivo', er.flujoEfectivo, er.pctFlujo, 'fd-er-total');
+
+  const cascada = document.getElementById('fd-er-cascada');
+  if (cascada) cascada.innerHTML = `<p class="fd-chart-subtitle">Cascada del flujo de efectivo</p>` + fdSvgCascadaFlujo(er);
+
+  const conclusion = document.getElementById('fd-er-conclusion');
+  if (conclusion) {
+    if (er.resultadoOperativo > 0 && er.flujoEfectivo < 0) {
+      conclusion.className = 'fd-er-conclusion alerta';
+      conclusion.textContent = `CLIDENTE genera utilidades operativas (${formatoDolar(er.resultadoOperativo)}), pero tiene flujo de caja negativo (${formatoDolar(er.flujoEfectivo)}): la cuota de ${formatoDolar(er.pagoBancos)} al banco se lleva mas de lo que produce la operacion.`;
+    } else if (er.flujoEfectivo >= 0) {
+      conclusion.className = 'fd-er-conclusion ok';
+      conclusion.textContent = `El mes cubre su operacion y la cuota al banco, y deja ${formatoDolar(er.flujoEfectivo)} de flujo de efectivo.`;
+    } else {
+      conclusion.className = 'fd-er-conclusion alerta';
+      conclusion.textContent = `El mes cierra con resultado operativo de ${formatoDolar(er.resultadoOperativo)} y flujo de efectivo de ${formatoDolar(er.flujoEfectivo)}.`;
+    }
+  }
+}
+
 async function fdRenderCajaDiariaDashboard(mesTexto, sigueVigente = () => true) {
   const card = document.getElementById('fd-caja-diaria-card');
   const cont = document.getElementById('fd-caja-diaria-chart');
@@ -1170,6 +1340,19 @@ function renderDashboardFinanciero() {
       <div id="fd-chart-facturacion" class="fd-chart-wrap"></div>
       <p class="fd-note">Barra verde: mes sobre su punto de equilibrio real. Barra roja: por debajo. Linea punteada ambar: punto de equilibrio real de cada mes (costos fijos entre margen de contribucion observado).</p>
       <div id="fd-chart-flujo" class="fd-chart-wrap" style="margin-top:1.1rem"></div>
+    </div>
+
+    <div class="card fd-card-tight" id="fd-er-card" style="display:none">
+      <div class="card-title"><i class="fas fa-file-invoice-dollar" style="margin-right:.5rem"></i>Estado de Resultados y flujo de efectivo &mdash; <span id="fd-er-mes"></span></div>
+      <div class="fd-table-wrap">
+        <table class="fd-table fd-er-tabla">
+          <thead><tr><th>PARTIDA</th><th class="num">MONTO</th><th class="num">% DE INGRESOS</th></tr></thead>
+          <tbody id="fd-er-body"></tbody>
+        </table>
+      </div>
+      <div id="fd-er-cascada" class="fd-chart-wrap" style="margin-top:1.1rem"></div>
+      <p id="fd-er-conclusion" class="fd-er-conclusion"></p>
+      <p class="fd-note">El Estado de Resultados incluye solo los intereses; el flujo registra la cuota completa a los bancos (capital + intereses). El flujo mide la operacion de la clinica: excluye el pago a cuenta de renta, el IVA neto y los retiros de la titular.</p>
     </div>
 
     <div class="card fd-card-tight" id="fd-caja-diaria-card" style="display:none">
@@ -1528,9 +1711,12 @@ async function initDashboardFinanciero() {
     /* La caja diaria se muestra solo en vista mensual: el saldo acumulado
        de varios meses encadenados no seria legible. */
     const cardDiaria = document.getElementById('fd-caja-diaria-card');
+    const cardER = document.getElementById('fd-er-card');
     if (esAcumulado) {
       if (cardDiaria) cardDiaria.style.display = 'none';
+      if (cardER) cardER.style.display = 'none';
     } else {
+      await fdRenderEstadoResultados(mesSolicitado, () => token === cargaToken);
       await fdRenderCajaDiariaDashboard(mesSolicitado, () => token === cargaToken);
     }
   };
@@ -1687,6 +1873,7 @@ function renderFormularioHenry() {
     <div class="fd-view-toggle fd-tabs" role="group" aria-label="Modo de registro">
       <button type="button" id="henry-tab-diario" class="active">Caja diaria</button>
       <button type="button" id="henry-tab-mensual">Cierre mensual</button>
+      <button type="button" id="henry-tab-er">Estado de Resultados</button>
     </div>
 
     <div id="henry-config-warning" class="fd-warning" style="display:none">
@@ -1788,7 +1975,273 @@ function renderFormularioHenry() {
       <button class="fd-secondary" onclick="navigate('dashboard-financiero')">Volver al dashboard</button>
     </div>
     </div><!-- /panel mensual -->
+
+    <!-- ══ PESTANA 3: ESTADO DE RESULTADOS ═════════════════════════ -->
+    <div id="henry-panel-er" style="display:none">
+      <div class="card fd-card-tight">
+        <div class="card-title"><i class="fas fa-file-invoice-dollar" style="margin-right:.5rem"></i>Estado de Resultados del mes</div>
+        <p class="fd-subtitle">Escribe las cinco lineas de entrada; el portal calcula utilidad bruta, resultado operativo, utilidad neta y flujo de efectivo. Tambien puedes traerlas del Excel de caja: el archivo no trae un Estado de Resultados, pero si el detalle de egresos por categoria, y el portal lo clasifica.</p>
+
+        <div class="fd-import-row">
+          <button type="button" id="er-btn-import" class="fd-secondary"><i class="fas fa-file-import"></i> Traer del Excel de caja</button>
+          <input type="file" id="er-file-excel" accept=".xlsx,.xlsm" style="display:none">
+          <button type="button" id="er-btn-desde-caja" class="fd-secondary"><i class="fas fa-calendar-day"></i> Ingresos desde caja diaria</button>
+          <span id="er-import-estado" class="fd-import-estado"></span>
+        </div>
+
+        <div class="fd-form-grid" style="margin-top:1rem">
+          <label>Ingresos del mes ($)<input id="er-ingresos" type="number" min="0" step="0.01" placeholder="0.00"></label>
+          <label>Costos variables ($)<input id="er-costos-variables" type="number" min="0" step="0.01" placeholder="0.00"></label>
+          <label>Costos fijos ($)<input id="er-costos-fijos" type="number" min="0" step="0.01" value="10800"></label>
+          <label>Gastos financieros ($)<input id="er-gastos-financieros" type="number" min="0" step="0.01" value="210.72"></label>
+          <label>Pago mensual a los bancos ($)<input id="er-pago-bancos" type="number" min="0" step="0.01" value="12000"></label>
+        </div>
+      </div>
+
+      <div class="card fd-card-tight" id="er-clasificador-card" style="display:none">
+        <div class="card-title"><i class="fas fa-tags" style="margin-right:.5rem"></i>Clasificacion de los egresos del Excel</div>
+        <p class="fd-subtitle">Cada categoria del Excel va a una linea del Estado de Resultados. Es criterio contable, no dato: revisalo con Ricardo. Las remesas son traslados de efectivo, no gasto.</p>
+        <div class="fd-table-wrap">
+          <table class="fd-table fd-input-table">
+            <thead><tr><th>Categoria del Excel</th><th class="num">Monto del mes</th><th>Va a</th></tr></thead>
+            <tbody id="er-clasificador-body"></tbody>
+          </table>
+        </div>
+        <div class="fd-actions" style="margin-top:.8rem">
+          <button type="button" id="er-aplicar-clasificacion" class="fd-secondary">Aplicar a las lineas de arriba</button>
+        </div>
+      </div>
+
+      <div class="card fd-card-tight">
+        <div class="card-title">Vista previa</div>
+        <div class="fd-table-wrap">
+          <table class="fd-table fd-er-tabla">
+            <thead><tr><th>PARTIDA</th><th class="num">MONTO</th><th class="num">% DE INGRESOS</th></tr></thead>
+            <tbody id="er-preview-body"></tbody>
+          </table>
+        </div>
+        <p id="er-preview-conclusion" class="fd-er-conclusion"></p>
+      </div>
+
+      <div class="fd-actions">
+        <button id="er-guardar" class="fd-save">Guardar Estado de Resultados</button>
+        <button class="fd-secondary" onclick="navigate('dashboard-financiero')">Volver al dashboard</button>
+      </div>
+    </div>
   </div>`;
+}
+
+/* ══ Captura del Estado de Resultados ══ */
+let fdErEgresosImportados = null;   /* { categoria: monto } del ultimo Excel leido */
+let fdErClasificacion = {};         /* { CATEGORIA: 'variable'|'fijo'|'financiero'|'excluido' } */
+
+function fdLeerER() {
+  return {
+    mes: fdReadMesControls('henry'),
+    ingresos: fdNumber('er-ingresos'),
+    costos_variables: fdNumber('er-costos-variables'),
+    costos_fijos: fdNumber('er-costos-fijos'),
+    gastos_financieros: fdNumber('er-gastos-financieros'),
+    pago_bancos: fdNumber('er-pago-bancos')
+  };
+}
+
+function fdActualizarPreviewER() {
+  const row = fdLeerER();
+  const er = fdCalcularER(row);
+  const body = document.getElementById('er-preview-body');
+  if (body) {
+    body.innerHTML =
+      `<tr class="fd-er-seccion"><td colspan="3">ESTADO DE RESULTADOS</td></tr>` +
+      fdFilaER('Ingresos', er.ingresos, 100) +
+      fdFilaER('Costos variables', er.costosVariables, er.pctVariables) +
+      fdFilaER('Utilidad bruta', er.utilidadBruta, er.margenBruto, 'fd-er-subtotal') +
+      fdFilaER('Costos fijos', er.costosFijos, er.pctFijos) +
+      fdFilaER('Resultado operativo', er.resultadoOperativo, er.margenOperativo, 'fd-er-subtotal') +
+      fdFilaER('Gastos financieros', er.gastosFinancieros, er.pctFinancieros) +
+      fdFilaER('Utilidad neta', er.utilidadNeta, er.margenNeto, 'fd-er-total') +
+      `<tr class="fd-er-seccion"><td colspan="3">FLUJO DE EFECTIVO</td></tr>` +
+      fdFilaER('Pago mensual a los bancos', er.pagoBancos, er.pctBancos) +
+      fdFilaER('Flujo de efectivo', er.flujoEfectivo, er.pctFlujo, 'fd-er-total');
+  }
+  const c = document.getElementById('er-preview-conclusion');
+  if (c) {
+    if (!er.ingresos) { c.textContent = ''; c.className = 'fd-er-conclusion'; return er; }
+    const utilidadYFlujoOpuestos = er.resultadoOperativo > 0 && er.flujoEfectivo < 0;
+    c.className = `fd-er-conclusion ${er.flujoEfectivo >= 0 ? 'ok' : 'alerta'}`;
+    c.textContent = utilidadYFlujoOpuestos
+      ? `Utilidad operativa de ${formatoDolar(er.resultadoOperativo)} pero flujo de efectivo de ${formatoDolar(er.flujoEfectivo)}: la cuota al banco se lleva mas de lo que produce la operacion.`
+      : `Resultado operativo ${formatoDolar(er.resultadoOperativo)} - flujo de efectivo ${formatoDolar(er.flujoEfectivo)}.`;
+  }
+  const btn = document.getElementById('er-guardar');
+  if (btn && !btn.disabled) btn.textContent = `Guardar Estado de Resultados de ${row.mes}`;
+  return er;
+}
+
+function fdRenderClasificador() {
+  const card = document.getElementById('er-clasificador-card');
+  const body = document.getElementById('er-clasificador-body');
+  if (!card || !body) return;
+  if (!fdErEgresosImportados) { card.style.display = 'none'; return; }
+  const cats = Object.keys(fdErEgresosImportados).filter(c => fdErEgresosImportados[c] > 0).sort();
+  if (!cats.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const opciones = [['variable', 'Costos variables'], ['fijo', 'Costos fijos'], ['financiero', 'Gastos financieros'], ['excluido', 'No es gasto (excluir)']];
+  body.innerHTML = cats.map(cat => {
+    const tipo = fdErClasificacion[cat] || 'fijo';
+    return `<tr>
+      <td>${fdEscapeXml(cat)}</td>
+      <td class="num"><strong>${formatoDolar(fdErEgresosImportados[cat])}</strong></td>
+      <td><select class="er-clas" data-cat="${fdEscapeXml(cat)}">${opciones.map(([v, t]) => `<option value="${v}" ${v === tipo ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+    </tr>`;
+  }).join('');
+}
+
+function fdAplicarClasificacion() {
+  if (!fdErEgresosImportados) return;
+  document.querySelectorAll('.er-clas').forEach(sel => { fdErClasificacion[sel.dataset.cat] = sel.value; });
+  const suma = tipo => Object.entries(fdErEgresosImportados)
+    .filter(([cat]) => (fdErClasificacion[cat] || 'fijo') === tipo)
+    .reduce((s, [, v]) => s + v, 0);
+  const poner = (id, valor) => {
+    const el = document.getElementById(id);
+    if (el) { el.value = valor.toFixed(2); el.dispatchEvent(new Event('input', { bubbles: true })); }
+  };
+  poner('er-costos-variables', suma('variable'));
+  poner('er-costos-fijos', suma('fijo'));
+  const excluido = suma('excluido');
+  const estado = document.getElementById('er-import-estado');
+  if (estado) {
+    estado.className = 'fd-import-estado ok';
+    estado.textContent = `Aplicado: variables ${formatoDolar(suma('variable'))}, fijos ${formatoDolar(suma('fijo'))}, financieros ${formatoDolar(suma('financiero'))}. Excluido del resultado: ${formatoDolar(excluido)} (traslados e inversion).`;
+  }
+}
+
+async function fdImportarEgresosExcel(archivo) {
+  const estado = document.getElementById('er-import-estado');
+  const mesTexto = fdReadMesControls('henry');
+  const poner = (txt, clase = '') => { if (estado) { estado.textContent = txt; estado.className = `fd-import-estado ${clase}`; } };
+  try {
+    poner('Leyendo el archivo...', 'cargando');
+    const mesArchivo = fdMesDesdeNombreArchivo(archivo?.name);
+    if (mesArchivo && mesArchivo !== mesTexto) {
+      poner(`El archivo parece de ${mesArchivo} y tienes seleccionado ${mesTexto}. Cambia el mes activo antes de importar.`, 'error');
+      return;
+    }
+    const XLSX = await fdCargarSheetJS();
+    const libro = XLSX.read(await archivo.arrayBuffer(), { type: 'array' });
+    const hoja = libro.Sheets['EGRESOS'];
+    if (!hoja) throw new Error('El archivo no tiene la hoja EGRESOS.');
+    const rango = XLSX.utils.decode_range(hoja['!ref'] || 'A1');
+    /* Bloque resumen: col E = 'GLOBAL', debajo categoria (col B) y total (col E). */
+    let ini = -1;
+    for (let r = rango.s.r; r <= Math.min(rango.e.r, 80); r++) {
+      if (fdCeldaTexto(hoja, XLSX, r, 4).trim().toUpperCase() === 'GLOBAL') { ini = r + 1; break; }
+    }
+    if (ini < 0) throw new Error('No se encontro el bloque de totales por categoria (columna GLOBAL).');
+    const egresos = {};
+    for (let r = ini; r <= Math.min(ini + 30, rango.e.r); r++) {
+      const cat = fdCeldaTexto(hoja, XLSX, r, 1).trim().toUpperCase();
+      if (!cat) continue;
+      if (cat.startsWith('TOTAL')) break;
+      egresos[cat] = Math.round(fdCeldaNumero(hoja, XLSX, r, 4) * 100) / 100;
+    }
+    if (!Object.keys(egresos).length) throw new Error('No se leyo ninguna categoria de egreso.');
+
+    fdErEgresosImportados = egresos;
+    const remota = await fdCargarClasificacionEgresos();
+    fdErClasificacion = { ...remota, ...fdErClasificacion };
+    fdRenderClasificador();
+    const total = Object.values(egresos).reduce((s, v) => s + v, 0);
+    poner(`${Object.keys(egresos).filter(c => egresos[c] > 0).length} categorias leidas de ${mesTexto} (${formatoDolar(total)} en egresos de efectivo). Revisa la clasificacion y pulsa "Aplicar".`, 'ok');
+  } catch (err) {
+    console.error(err);
+    poner(`No se pudo leer el archivo: ${err?.message || 'error desconocido'}`, 'error');
+  }
+}
+
+async function fdIngresosDesdeCaja() {
+  const mesTexto = fdReadMesControls('henry');
+  const estado = document.getElementById('er-import-estado');
+  try {
+    const { rows } = await fdCargarCajaDiaria(mesTexto);
+    const res = fdResumenCajaDiaria(rows);
+    if (!res.diasConDatos) {
+      if (estado) { estado.className = 'fd-import-estado error'; estado.textContent = `No hay caja diaria capturada para ${mesTexto}.`; }
+      return;
+    }
+    const el = document.getElementById('er-ingresos');
+    if (el) { el.value = res.ingresos.toFixed(2); el.dispatchEvent(new Event('input', { bubbles: true })); }
+    if (estado) {
+      estado.className = 'fd-import-estado ok';
+      estado.textContent = `Ingresos ${formatoDolar(res.ingresos)} tomados de ${res.diasConDatos} dia(s) de caja. Ojo: la caja registra COBROS, que pueden diferir de lo facturado.`;
+    }
+  } catch (err) {
+    console.error(err);
+    if (estado) { estado.className = 'fd-import-estado error'; estado.textContent = 'No se pudo leer la caja diaria.'; }
+  }
+}
+
+async function fdGuardarER() {
+  if (fdRolPropio === 'viewer') {
+    alert('Tu usuario es de solo lectura: el guardado esta reservado a los editores del equipo.');
+    return;
+  }
+  const row = fdLeerER();
+  if (FD_ER_LINEAS.some(k => row[k] < 0)) {
+    alert('Hay valores negativos. Las lineas se capturan en positivo; el portal aplica el signo.');
+    return;
+  }
+  if (row.ingresos <= 0) {
+    alert('Escribe los ingresos del mes antes de guardar.');
+    return;
+  }
+  const er = fdCalcularER(row);
+  if (er.resultadoOperativo < 0 && !confirm(`El resultado operativo de ${row.mes} sale negativo (${formatoDolar(er.resultadoOperativo)}). Guardar de todos modos?`)) return;
+
+  if (!fdSupabaseConfigurado()) {
+    const otros = fdGetLocalJson(FD_LOCAL_ER_KEY).filter(r => r.mes !== row.mes);
+    fdSetLocalJson(FD_LOCAL_ER_KEY, otros.concat([{ ...row, local_only: true, created_at: new Date().toISOString() }]));
+    alert(`Sin conexion a Supabase: el Estado de Resultados de ${row.mes} quedo guardado solo en este navegador.`);
+    return;
+  }
+  try {
+    await fdSupabaseUpsert('estado_resultados', { ...row, origen: 'manual', created_at: new Date().toISOString() }, 'mes');
+    fdSetLocalJson(FD_LOCAL_ER_KEY, fdGetLocalJson(FD_LOCAL_ER_KEY).filter(r => r.mes !== row.mes));
+    alert(`Estado de Resultados de ${row.mes} guardado.`);
+    navigate('dashboard-financiero');
+  } catch (err) {
+    console.error(err);
+    if (fdErrorDePermisos(err)) {
+      alert('Supabase rechazo el guardado por permisos. Si tu usuario es de solo lectura, pide a un editor del equipo que lo registre.');
+      return;
+    }
+    if (/estado_resultados/i.test(err?.message || '') && /does not exist|PGRST205|42P01/i.test(err?.message || '')) {
+      alert('La tabla estado_resultados todavia no existe en la base. Ejecutar supabase-estado-resultados.sql en Supabase.');
+      return;
+    }
+    const otros = fdGetLocalJson(FD_LOCAL_ER_KEY).filter(r => r.mes !== row.mes);
+    fdSetLocalJson(FD_LOCAL_ER_KEY, otros.concat([{ ...row, local_only: true, created_at: new Date().toISOString() }]));
+    alert(`No se pudo conectar con Supabase (${err?.message || 'error'}). El Estado de Resultados quedo guardado en este navegador.`);
+  }
+}
+
+async function fdCargarERenFormulario() {
+  const mesTexto = fdReadMesControls('henry');
+  try {
+    const { row } = await fdCargarER(mesTexto);
+    if (row) {
+      const poner = (id, v) => { const el = document.getElementById(id); if (el) el.value = parseFloat(v || 0).toFixed(2); };
+      poner('er-ingresos', row.ingresos);
+      poner('er-costos-variables', row.costos_variables);
+      poner('er-costos-fijos', row.costos_fijos);
+      poner('er-gastos-financieros', row.gastos_financieros);
+      poner('er-pago-bancos', row.pago_bancos);
+    }
+  } catch (err) {
+    console.error('No se pudo precargar el estado de resultados:', err);
+  }
+  fdActualizarPreviewER();
 }
 
 /* ══ Grilla de caja diaria ══ */
@@ -2132,14 +2585,14 @@ function fdPasarDiarioAMensual() {
 }
 
 function fdMostrarPanelHenry(cual) {
-  const diario = document.getElementById('henry-panel-diario');
-  const mensual = document.getElementById('henry-panel-mensual');
-  const tabD = document.getElementById('henry-tab-diario');
-  const tabM = document.getElementById('henry-tab-mensual');
-  if (diario) diario.style.display = cual === 'diario' ? '' : 'none';
-  if (mensual) mensual.style.display = cual === 'mensual' ? '' : 'none';
-  tabD?.classList.toggle('active', cual === 'diario');
-  tabM?.classList.toggle('active', cual === 'mensual');
+  [['diario', 'henry-panel-diario', 'henry-tab-diario'],
+   ['mensual', 'henry-panel-mensual', 'henry-tab-mensual'],
+   ['er', 'henry-panel-er', 'henry-tab-er']].forEach(([clave, panelId, tabId]) => {
+    const panel = document.getElementById(panelId);
+    const tab = document.getElementById(tabId);
+    if (panel) panel.style.display = cual === clave ? '' : 'none';
+    tab?.classList.toggle('active', cual === clave);
+  });
 }
 
 function fdNumber(id) {
@@ -2552,6 +3005,23 @@ function initFormularioHenry() {
   /* Pestanas */
   document.getElementById('henry-tab-diario')?.addEventListener('click', () => fdMostrarPanelHenry('diario'));
   document.getElementById('henry-tab-mensual')?.addEventListener('click', () => fdMostrarPanelHenry('mensual'));
+  document.getElementById('henry-tab-er')?.addEventListener('click', () => fdMostrarPanelHenry('er'));
+
+  /* Estado de Resultados */
+  FD_ER_LINEAS.forEach(k => {
+    const id = 'er-' + k.replace(/_/g, '-');
+    document.getElementById(id)?.addEventListener('input', fdActualizarPreviewER);
+  });
+  document.getElementById('er-guardar')?.addEventListener('click', fdGuardarER);
+  document.getElementById('er-btn-desde-caja')?.addEventListener('click', fdIngresosDesdeCaja);
+  document.getElementById('er-aplicar-clasificacion')?.addEventListener('click', fdAplicarClasificacion);
+  const erFile = document.getElementById('er-file-excel');
+  document.getElementById('er-btn-import')?.addEventListener('click', () => erFile?.click());
+  erFile?.addEventListener('change', ev => {
+    const archivo = ev.target.files?.[0];
+    if (archivo) fdImportarEgresosExcel(archivo);
+    ev.target.value = '';
+  });
 
   /* Caja diaria: recalculo en vivo, guardado, importador y puente al cierre */
   document.getElementById('cd-body')?.addEventListener('input', ev => {
@@ -2571,8 +3041,12 @@ function initFormularioHenry() {
     ev.target.value = '';
   });
 
+  document.getElementById('henry-mes')?.addEventListener('change', fdCargarERenFormulario);
+  document.getElementById('henry-anio')?.addEventListener('change', fdCargarERenFormulario);
+
   fdUpdateHenryPreview();
   cargarMesAnterior();
   cargarDiario();
+  fdCargarERenFormulario();
 }
 
