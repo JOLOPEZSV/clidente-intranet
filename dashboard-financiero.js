@@ -521,17 +521,20 @@ function fdAgruparDentistas(rows, mesesRegistrados) {
   const map = new Map();
   (Array.isArray(rows) ? rows : []).forEach(row => {
     const nombre = row.nombre || 'Sin nombre';
-    const actual = map.get(nombre) || { nombre, facturacion: 0, meta: FD_META_DENTISTA * mesesRegistrados, estado: 'critico' };
+    const actual = map.get(nombre) || { nombre, facturacion: 0, meta: FD_META_DENTISTA * mesesRegistrados, estado: 'critico', comparable: false };
     actual.facturacion += parseFloat(row.facturacion || 0);
+    /* En el acumulado cuenta quien ocupo una silla en AL MENOS un mes del
+       periodo: su produccion acumulada si sale de trabajo en silla. */
+    if (row.comparable !== false) actual.comparable = true;
     map.set(nombre, actual);
   });
   const grouped = [...map.values()];
   FD_DENTISTAS_NOMBRES.forEach(nombre => {
-    if (!map.has(nombre)) grouped.push({ nombre, facturacion: 0, meta: FD_META_DENTISTA * mesesRegistrados, estado: 'critico' });
+    if (!map.has(nombre)) grouped.push({ nombre, facturacion: 0, meta: FD_META_DENTISTA * mesesRegistrados, estado: 'critico', comparable: true });
   });
   return grouped.map(row => {
     const estado = fdEstadoDentista(row.facturacion, FD_META_DENTISTA * mesesRegistrados, FD_PISO_RENTABILIDAD * mesesRegistrados);
-    return { ...row, estado: estado.key, meta: FD_META_DENTISTA * mesesRegistrados };
+    return { ...row, estado: estado.key, meta: FD_META_DENTISTA * mesesRegistrados, comparable: row.comparable !== false };
   });
 }
 
@@ -1405,7 +1408,7 @@ function renderDashboardFinanciero() {
         <div class="card-title"><i class="fas fa-chair" style="margin-right:.5rem"></i>Analisis por silla</div>
         <div class="fd-metric-row"><span>Costo fijo por silla<em id="fd-silla-costo-nota" class="fd-metric-nota"></em></span><strong id="fd-silla-costo">&mdash;</strong></div>
         <div class="fd-metric-row"><span>Piso de rentabilidad<em id="fd-silla-piso-nota" class="fd-metric-nota"></em></span><strong id="fd-silla-piso">&mdash;</strong></div>
-        <div class="fd-metric-row"><span>Media aritmetica del grupo</span><strong id="fd-silla-media">$0/mes</strong></div>
+        <div class="fd-metric-row"><span>Media aritmetica del grupo<em id="fd-silla-grupo" class="fd-metric-nota"></em></span><strong id="fd-silla-media">$0/mes</strong></div>
         <div class="fd-metric-row"><span>Meta Cero</span><strong id="fd-silla-meta">&mdash;</strong></div>
         <div class="fd-metric-row danger"><span id="fd-silla-neg-label">Sillas bajo piso</span><strong id="fd-silla-neg-valor">$0.00</strong></div>
         <p id="fd-silla-neg-nota" class="fd-note" style="margin-top:.4rem"></p>
@@ -1571,6 +1574,18 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
           celdaTend = `<span class="fd-trend ${clase}">${flecha} ${diff > 0 ? '+' : '-'}${formatoDolar(Math.abs(diff))}${pct}</span>`;
         }
       }
+      /* Fuera de la comparativa de sillas (laboratorio, especialista, quien ya
+         no esta): su facturacion es ingreso real y se muestra, pero sin
+         semaforo, para que no se lea como una silla en rojo. */
+      if (d.comparable === false) {
+        return `<tr class="fd-fila-no-comparable">
+          <td>${d.nombre}</td>
+          <td><strong>${formatoDolar(valor)}</strong></td>
+          <td>${celdaTend}</td>
+          <td><div class="fd-mini-track"><div class="fd-mini-fill neutro" style="width:${width}%"></div></div></td>
+          <td><span class="fd-status neutro">Fuera de comparativa</span></td>
+        </tr>`;
+      }
       return `<tr>
         <td>${d.nombre}</td>
         <td><strong>${formatoDolar(valor)}</strong></td>
@@ -1581,8 +1596,13 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
     }).join('');
   }
 
-  const promedioDentista = dentistasOrdenados.length ? dentistasOrdenados.reduce((sum, d) => sum + parseFloat(d.facturacion || 0), 0) / dentistasOrdenados.length : 0;
-  const negativos = dentistasOrdenados.filter(d => parseFloat(d.facturacion || 0) < pisoDentista);
+  /* El analisis de silla compara SOLO a quienes ocupan una silla como
+     odontologo general ese mes (laboratorio, especialistas y quienes ya no
+     estan quedan fuera). El ingreso no se toca: ese dinero se cobro igual. */
+  const comparables = dentistasOrdenados.filter(d => d.comparable !== false);
+  const baseComparacion = comparables.length ? comparables : dentistasOrdenados;
+  const promedioDentista = baseComparacion.length ? baseComparacion.reduce((sum, d) => sum + parseFloat(d.facturacion || 0), 0) / baseComparacion.length : 0;
+  const negativos = baseComparacion.filter(d => parseFloat(d.facturacion || 0) < pisoDentista);
   /* La brecha se expresa en dinero de la CLINICA: lo que falta de produccion
      por el 75% que la clinica retiene. Es el criterio del informe. */
   const brechaProduccion = negativos.reduce((sum, d) => sum + Math.max(pisoDentista - parseFloat(d.facturacion || 0), 0), 0);
@@ -1594,6 +1614,9 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   fdSetText('fd-silla-piso-nota', `${formatoDolar(FD_COSTO_POR_SILLA)} entre ${fdPorcentaje(FD_RETENCION_CLINICA * 100)} de retencion`);
   fdSetText('fd-silla-media', isAcumulado ? `${formatoDolar(promedioDentista)} acumulado` : `${formatoDolar(promedioDentista)}/mes`);
   fdSetText('fd-silla-meta', isAcumulado ? `${formatoDolar(metaDentista)} acumulado` : `${formatoDolar(FD_META_DENTISTA)}/mes`);
+  fdSetText('fd-silla-grupo', comparables.length && comparables.length !== dentistasOrdenados.length
+    ? `${comparables.length} comparables de ${dentistasOrdenados.length} registrados`
+    : `${baseComparacion.length} profesional(es)`);
   fdSetText('fd-silla-neg-label', `${negativos.length} silla(s) bajo piso`);
   fdSetText('fd-silla-neg-valor', brechaPiso ? '-' + formatoDolar(brechaPiso) : formatoDolar(0));
   fdSetText('fd-silla-neg-nota', brechaPiso ? `${formatoDolar(brechaProduccion)} de produccion faltante, al ${fdPorcentaje(FD_RETENCION_CLINICA * 100)} que retiene la clinica` : '');
@@ -1633,7 +1656,7 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
     bar.classList.toggle('danger', pacientes < metaPacientes);
   }
 
-  const bajoMeta = dentistasOrdenados.filter(d => parseFloat(d.facturacion || 0) < metaDentista);
+  const bajoMeta = baseComparacion.filter(d => parseFloat(d.facturacion || 0) < metaDentista);
   const brechaMeta = bajoMeta.reduce((sum, d) => sum + Math.max(metaDentista - parseFloat(d.facturacion || 0), 0), 0);
   const nombresNegativos = negativos.slice(0, 4).map(d => d.nombre.replace(/^Dr\.\s+|^Dra\.\s+/, '')).join(', ');
   const alertas = document.getElementById('fd-alertas');

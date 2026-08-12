@@ -249,6 +249,12 @@
 .fd-btn-informe:disabled { opacity:.6; cursor:progress; }
 @media(max-width:860px) { .fd-hero-acciones { width:100%; } }
 
+/* Profesional fuera de la comparativa de sillas (laboratorio, especialista,
+   inactivo): su facturacion es real, pero no compite por una silla. */
+.fd-fila-no-comparable td { opacity:.62; }
+.fd-status.neutro { background:#e2e8f0; color:#475569; }
+.fd-mini-fill.neutro { background:#94a3b8; }
+
 /* Nota bajo la etiqueta de una fila de metrica (de donde sale el numero) */
 .fd-metric-nota { display:block; font-style:normal; font-size:.7rem; font-weight:600; color:var(--text-muted); margin-top:.15rem; }
 .fd-metric-nota:empty { display:none; }
