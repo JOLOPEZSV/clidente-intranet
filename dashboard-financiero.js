@@ -632,6 +632,14 @@ async function fdCargarSerieAnual(anio) {
   return fdFiltrarMensualesAnio(rows, anio, 12);
 }
 
+/* Zona de clic que cubre la columna entera de un mes en los graficos anuales.
+   Transparente pero con fill (un fill:none no recibe eventos). */
+function fdSvgZonaMes(mes, x0, yTop, ancho, alto, titulo) {
+  return `<g class="fd-drill-zona" data-fd-drill="mes" data-fd-mes="${fdEscapeXml(mes)}" tabindex="0" role="button" aria-label="${fdEscapeXml(`Ver el detalle de ${mes}`)}">
+    <rect x="${x0.toFixed(1)}" y="${yTop.toFixed(1)}" width="${ancho.toFixed(1)}" height="${alto.toFixed(1)}" fill="#0f2340" opacity="0"><title>${fdEscapeXml(titulo)}</title></rect>
+  </g>`;
+}
+
 function fdSvgFacturacionVsPE(rows) {
   const W = 760, H = 250, L = 58, R = 12, T = 26, B = 32;
   const plotW = W - L - R, plotH = H - T - B;
@@ -672,11 +680,14 @@ function fdSvgFacturacionVsPE(rows) {
     const yRect = Math.min(y(fact), baseY - hBar);
     const peFueraEscala = pe.valido && pe.usd > yMax;
     const detalle = `${row.mes}: facturacion ${formatoDolar(fact)}${pe.valido ? ' | PE real ' + formatoDolar(pe.usd) + (sobre ? ' (sobre equilibrio)' : ' (bajo equilibrio)') + (peFueraEscala ? ' - fuera de escala' : '') : (margenNegativo ? ' | costos variables superan la facturacion: sin punto de equilibrio alcanzable' : '')}`;
-    out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${yRect.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" rx="3" fill="${color}"><title>${fdEscapeXml(detalle)}</title></rect>`;
+    /* Toda la columna es zona de clic, no solo la barra: apuntarle a una barra
+       de 34px de ancho en un telefono es una miseria. */
+    out += fdSvgZonaMes(row.mes, x0, T, slotW, plotH, `${detalle} - clic para ver el mes`);
+    out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${yRect.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" rx="3" fill="${color}" pointer-events="none"/>`;
     if (pe.valido && !peFueraEscala) {
-      out += `<line x1="${(x0 + slotW * 0.08).toFixed(1)}" y1="${y(pe.usd).toFixed(1)}" x2="${(x0 + slotW * 0.92).toFixed(1)}" y2="${y(pe.usd).toFixed(1)}" stroke="#b45309" stroke-width="2" stroke-dasharray="5 3"><title>${fdEscapeXml(`Punto de equilibrio real ${row.mes}: ${formatoDolar(pe.usd)}`)}</title></line>`;
+      out += `<line x1="${(x0 + slotW * 0.08).toFixed(1)}" y1="${y(pe.usd).toFixed(1)}" x2="${(x0 + slotW * 0.92).toFixed(1)}" y2="${y(pe.usd).toFixed(1)}" stroke="#b45309" stroke-width="2" stroke-dasharray="5 3" pointer-events="none"/>`;
     }
-    out += `<text x="${cx}" y="${(yRect - 6).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155" stroke="#ffffff" stroke-width="3" style="paint-order:stroke">${fdDolarCorto(fact)}</text>`;
+    out += `<text x="${cx}" y="${(yRect - 6).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155" stroke="#ffffff" stroke-width="3" style="paint-order:stroke" pointer-events="none">${fdDolarCorto(fact)}</text>`;
   }
   out += '</svg>';
   return out;
@@ -727,9 +738,10 @@ function fdSvgFlujoMensual(rows) {
     /* El stub minimo de 2px queda anclado en la linea cero, sin cruzarla. */
     const yTop = positivo ? Math.min(y(f), y(0) - hBar) : y(0);
     const color = f === 0 ? '#94a3b8' : (positivo ? '#16a34a' : '#dc2626');
-    out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" rx="3" fill="${color}"><title>${fdEscapeXml(`${row.mes}: resultado operativo ${formatoDolar(f)}`)}</title></rect>`;
+    out += fdSvgZonaMes(row.mes, x0, T, slotW, plotH, `${row.mes}: resultado operativo ${formatoDolar(f)} - clic para ver el mes`);
+    out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" rx="3" fill="${color}" pointer-events="none"/>`;
     const yLabel = positivo ? yTop - 6 : y(f) + 14;
-    out += `<text x="${cx}" y="${yLabel.toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155" stroke="#ffffff" stroke-width="3" style="paint-order:stroke">${fdDolarCorto(f)}</text>`;
+    out += `<text x="${cx}" y="${yLabel.toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155" stroke="#ffffff" stroke-width="3" style="paint-order:stroke" pointer-events="none">${fdDolarCorto(f)}</text>`;
   }
   out += '</svg>';
   return out;
@@ -804,6 +816,263 @@ async function fdCargarClasificacionEgresos() {
     console.error('No se pudo cargar la clasificacion de egresos:', err);
     return {};
   }
+}
+
+async function fdCargarEgresosCategoria(mesTexto) {
+  if (!fdSupabaseConfigurado()) return [];
+  try {
+    const rows = await fdSupabaseGetRows(
+      `egresos_categoria?select=categoria,monto,orden&mes=eq.${encodeURIComponent(mesTexto)}&order=monto.desc`);
+    return Array.isArray(rows) ? rows : [];
+  } catch (err) {
+    /* La tabla puede no existir todavia (SQL sin correr): eso no es un error
+       que deba romper el dashboard, solo significa que no hay drill-down. */
+    console.error('No se pudieron cargar los egresos por categoria:', err);
+    return [];
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DRILL-DOWN
+   Cuatro niveles, todos sobre datos que ya estan en la base:
+     barra de mes  -> el dashboard entero salta a ese mes
+     fila dentista -> su evolucion en el anio
+     punto del dia -> el detalle de ese dia
+     "Costos"      -> las 20 categorias de egreso del mes
+   El panel es uno solo y se reutiliza; navegar por mes NO abre panel, porque
+   ahi el detalle ya es la vista mensual completa que el portal sabe dibujar.
+   ══════════════════════════════════════════════════════════════════════ */
+function fdDrillCerrar() {
+  const ov = document.getElementById('fd-drill-overlay');
+  if (ov) ov.remove();
+  document.removeEventListener('keydown', fdDrillEsc);
+}
+
+function fdDrillEsc(ev) {
+  if (ev.key === 'Escape') fdDrillCerrar();
+}
+
+function fdDrillAbrir(titulo, subtitulo, html) {
+  fdDrillCerrar();
+  const ov = document.createElement('div');
+  ov.id = 'fd-drill-overlay';
+  ov.className = 'fd-drill-overlay';
+  ov.innerHTML = `<div class="fd-drill-panel" role="dialog" aria-modal="true" aria-label="${fdEscapeXml(titulo)}">
+    <div class="fd-drill-head">
+      <div>
+        <h3>${fdEscapeXml(titulo)}</h3>
+        ${subtitulo ? `<p>${fdEscapeXml(subtitulo)}</p>` : ''}
+      </div>
+      <button type="button" class="fd-drill-close" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="fd-drill-body">${html}</div>
+  </div>`;
+  ov.addEventListener('click', ev => { if (ev.target === ov) fdDrillCerrar(); });
+  ov.querySelector('.fd-drill-close').addEventListener('click', fdDrillCerrar);
+  document.body.appendChild(ov);
+  document.addEventListener('keydown', fdDrillEsc);
+  ov.querySelector('.fd-drill-close').focus();
+}
+
+function fdDrillCargando(titulo) {
+  fdDrillAbrir(titulo, '', '<p class="fd-note">Cargando detalle...</p>');
+}
+
+function fdDrillBody(html) {
+  const body = document.querySelector('#fd-drill-overlay .fd-drill-body');
+  if (body) body.innerHTML = html;
+}
+
+function fdDrillSub(texto) {
+  const p = document.querySelector('#fd-drill-overlay .fd-drill-head p');
+  const cont = document.querySelector('#fd-drill-overlay .fd-drill-head > div');
+  if (p) p.textContent = texto;
+  else if (cont) cont.insertAdjacentHTML('beforeend', `<p>${fdEscapeXml(texto)}</p>`);
+}
+
+/* Navegar a un mes = mover el selector y dejar que cargarVista haga el resto.
+   No se duplica logica de carga. */
+function fdDrillIrAMes(mesTexto) {
+  const parsed = fdParseMesActivo(mesTexto);
+  const selMes = document.getElementById('fd-dashboard-mes');
+  const selAnio = document.getElementById('fd-dashboard-anio');
+  if (!selMes) return;
+  if (selAnio && String(parsed.anio) !== selAnio.value &&
+      [...selAnio.options].some(o => o.value === String(parsed.anio))) {
+    selAnio.value = String(parsed.anio);
+  }
+  selMes.value = parsed.mes;
+  selMes.dispatchEvent(new Event('change', { bubbles: true }));
+  document.getElementById('dashboard-financiero-root')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* Barras horizontales simples, en HTML. Sirven para las tres vistas de detalle
+   sin arrastrar otro generador de SVG. */
+function fdDrillBarras(items, opciones = {}) {
+  const max = Math.max(...items.map(i => Math.abs(i.valor)), 1);
+  const filas = items.map(i => {
+    const w = Math.max((Math.abs(i.valor) / max) * 100, i.valor ? 1.5 : 0);
+    return `<tr${i.tenue ? ' class="fd-drill-tenue"' : ''}>
+      <td>${fdEscapeXml(i.etiqueta)}${i.nota ? ` <em class="fd-drill-nota">${fdEscapeXml(i.nota)}</em>` : ''}</td>
+      <td class="num"><strong>${formatoDolar(i.valor)}</strong></td>
+      ${opciones.pct ? `<td class="num">${fdPorcentaje(i.pct || 0)}</td>` : ''}
+      <td class="fd-drill-barra"><div class="fd-mini-track"><div class="fd-mini-fill ${i.css || 'neutro'}" style="width:${w.toFixed(1)}%"></div></div></td>
+    </tr>`;
+  }).join('');
+  return `<table class="fd-table fd-drill-tabla">
+    <thead><tr><th>${opciones.col1 || 'Concepto'}</th><th class="num">${opciones.col2 || 'Monto'}</th>${opciones.pct ? '<th class="num">%</th>' : ''}<th></th></tr></thead>
+    <tbody>${filas}</tbody></table>`;
+}
+
+async function fdDrillDentista(nombre) {
+  const anio = fdParseMesActivo(fdMesActivoSeleccionado).anio;
+  fdDrillCargando(nombre);
+  let filas = [];
+  try {
+    const rows = await fdSupabaseGetRows(
+      `produccion_dentistas?select=mes,facturacion,meta,estado,comparable&nombre=eq.${encodeURIComponent(nombre)}`);
+    filas = (Array.isArray(rows) ? rows : [])
+      .filter(r => fdParseMesActivo(r.mes).anio === anio)
+      .sort((a, b) => fdMesIndice(a.mes) - fdMesIndice(b.mes));
+  } catch (err) {
+    console.error('No se pudo cargar la serie del dentista:', err);
+  }
+  if (!document.getElementById('fd-drill-overlay')) return;
+  if (!filas.length) {
+    fdDrillBody(`<p class="fd-note">No hay meses registrados para ${fdEscapeXml(nombre)} en ${anio}.</p>`);
+    return;
+  }
+  const piso = FD_COSTOS_FIJOS_MES / FD_SILLAS_OPERATIVAS / FD_RETENCION_CLINICA;
+  const meta = parseFloat(filas[0].meta || 0) || 2500;
+  const activos = filas.filter(f => parseFloat(f.facturacion || 0) > 0);
+  const total = filas.reduce((s, f) => s + parseFloat(f.facturacion || 0), 0);
+  const prom = activos.length ? total / activos.length : 0;
+  const items = filas.map(f => {
+    const v = parseFloat(f.facturacion || 0);
+    const fuera = f.comparable === false;
+    return {
+      etiqueta: fdParseMesActivo(f.mes).mes,
+      valor: v,
+      nota: fuera ? 'fuera de comparativa' : (v < piso ? 'bajo el piso' : ''),
+      tenue: fuera,
+      css: fuera ? 'neutro' : fdEstadoDentista(v, meta, piso).css
+    };
+  });
+  const bajoPiso = items.filter(i => !i.tenue && i.valor < piso).length;
+  const resumen = bajoPiso
+    ? `${bajoPiso} de ${items.filter(i => !i.tenue).length} meses comparables por debajo del piso de ${formatoDolar(piso)}.`
+    : `Ningun mes comparable cayo bajo el piso de ${formatoDolar(piso)}.`;
+  fdDrillSub(`${anio} · promedio ${formatoDolar(prom)}/mes en ${activos.length} meses con produccion`);
+  fdDrillBody(
+    fdDrillBarras(items, { col1: 'Mes', col2: 'Produccion' }) +
+    `<p class="fd-note">Meta Cero ${formatoDolar(meta)} · piso de rentabilidad ${formatoDolar(piso)} (${formatoDolar(FD_COSTOS_FIJOS_MES)} entre ${FD_SILLAS_OPERATIVAS} sillas, sobre ${fdPorcentaje(FD_RETENCION_CLINICA * 100)} de retencion). ${resumen}</p>`);
+}
+
+async function fdDrillDia(fechaISO) {
+  const mesTexto = fdMesActivoSeleccionado;
+  fdDrillCargando(`${fechaISO} (${fdDiaSemana(fechaISO)})`);
+  let res = null;
+  try {
+    const data = await fdCargarCajaDiaria(mesTexto);
+    res = fdResumenCajaDiaria(data.rows.filter(r =>
+      parseFloat(r.ingreso || 0) || parseFloat(r.egreso || 0) || parseFloat(r.pago_banco || 0)));
+  } catch (err) {
+    console.error('No se pudo cargar el detalle del dia:', err);
+  }
+  if (!document.getElementById('fd-drill-overlay')) return;
+  const dia = res?.detalle.find(r => String(r.fecha) === String(fechaISO));
+  if (!dia) {
+    fdDrillBody('<p class="fd-note">No hay movimiento registrado ese dia.</p>');
+    return;
+  }
+  const conIngreso = res.detalle.filter(r => r.ingreso > 0);
+  const promDia = conIngreso.length ? conIngreso.reduce((s, r) => s + r.ingreso, 0) / conIngreso.length : 0;
+  const mejores = conIngreso.slice().sort((a, b) => b.ingreso - a.ingreso);
+  const puesto = mejores.findIndex(r => r.fecha === dia.fecha) + 1;
+  const vsProm = promDia ? ((dia.ingreso - promDia) / promDia) * 100 : 0;
+  const items = [
+    { etiqueta: 'Ingreso del dia', valor: dia.ingreso, css: 'ok' },
+    { etiqueta: 'Egreso en efectivo', valor: dia.egreso, css: 'no' },
+    { etiqueta: 'Pago al banco', valor: dia.pago_banco, css: 'warn' }
+  ];
+  fdDrillSub(`${mesTexto} · ${dia.pacientes || 0} pacientes`);
+  fdDrillBody(
+    fdDrillBarras(items, { col1: 'Movimiento', col2: 'Monto' }) +
+    `<div class="fd-drill-cifras">
+       <div><span>Neto del dia</span><strong class="${dia.neto >= 0 ? 'fd-positive' : 'fd-negative'}">${formatoDolar(dia.neto)}</strong></div>
+       <div><span>Acumulado del mes hasta hoy</span><strong class="${dia.saldo >= 0 ? 'fd-positive' : 'fd-negative'}">${formatoDolar(dia.saldo)}</strong></div>
+       <div><span>Ticket del dia</span><strong>${dia.pacientes ? formatoDolar(dia.ingreso / dia.pacientes) : '&mdash;'}</strong></div>
+     </div>
+     <p class="fd-note">Puesto ${puesto} de ${conIngreso.length} dias con ingreso del mes; ${vsProm >= 0 ? 'arriba' : 'abajo'} del promedio diario (${formatoDolar(promDia)}) por ${fdPorcentaje(Math.abs(vsProm))}. El acumulado arranca en cero cada mes: es flujo del periodo, no saldo bancario.</p>`);
+}
+
+async function fdDrillCostos(mesTexto) {
+  fdDrillCargando(`Egresos en efectivo &mdash; ${mesTexto}`);
+  const [cats, clasif] = await Promise.all([
+    fdCargarEgresosCategoria(mesTexto),
+    fdCargarClasificacionEgresos()
+  ]);
+  if (!document.getElementById('fd-drill-overlay')) return;
+  if (!cats.length) {
+    fdDrillBody(`<p class="fd-note">Todavia no hay egresos por categoria cargados para ${fdEscapeXml(mesTexto)}. Se cargan con <code>supabase-egresos-categoria.sql</code>.</p>`);
+    return;
+  }
+  const CSS = { variable: 'warn', fijo: 'no', financiero: 'neutro', excluido: 'neutro' };
+  const ETIQ = { variable: 'variable', fijo: 'fijo', financiero: 'financiero', excluido: 'excluido - no es gasto' };
+  const conMonto = cats.filter(c => parseFloat(c.monto || 0) > 0);
+  const total = conMonto.reduce((s, c) => s + parseFloat(c.monto || 0), 0);
+  const items = conMonto.map(c => {
+    const tipo = clasif[String(c.categoria).toUpperCase()] || 'fijo';
+    return {
+      etiqueta: c.categoria,
+      valor: parseFloat(c.monto || 0),
+      pct: total ? (parseFloat(c.monto || 0) / total) * 100 : 0,
+      nota: ETIQ[tipo] || tipo,
+      tenue: tipo === 'excluido',
+      css: CSS[tipo] || 'neutro'
+    };
+  });
+  const porTipo = {};
+  items.forEach(i => {
+    const t = clasif[i.etiqueta.toUpperCase()] || 'fijo';
+    porTipo[t] = (porTipo[t] || 0) + i.valor;
+  });
+  const excluido = porTipo.excluido || 0;
+  const resumenTipos = Object.entries(porTipo)
+    .sort((a, b) => b[1] - a[1])
+    .map(([t, v]) => `${ETIQ[t] || t}: ${formatoDolar(v)}`)
+    .join(' · ');
+  fdDrillSub(`${conMonto.length} categorias con movimiento · total ${formatoDolar(total)}`);
+  fdDrillBody(
+    fdDrillBarras(items, { col1: 'Categoria', col2: 'Egreso', pct: true }) +
+    `<p class="fd-note">${resumenTipos}.</p>
+     <p class="fd-note"><strong>Esto es salida de efectivo, no el costo del Estado de Resultados.</strong>${excluido > 0 ? ` De este total, ${formatoDolar(excluido)} son traslados o inversion de capital y no son gasto del periodo.` : ''} Por eso este total y la linea de costos del ER no tienen por que coincidir.</p>`);
+}
+
+/* Un solo listener para todo el dashboard: los SVG se redibujan enteros en
+   cada carga, asi que enganchar handlers por elemento los perderia. */
+function fdDrillInit() {
+  const root = document.getElementById('dashboard-financiero-root');
+  if (!root || root.dataset.drillListo === '1') return;
+  root.dataset.drillListo = '1';
+  root.addEventListener('click', ev => {
+    const objetivo = ev.target.closest('[data-fd-drill]');
+    if (!objetivo) return;
+    const tipo = objetivo.getAttribute('data-fd-drill');
+    if (tipo === 'mes') fdDrillIrAMes(objetivo.getAttribute('data-fd-mes'));
+    else if (tipo === 'dentista') fdDrillDentista(objetivo.getAttribute('data-fd-nombre'));
+    else if (tipo === 'dia') fdDrillDia(objetivo.getAttribute('data-fd-fecha'));
+    else if (tipo === 'costos') fdDrillCostos(objetivo.getAttribute('data-fd-mes') || fdMesActivoSeleccionado);
+  });
+  /* Teclado: las filas y los grupos SVG llevan tabindex, asi que Enter/Espacio
+     deben hacer lo mismo que el clic. */
+  root.addEventListener('keydown', ev => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const objetivo = ev.target.closest?.('[data-fd-drill]');
+    if (!objetivo) return;
+    ev.preventDefault();
+    objetivo.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1078,12 +1347,18 @@ function fdSvgCajaDiaria(detalle, mesTexto) {
   detalle.forEach((r, i) => {
     const dia = parseInt(String(r.fecha).slice(-2), 10);
     const cx = x(i), cy = y(r.saldo);
+    const titulo = r.pago_banco > 0
+      ? `${r.fecha}: pago al banco ${formatoDolar(r.pago_banco)} - saldo ${formatoDolar(r.saldo)}`
+      : `${r.fecha} (${fdDiaSemana(r.fecha)}): ingreso ${formatoDolar(r.ingreso)}, egreso ${formatoDolar(r.egreso)} - saldo ${formatoDolar(r.saldo)}`;
     if (r.pago_banco > 0) {
-      out += `<line x1="${cx.toFixed(1)}" y1="${T}" x2="${cx.toFixed(1)}" y2="${(T + plotH).toFixed(1)}" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4 3" opacity=".85"/>`;
-      out += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="#b45309" stroke="#fff" stroke-width="2"><title>${fdEscapeXml(`${r.fecha}: pago al banco ${formatoDolar(r.pago_banco)} - saldo ${formatoDolar(r.saldo)}`)}</title></circle>`;
-    } else {
-      out += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3" fill="${r.saldo < 0 ? '#dc2626' : '#0f2340'}"><title>${fdEscapeXml(`${r.fecha} (${fdDiaSemana(r.fecha)}): ingreso ${formatoDolar(r.ingreso)}, egreso ${formatoDolar(r.egreso)} - saldo ${formatoDolar(r.saldo)}`)}</title></circle>`;
+      out += `<line x1="${cx.toFixed(1)}" y1="${T}" x2="${cx.toFixed(1)}" y2="${(T + plotH).toFixed(1)}" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4 3" opacity=".85" pointer-events="none"/>`;
     }
+    /* El circulo visible es pequenio; el aro transparente de 11px es el que
+       recibe el clic, para que el dia se pueda tocar con el dedo. */
+    out += `<g class="fd-drill-zona" data-fd-drill="dia" data-fd-fecha="${fdEscapeXml(String(r.fecha))}" tabindex="0" role="button" aria-label="${fdEscapeXml(`Ver el detalle del ${r.fecha}`)}">
+      <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="11" fill="#0f2340" opacity="0"><title>${fdEscapeXml(titulo + ' - clic para el detalle')}</title></circle>
+      <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.pago_banco > 0 ? 5 : 3}" fill="${r.pago_banco > 0 ? '#b45309' : (r.saldo < 0 ? '#dc2626' : '#0f2340')}"${r.pago_banco > 0 ? ' stroke="#fff" stroke-width="2"' : ''} pointer-events="none"/>
+    </g>`;
     if (dia === 1 || dia % 5 === 0) {
       out += `<text x="${cx.toFixed(1)}" y="${(H - 14).toFixed(1)}" text-anchor="middle" font-size="10" fill="#64748b">${dia}</text>`;
     }
@@ -1095,13 +1370,13 @@ function fdSvgCajaDiaria(detalle, mesTexto) {
 
 /* Cascada del flujo de efectivo: ingresos -> costos -> pago a bancos -> flujo,
    igual que el grafico de la presentacion. */
-function fdSvgCascadaFlujo(er) {
+function fdSvgCascadaFlujo(er, mesTexto = '') {
   const W = 720, H = 250, L = 12, R = 12, T = 30, B = 44;
   const plotW = W - L - R, plotH = H - T - B;
   const costos = er.costosVariables + er.costosFijos;
   const pasos = [
     { etiqueta: 'Ingresos', valor: er.ingresos, base: 0, color: '#1d4ed8' },
-    { etiqueta: 'Costos', valor: costos, base: er.ingresos - costos, color: '#b45309' },
+    { etiqueta: 'Costos', valor: costos, base: er.ingresos - costos, color: '#b45309', drill: 'costos' },
     { etiqueta: 'Pago a bancos', valor: er.pagoBancos, base: er.ingresos - costos - er.pagoBancos, color: '#b45309' },
     { etiqueta: 'Flujo de efectivo', valor: Math.abs(er.flujoEfectivo), base: Math.min(er.flujoEfectivo, 0), color: er.flujoEfectivo >= 0 ? '#16a34a' : '#dc2626' }
   ];
@@ -1117,11 +1392,17 @@ function fdSvgCascadaFlujo(er) {
     const cx = L + slot * i + slot / 2;
     const yTop = y(p.base + p.valor);
     const alto = Math.max(Math.abs(y(p.base) - y(p.base + p.valor)), 2);
-    out += `<rect x="${(cx - ancho / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${ancho.toFixed(1)}" height="${alto.toFixed(1)}" rx="3" fill="${p.color}"><title>${fdEscapeXml(`${p.etiqueta}: ${formatoDolar(p.valor)}`)}</title></rect>`;
+    const clicable = p.drill && mesTexto;
+    const tituloBarra = `${p.etiqueta}: ${formatoDolar(p.valor)}${clicable ? ' - clic para ver en que se fue' : ''}`;
+    if (clicable) {
+      out += `<g class="fd-drill-zona" data-fd-drill="${p.drill}" data-fd-mes="${fdEscapeXml(mesTexto)}" tabindex="0" role="button" aria-label="${fdEscapeXml(`Ver el desglose de costos de ${mesTexto}`)}">`;
+    }
+    out += `<rect x="${(cx - ancho / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${ancho.toFixed(1)}" height="${alto.toFixed(1)}" rx="3" fill="${p.color}"><title>${fdEscapeXml(tituloBarra)}</title></rect>`;
+    if (clicable) out += '</g>';
     const dentro = alto > 26;
     const etiquetaY = dentro ? yTop + alto / 2 + 4 : yTop - 7;
-    out += `<text x="${cx.toFixed(1)}" y="${etiquetaY.toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="800" fill="${dentro ? '#ffffff' : '#334155'}"${dentro ? '' : ' stroke="#ffffff" stroke-width="3" style="paint-order:stroke"'}>${fdDolarCorto(p.etiqueta === 'Flujo de efectivo' ? er.flujoEfectivo : p.valor)}</text>`;
-    out += `<text x="${cx.toFixed(1)}" y="${(H - 16).toFixed(1)}" text-anchor="middle" font-size="11" fill="#475569">${fdEscapeXml(p.etiqueta)}</text>`;
+    out += `<text x="${cx.toFixed(1)}" y="${etiquetaY.toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="800" fill="${dentro ? '#ffffff' : '#334155'}"${dentro ? '' : ' stroke="#ffffff" stroke-width="3" style="paint-order:stroke"'} pointer-events="none">${fdDolarCorto(p.etiqueta === 'Flujo de efectivo' ? er.flujoEfectivo : p.valor)}</text>`;
+    out += `<text x="${cx.toFixed(1)}" y="${(H - 16).toFixed(1)}" text-anchor="middle" font-size="11" fill="#475569" pointer-events="none">${fdEscapeXml(p.etiqueta)}${clicable ? ' ▾' : ''}</text>`;
   });
   out += '</svg>';
   return out;
@@ -1376,7 +1657,7 @@ async function fdRenderEstadoResultados(mesTexto, sigueVigente = () => true) {
     fdFilaER('Flujo de efectivo', er.flujoEfectivo, er.pctFlujo, 'fd-er-total');
 
   const cascada = document.getElementById('fd-er-cascada');
-  if (cascada) cascada.innerHTML = `<p class="fd-chart-subtitle">Cascada del flujo de efectivo</p>` + fdSvgCascadaFlujo(er);
+  if (cascada) cascada.innerHTML = `<p class="fd-chart-subtitle">Cascada del flujo de efectivo &middot; <em>clic en Costos para ver en que se fue</em></p>` + fdSvgCascadaFlujo(er, mesTexto);
 
   const conclusion = document.getElementById('fd-er-conclusion');
   if (conclusion) {
@@ -1817,8 +2098,9 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
       /* Fuera de la comparativa de sillas (laboratorio, especialista, quien ya
          no esta): su facturacion es ingreso real y se muestra, pero sin
          semaforo, para que no se lea como una silla en rojo. */
+      const attrsDrill = `class="%CLASE%" data-fd-drill="dentista" data-fd-nombre="${fdEscapeXml(d.nombre)}" tabindex="0" role="button" title="Clic para ver la evolucion de ${fdEscapeXml(d.nombre)} en el anio"`;
       if (d.comparable === false) {
-        return `<tr class="fd-fila-no-comparable">
+        return `<tr ${attrsDrill.replace('%CLASE%', 'fd-fila-no-comparable fd-drill-fila')}>
           <td>${d.nombre}</td>
           <td><strong>${formatoDolar(valor)}</strong></td>
           <td>${celdaTend}</td>
@@ -1826,7 +2108,7 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
           <td><span class="fd-status neutro">Fuera de comparativa</span></td>
         </tr>`;
       }
-      return `<tr>
+      return `<tr ${attrsDrill.replace('%CLASE%', 'fd-drill-fila')}>
         <td>${d.nombre}</td>
         <td><strong>${formatoDolar(valor)}</strong></td>
         <td>${celdaTend}</td>
@@ -1925,6 +2207,9 @@ async function initDashboardFinanciero() {
   const yearSelect = document.getElementById('fd-dashboard-anio');
   const btnMensual = document.getElementById('fd-vista-mensual');
   const btnAcumulado = document.getElementById('fd-vista-acumulado');
+  /* Antes de cualquier await: solo engancha listeners al DOM, no consulta nada,
+     asi que no le afecta que la sesion de Supabase todavia no exista. */
+  fdDrillInit();
   fdCargarRolPropio().then(rol => {
     if (rol === 'viewer') {
       const btnIngresar = document.getElementById('fd-btn-ingresar');

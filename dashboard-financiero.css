@@ -307,6 +307,53 @@
 .fd-reparto-pendiente td { background:#f1f5f9; color:#64748b; }
 .fd-descuadre { display:block; font-style:normal; font-size:.68rem; font-weight:800; color:#b91c1c; }
 
+/* ══ Drill-down ══ */
+.fd-drill-zona { cursor:pointer; }
+.fd-drill-zona:hover rect[opacity="0"], .fd-drill-zona:hover circle[opacity="0"] { opacity:.10 !important; }
+.fd-drill-zona:focus { outline:none; }
+.fd-drill-zona:focus-visible rect[opacity="0"], .fd-drill-zona:focus-visible circle[opacity="0"] { opacity:.18 !important; }
+.fd-drill-fila { cursor:pointer; }
+.fd-drill-fila:hover td { background:#eff6ff; }
+.fd-drill-fila:focus-visible { outline:2px solid #1d4ed8; outline-offset:-2px; }
+
+.fd-drill-overlay {
+  position:fixed; inset:0; z-index:9000; background:rgba(15,35,64,.55);
+  display:flex; align-items:center; justify-content:center; padding:1.2rem;
+}
+.fd-drill-panel {
+  background:#fff; border-radius:12px; width:min(680px,100%); max-height:88vh;
+  display:flex; flex-direction:column; box-shadow:0 18px 48px rgba(15,35,64,.35);
+}
+.fd-drill-head {
+  display:flex; align-items:flex-start; justify-content:space-between; gap:1rem;
+  padding:1rem 1.2rem .8rem; border-bottom:1px solid #e2e8f0;
+}
+.fd-drill-head h3 { margin:0; font-size:1.02rem; color:#0f2340; font-weight:800; }
+.fd-drill-head p { margin:.25rem 0 0; font-size:.78rem; color:#64748b; }
+.fd-drill-close {
+  border:none; background:#f1f5f9; color:#475569; font-size:1.3rem; line-height:1;
+  width:32px; height:32px; border-radius:8px; cursor:pointer; flex:0 0 auto;
+}
+.fd-drill-close:hover { background:#e2e8f0; }
+.fd-drill-body { padding:1rem 1.2rem 1.2rem; overflow-y:auto; }
+.fd-drill-tabla { width:100%; font-size:.82rem; }
+.fd-drill-tabla td, .fd-drill-tabla th { padding:.38rem .5rem; }
+.fd-drill-tabla td.num, .fd-drill-tabla th.num { text-align:right; white-space:nowrap; }
+.fd-drill-barra { width:34%; min-width:90px; }
+.fd-drill-tenue td { color:#94a3b8; }
+.fd-drill-nota { font-style:normal; font-size:.68rem; color:#94a3b8; }
+.fd-drill-cifras { display:flex; flex-wrap:wrap; gap:.8rem; margin:.9rem 0 .2rem; }
+.fd-drill-cifras > div {
+  flex:1 1 150px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:.55rem .7rem;
+}
+.fd-drill-cifras span { display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; }
+.fd-drill-cifras strong { font-size:1.02rem; color:#0f2340; }
+@media(max-width:520px) {
+  .fd-drill-overlay { padding:0; align-items:flex-end; }
+  .fd-drill-panel { max-height:92vh; border-radius:12px 12px 0 0; }
+  .fd-drill-barra { display:none; }
+}
+
 /* ══ Estado de Resultados ══ */
 .fd-er-tabla { font-size:.86rem; }
 .fd-er-tabla th.num, .fd-er-tabla td.num { text-align:right; white-space:nowrap; }
