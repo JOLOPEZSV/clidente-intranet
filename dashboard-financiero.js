@@ -634,8 +634,9 @@ async function fdCargarSerieAnual(anio) {
 
 /* Zona de clic que cubre la columna entera de un mes en los graficos anuales.
    Transparente pero con fill (un fill:none no recibe eventos). */
-function fdSvgZonaMes(mes, x0, yTop, ancho, alto, titulo) {
-  return `<g class="fd-drill-zona" data-fd-drill="mes" data-fd-mes="${fdEscapeXml(mes)}" tabindex="0" role="button" aria-label="${fdEscapeXml(`Ver el detalle de ${mes}`)}">
+function fdSvgZonaMes(mes, x0, yTop, ancho, alto, titulo, tipo = 'mes') {
+  const que = tipo === 'operativo' ? 'el resultado operativo' : 'la facturacion diaria';
+  return `<g class="fd-drill-zona" data-fd-drill="${tipo}" data-fd-mes="${fdEscapeXml(mes)}" tabindex="0" role="button" aria-label="${fdEscapeXml(`Ver ${que} de ${mes}`)}">
     <rect x="${x0.toFixed(1)}" y="${yTop.toFixed(1)}" width="${ancho.toFixed(1)}" height="${alto.toFixed(1)}" fill="#0f2340" opacity="0"><title>${fdEscapeXml(titulo)}</title></rect>
   </g>`;
 }
@@ -738,7 +739,7 @@ function fdSvgFlujoMensual(rows) {
     /* El stub minimo de 2px queda anclado en la linea cero, sin cruzarla. */
     const yTop = positivo ? Math.min(y(f), y(0) - hBar) : y(0);
     const color = f === 0 ? '#94a3b8' : (positivo ? '#16a34a' : '#dc2626');
-    out += fdSvgZonaMes(row.mes, x0, T, slotW, plotH, `${row.mes}: resultado operativo ${formatoDolar(f)} - clic para ver el mes`);
+    out += fdSvgZonaMes(row.mes, x0, T, slotW, plotH, `${row.mes}: resultado operativo ${formatoDolar(f)} - clic para ver como se formo`, 'operativo');
     out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" rx="3" fill="${color}" pointer-events="none"/>`;
     const yLabel = positivo ? yTop - 6 : y(f) + 14;
     out += `<text x="${cx}" y="${yLabel.toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155" stroke="#ffffff" stroke-width="3" style="paint-order:stroke" pointer-events="none">${fdDolarCorto(f)}</text>`;
@@ -1048,6 +1049,100 @@ async function fdDrillMes(mesTexto) {
     irAlMes);
 }
 
+/* Fila del desglose del resultado operativo. Los restos van entre parentesis,
+   igual que en el Estado de Resultados, para no leerlos como sumas. */
+function fdFilaOperativo(etiqueta, valor, pct, clase = '', resta = false) {
+  return `<tr class="${clase}">
+    <td>${etiqueta}</td>
+    <td class="num ${valor < 0 ? 'fd-negative' : ''}">${resta && valor > 0 ? `(${formatoDolar(valor)})` : formatoDolar(valor)}</td>
+    <td class="num">${fdPorcentaje(pct)}</td>
+  </tr>`;
+}
+
+async function fdDrillOperativo(mesTexto) {
+  fdDrillCargando(`Resultado operativo - ${mesTexto}`);
+  const anio = fdParseMesActivo(mesTexto).anio;
+  let serieER = [], serieMes = [];
+  try {
+    [serieER, serieMes] = await Promise.all([fdCargarSerieER(anio), fdCargarSerieAnual(anio)]);
+  } catch (err) {
+    console.error('No se pudo cargar el detalle del resultado operativo:', err);
+  }
+  if (!document.getElementById('fd-drill-overlay')) return;
+  const rowER = (serieER || []).find(r => r.mes === mesTexto);
+  const rowMes = (serieMes || []).find(r => r.mes === mesTexto);
+  if (!rowER && !rowMes) {
+    fdDrillBody(`<p class="fd-note">No hay Estado de Resultados cargado para ${fdEscapeXml(mesTexto)}.</p>`);
+    return;
+  }
+  /* El ER es la fuente cuando existe; si el mes solo tiene la fila del
+     dashboard, se arma el equivalente para no dejar el panel vacio. */
+  const er = fdCalcularER(rowER || {
+    ingresos: rowMes?.facturacion_total,
+    costos_variables: parseFloat(rowMes?.comisiones || 0) + parseFloat(rowMes?.insumos || 0),
+    costos_fijos: rowMes?.costos_fijos
+  });
+  const comisiones = parseFloat(rowMes?.comisiones || 0);
+  const insumos = parseFloat(rowMes?.insumos || 0);
+  /* Comisiones + insumos deben dar los costos variables del ER. Si el mes se
+     capturo por separado y no cuadran, se muestra la diferencia como "otros"
+     en vez de dejar una tabla que no suma. */
+  const otrosVar = er.costosVariables - comisiones - insumos;
+  const pct = v => er.ingresos > 0 ? (v / er.ingresos) * 100 : 0;
+
+  let tabla = `<table class="fd-table fd-er-tabla">
+    <thead><tr><th>Concepto</th><th class="num">Monto</th><th class="num">% de ingresos</th></tr></thead><tbody>` +
+    fdFilaOperativo('Ingresos', er.ingresos, 100);
+  if (comisiones || insumos) {
+    tabla += fdFilaOperativo('Comisiones de doctores', comisiones, pct(comisiones), '', true);
+    tabla += fdFilaOperativo('Insumos y descartables', insumos, pct(insumos), '', true);
+    if (Math.abs(otrosVar) > 1) tabla += fdFilaOperativo('Otros costos variables', otrosVar, pct(otrosVar), '', true);
+  } else {
+    tabla += fdFilaOperativo('Costos variables', er.costosVariables, er.pctVariables, '', true);
+  }
+  tabla += fdFilaOperativo('Margen de contribucion', er.utilidadBruta, er.margenBruto, 'fd-er-subtotal') +
+    fdFilaOperativo('Costos fijos', er.costosFijos, er.pctFijos, '', true) +
+    fdFilaOperativo('Resultado operativo', er.resultadoOperativo, er.margenOperativo, 'fd-er-total') +
+    '</tbody></table>';
+
+  /* Puente contra el mes anterior: ΔRO = ΔIngresos - ΔVariables - ΔFijos.
+     Las tres partes suman la diferencia exacta, sin residuo que explicar. */
+  const idx = fdMesIndice(mesTexto);
+  const prevTexto = idx > 1 ? `${FD_MESES[idx - 2]} ${anio}` : null;
+  const rowPrev = prevTexto ? (serieER || []).find(r => r.mes === prevTexto) : null;
+  let puente = '';
+  if (rowPrev) {
+    const ant = fdCalcularER(rowPrev);
+    const dRO = er.resultadoOperativo - ant.resultadoOperativo;
+    const partes = [
+      { etiqueta: 'Por ingresos', valor: er.ingresos - ant.ingresos },
+      { etiqueta: 'Por costos variables', valor: -(er.costosVariables - ant.costosVariables) },
+      { etiqueta: 'Por costos fijos', valor: -(er.costosFijos - ant.costosFijos) }
+    ].filter(p => Math.abs(p.valor) > 1);
+    const dominante = partes.slice().sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor))[0];
+    puente =
+      `<p class="fd-chart-subtitle" style="margin-top:1.1rem">Que explica el cambio contra ${fdEscapeXml(FD_MESES[idx - 2])}</p>` +
+      fdDrillBarras(partes.map(p => ({
+        etiqueta: p.etiqueta,
+        valor: p.valor,
+        css: p.valor >= 0 ? 'ok' : 'no'
+      })), { col1: 'Efecto', col2: 'Impacto' }) +
+      `<p class="fd-note">El resultado operativo ${dRO >= 0 ? 'subio' : 'bajo'} ${formatoDolar(Math.abs(dRO))} contra ${fdEscapeXml(FD_MESES[idx - 2])} (${formatoDolar(ant.resultadoOperativo)} &rarr; ${formatoDolar(er.resultadoOperativo)})${dominante ? `, y lo que mas pesa es <strong>${fdEscapeXml(dominante.etiqueta.toLowerCase())}</strong> con ${formatoDolar(Math.abs(dominante.valor))}` : ''}. Los tres efectos suman la diferencia exacta.</p>`;
+  }
+
+  const cuota = er.pagoBancos;
+  const notaCuota = cuota > 0
+    ? `<p class="fd-note"><strong>Esto es antes de la cuota al banco.</strong> Con los ${formatoDolar(cuota)} de cuota, el mes deja ${formatoDolar(er.flujoEfectivo)} de flujo de efectivo${er.flujoEfectivo < 0 ? ': la operacion no alcanza a cubrirla sola' : ''}.</p>`
+    : '';
+
+  fdDrillSub(`Margen operativo ${fdPorcentaje(er.margenOperativo)} · margen de contribucion ${fdPorcentaje(er.margenBruto)}`);
+  fdDrillBody(tabla + puente + notaCuota +
+    `<p class="fd-drill-acciones">
+       <button type="button" class="fd-drill-ir" data-fd-drill="costos" data-fd-mes="${fdEscapeXml(mesTexto)}">Ver en que se fue el efectivo &rarr;</button>
+       <button type="button" class="fd-drill-ir" data-fd-drill="mes" data-fd-mes="${fdEscapeXml(mesTexto)}">Ver la facturacion diaria &rarr;</button>
+     </p>`);
+}
+
 async function fdDrillDentista(nombre) {
   const anio = fdParseMesActivo(fdMesActivoSeleccionado).anio;
   fdDrillCargando(nombre);
@@ -1184,6 +1279,7 @@ function fdDrillHandler(ev) {
   if (!objetivo) return;
   const tipo = objetivo.getAttribute('data-fd-drill');
   if (tipo === 'mes') fdDrillMes(objetivo.getAttribute('data-fd-mes'));
+  else if (tipo === 'operativo') fdDrillOperativo(objetivo.getAttribute('data-fd-mes'));
   else if (tipo === 'dentista') fdDrillDentista(objetivo.getAttribute('data-fd-nombre'));
   else if (tipo === 'dia') fdDrillDia(objetivo.getAttribute('data-fd-fecha'));
   else if (tipo === 'costos') fdDrillCostos(objetivo.getAttribute('data-fd-mes') || fdMesActivoSeleccionado);
@@ -1921,8 +2017,8 @@ function fdRenderTendencia(rows, anio) {
     contFlujo.innerHTML = '';
     return;
   }
-  contFact.innerHTML = `<p class="fd-chart-subtitle">Facturacion mensual vs punto de equilibrio real</p>` + fdSvgFacturacionVsPE(rows);
-  contFlujo.innerHTML = `<p class="fd-chart-subtitle">Resultado operativo mensual (antes de la cuota al banco)</p>` + fdSvgFlujoMensual(rows);
+  contFact.innerHTML = `<p class="fd-chart-subtitle">Facturacion mensual vs punto de equilibrio real &middot; <em>clic en un mes para ver su facturacion diaria</em></p>` + fdSvgFacturacionVsPE(rows);
+  contFlujo.innerHTML = `<p class="fd-chart-subtitle">Resultado operativo mensual (antes de la cuota al banco) &middot; <em>clic en un mes para ver como se formo</em></p>` + fdSvgFlujoMensual(rows);
 }
 
 function renderDashboardFinanciero() {
