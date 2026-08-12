@@ -702,7 +702,7 @@ function fdSvgFlujoMensual(rows) {
   const y = v => T + plotH * (yMax - v) / (yMax - yMin);
   const slotW = plotW / 12;
   const barW = Math.min(slotW * 0.56, 34);
-  let out = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Flujo neto mensual" style="width:100%;height:auto;display:block">`;
+  let out = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Resultado operativo mensual" style="width:100%;height:auto;display:block">`;
   out += `<line x1="${L}" y1="${y(yMax)}" x2="${L}" y2="${y(yMin)}" stroke="#e2e8f0" stroke-width="1"/>`;
   /* El '$0' se etiqueta primero; niveles cuya etiqueta quedaria a <12px de otra
      ya dibujada conservan su gridline pero sin texto (evita encimados). */
@@ -727,7 +727,7 @@ function fdSvgFlujoMensual(rows) {
     /* El stub minimo de 2px queda anclado en la linea cero, sin cruzarla. */
     const yTop = positivo ? Math.min(y(f), y(0) - hBar) : y(0);
     const color = f === 0 ? '#94a3b8' : (positivo ? '#16a34a' : '#dc2626');
-    out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" rx="3" fill="${color}"><title>${fdEscapeXml(`${row.mes}: flujo neto ${formatoDolar(f)}`)}</title></rect>`;
+    out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" rx="3" fill="${color}"><title>${fdEscapeXml(`${row.mes}: resultado operativo ${formatoDolar(f)}`)}</title></rect>`;
     const yLabel = positivo ? yTop - 6 : y(f) + 14;
     out += `<text x="${cx}" y="${yLabel.toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155" stroke="#ffffff" stroke-width="3" style="paint-order:stroke">${fdDolarCorto(f)}</text>`;
   }
@@ -1476,7 +1476,7 @@ function fdRenderTendencia(rows, anio) {
     return;
   }
   contFact.innerHTML = `<p class="fd-chart-subtitle">Facturacion mensual vs punto de equilibrio real</p>` + fdSvgFacturacionVsPE(rows);
-  contFlujo.innerHTML = `<p class="fd-chart-subtitle">Flujo neto mensual</p>` + fdSvgFlujoMensual(rows);
+  contFlujo.innerHTML = `<p class="fd-chart-subtitle">Resultado operativo mensual (antes de la cuota al banco)</p>` + fdSvgFlujoMensual(rows);
 }
 
 function renderDashboardFinanciero() {
@@ -1514,7 +1514,7 @@ function renderDashboardFinanciero() {
       <div class="fd-kpi-card"><span id="fd-label-facturacion">Facturacion total</span><strong id="fd-kpi-facturacion">$0.00</strong><small id="fd-delta-facturacion" class="fd-delta"></small></div>
       <div class="fd-kpi-card"><span id="fd-label-pacientes">Pacientes atendidos</span><strong id="fd-kpi-pacientes">0</strong><small id="fd-delta-pacientes" class="fd-delta"></small></div>
       <div class="fd-kpi-card"><span>Ticket promedio</span><strong id="fd-kpi-ticket">$0.00</strong><small id="fd-delta-ticket" class="fd-delta"></small></div>
-      <div class="fd-kpi-card"><span id="fd-label-flujo">Flujo neto</span><strong id="fd-kpi-flujo">$0.00</strong><small id="fd-delta-flujo" class="fd-delta"></small></div>
+      <div class="fd-kpi-card"><span id="fd-label-flujo">Resultado operativo</span><strong id="fd-kpi-flujo">$0.00</strong><small id="fd-delta-flujo" class="fd-delta"></small></div>
     </div>
 
     <div class="fd-insight-grid">
@@ -1622,13 +1622,14 @@ function renderDashboardFinanciero() {
       </div>
 
       <div class="card fd-card-tight">
-        <div class="card-title" id="fd-caja-title"><i class="fas fa-cash-register" style="margin-right:.5rem"></i>Flujo de caja del mes</div>
+        <div class="card-title" id="fd-caja-title"><i class="fas fa-cash-register" style="margin-right:.5rem"></i>Del ingreso al resultado operativo</div>
         <div class="fd-metric-row"><span>Facturacion bruta</span><strong id="fd-caja-facturacion">$0.00</strong></div>
         <div class="fd-metric-row danger"><span>Comisiones <em id="fd-caja-comisiones-pct" class="fd-pct"></em></span><strong id="fd-caja-comisiones">$0.00</strong></div>
         <div class="fd-metric-row danger"><span>Insumos <em id="fd-caja-insumos-pct" class="fd-pct"></em></span><strong id="fd-caja-insumos">$0.00</strong></div>
         <div class="fd-metric-row"><span>Margen de contribucion <em id="fd-caja-margen-pct" class="fd-pct"></em></span><strong id="fd-caja-margen">$0.00</strong></div>
         <div class="fd-metric-row danger"><span>Costos fijos <em id="fd-caja-costos-pct" class="fd-pct"></em></span><strong id="fd-caja-costos">$0.00</strong></div>
-        <div class="fd-metric-row total"><span>Flujo neto</span><strong id="fd-caja-flujo">$0.00</strong></div>
+        <div class="fd-metric-row total"><span>Resultado operativo</span><strong id="fd-caja-flujo">$0.00</strong></div>
+        <p class="fd-note" style="margin-top:.5rem">Aqui termina la operacion. Para llegar al <strong>flujo de efectivo</strong> falta restar la cuota al banco, y para la <strong>utilidad neta</strong> los gastos financieros: ambos estan en la tarjeta de Estado de Resultados.</p>
       </div>
     </div>
 
@@ -1682,7 +1683,7 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   fdSetText('fd-periodo-summary', isAcumulado ? (mensual.periodo_titulo || `Acumulado anual`) : `Vista mensual: ${fdMesActivoSeleccionado}`);
   fdSetText('fd-label-facturacion', isAcumulado ? 'Facturacion acumulada' : 'Facturacion total');
   fdSetText('fd-label-pacientes', isAcumulado ? 'Pacientes acumulados' : 'Pacientes atendidos');
-  fdSetText('fd-label-flujo', isAcumulado ? 'Flujo acumulado' : 'Flujo neto');
+  fdSetText('fd-label-flujo', isAcumulado ? 'Resultado operativo acumulado' : 'Resultado operativo');
   fdSetText('fd-kpi-facturacion', formatoDolar(facturacion));
   fdSetText('fd-kpi-pacientes', fdEntero(pacientes));
   fdSetText('fd-kpi-ticket', formatoDolar(ticket));
@@ -1833,7 +1834,7 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   const costosVal = parseFloat(mensual.costos_fijos || 0);
   const margenContribucionUsd = facturacion - comisionesVal - insumosVal;
   const pctDe = valor => facturacion > 0 ? `(${fdPorcentaje((valor / facturacion) * 100)})` : '';
-  fdSetText('fd-caja-title', isAcumulado ? 'Flujo de caja acumulado' : 'Flujo de caja del mes');
+  fdSetText('fd-caja-title', isAcumulado ? 'Del ingreso al resultado operativo (acumulado)' : 'Del ingreso al resultado operativo');
   fdSetText('fd-caja-facturacion', formatoDolar(facturacion));
   fdSetText('fd-caja-comisiones', '-' + formatoDolar(comisionesVal));
   fdSetText('fd-caja-comisiones-pct', pctDe(comisionesVal));
@@ -2244,7 +2245,7 @@ function renderFormularioHenry() {
         <div class="fd-kpi-card"><span>Facturacion</span><strong id="prev-facturacion">$0.00</strong></div>
         <div class="fd-kpi-card"><span>Pacientes</span><strong id="prev-pacientes">0</strong></div>
         <div class="fd-kpi-card"><span>Ticket promedio</span><strong id="prev-ticket">$0.00</strong></div>
-        <div class="fd-kpi-card"><span>Flujo neto</span><strong id="prev-flujo">$0.00</strong></div>
+        <div class="fd-kpi-card"><span>Resultado operativo</span><strong id="prev-flujo">$0.00</strong></div>
       </div>
       <div class="fd-progress-label"><span id="prev-equilibrio-texto">0 de 878 pacientes - meta mensual</span><strong id="prev-equilibrio-pct">0.0%</strong></div>
       <div class="fd-big-track"><div id="prev-equilibrio-bar" class="fd-big-fill danger" style="width:0%"></div></div>
@@ -3007,7 +3008,7 @@ function fdUpdateHenryPreview() {
       if (data.facturacion > baseFact) mejoras.push(`Facturacion +${formatoDolar(data.facturacion - baseFact)}`);
       if (data.pacientes > basePac) mejoras.push(`Pacientes +${fdEntero(data.pacientes - basePac)}`);
       if (data.ticket > baseTicket) mejoras.push(`Ticket promedio +${formatoDolar(data.ticket - baseTicket)}`);
-      if (data.flujo > baseFlujo) mejoras.push(`Flujo neto mejora ${formatoDolar(data.flujo - baseFlujo)}`);
+      if (data.flujo > baseFlujo) mejoras.push(`Resultado operativo mejora ${formatoDolar(data.flujo - baseFlujo)}`);
       mejorasBox.style.display = mejoras.length ? 'block' : 'none';
       mejorasBox.innerHTML = mejoras.length ? `<strong>Mejoras frente a ${fdHenryPrevLabel}:</strong> ${mejoras.join(' &middot; ')}` : '';
     }
