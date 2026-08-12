@@ -259,6 +259,14 @@
 .fd-metric-nota { display:block; font-style:normal; font-size:.7rem; font-weight:600; color:var(--text-muted); margin-top:.15rem; }
 .fd-metric-nota:empty { display:none; }
 
+/* ══ Reparto de lo cobrado (operacion vs titular) ══ */
+.fd-reparto-tabla { font-size:.85rem; }
+.fd-reparto-tabla th.num, .fd-reparto-tabla td.num { text-align:right; white-space:nowrap; }
+.fd-reparto-tabla td { padding:.42rem .7rem; }
+.fd-reparto-warn td { background:#fef3c7; }
+.fd-reparto-bad td { background:#fee2e2; }
+.fd-descuadre { display:block; font-style:normal; font-size:.68rem; font-weight:800; color:#b91c1c; }
+
 /* ══ Estado de Resultados ══ */
 .fd-er-tabla { font-size:.86rem; }
 .fd-er-tabla th.num, .fd-er-tabla td.num { text-align:right; white-space:nowrap; }

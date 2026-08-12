@@ -1137,6 +1137,78 @@ function fdFilaER(etiqueta, valor, pct, clase = '') {
   </tr>`;
 }
 
+/* Reparto de lo cobrado entre operacion y titular, y si el retiro de la
+   titular alcanza para la cuota del banco. Responde la pregunta que la caja
+   no puede responder, porque la cuota no pasa por la caja de la clinica. */
+async function fdRenderReparto(anio, sigueVigente = () => true) {
+  const card = document.getElementById('fd-reparto-card');
+  const body = document.getElementById('fd-reparto-body');
+  if (!card || !body) return;
+
+  let meses = [];
+  let cuotas = new Map();
+  try {
+    meses = await fdCargarSerieAnual(anio);
+    (await fdCargarSerieER(anio)).forEach(r => cuotas.set(r.mes, parseFloat(r.pago_bancos || 0)));
+  } catch (err) {
+    console.error('No se pudo cargar el reparto de fondos:', err);
+  }
+  if (!sigueVigente()) return;
+
+  const conReparto = meses.filter(m => m.retiro_titular != null && parseFloat(m.retiro_titular) > 0);
+  if (!conReparto.length) {
+    card.style.display = 'none';
+    body.innerHTML = '';
+    return;
+  }
+  card.style.display = '';
+  fdSetText('fd-reparto-anio', String(anio));
+
+  const ajustados = [];
+  const descuadrados = [];
+  body.innerHTML = conReparto.map(m => {
+    const cobrado = parseFloat(m.facturacion_total || 0);
+    const admin = parseFloat(m.admin_operacion || 0);
+    const titular = parseFloat(m.retiro_titular || 0);
+    const cuota = cuotas.get(m.mes) || 0;
+    const margen = titular - cuota;
+    const nombreMes = fdParseMesActivo(m.mes).mes;
+    /* El reparto del Excel debe sumar lo cobrado. Si no cuadra, la cifra de
+       facturacion viene de otra fuente y hay que resolverlo antes de usarla. */
+    const descuadre = cobrado - (admin + titular);
+    if (Math.abs(descuadre) > 1) descuadrados.push({ mes: nombreMes, descuadre, reparto: admin + titular, cobrado });
+    /* Menos de mil dolares de margen sobre la cuota = mes apretado. */
+    const clase = cuota <= 0 ? '' : margen < 0 ? 'bad' : margen < 1000 ? 'warn' : 'ok';
+    if (clase === 'warn' || clase === 'bad') ajustados.push({ mes: nombreMes, margen });
+    const avisoDescuadre = Math.abs(descuadre) > 1
+      ? ` <em class="fd-descuadre" title="El reparto del Excel suma ${formatoDolar(admin + titular)}">no cuadra: ${formatoDolar(Math.abs(descuadre))}</em>`
+      : '';
+    return `<tr class="fd-reparto-${clase}">
+      <td>${nombreMes}</td>
+      <td class="num">${formatoDolar(cobrado)}${avisoDescuadre}</td>
+      <td class="num">${formatoDolar(admin)}</td>
+      <td class="num"><strong>${formatoDolar(titular)}</strong></td>
+      <td class="num">${cuota > 0 ? '(' + formatoDolar(cuota) + ')' : '&mdash;'}</td>
+      <td class="num"><strong class="${margen < 0 ? 'fd-negative' : 'fd-positive'}">${cuota > 0 ? formatoDolar(margen) : '&mdash;'}</strong></td>
+    </tr>`;
+  }).join('');
+
+  const nota = document.getElementById('fd-reparto-nota');
+  if (nota) {
+    const partes = [];
+    if (ajustados.length) {
+      const detalle = ajustados.map(a => `${a.mes} (${formatoDolar(a.margen)})`).join(' y ');
+      partes.push(`<strong class="fd-negative">${ajustados.length} de ${conReparto.length} meses cerraron con menos de $1,000 de margen sobre la cuota: ${detalle}.</strong> Cualquier imprevisto en esos meses deja la cuota sin cubrir.`);
+    } else {
+      partes.push(`Los ${conReparto.length} meses cubrieron la cuota con holgura.`);
+    }
+    descuadrados.forEach(d => {
+      partes.push(`<strong class="fd-negative">En ${d.mes} el reparto del Excel suma ${formatoDolar(d.reparto)} y la facturacion registrada es ${formatoDolar(d.cobrado)}: faltan ${formatoDolar(Math.abs(d.descuadre))} por explicar.</strong> Los demas meses cuadran al centavo, asi que conviene revisar de donde sale esa cifra antes de usarla.`);
+    });
+    nota.innerHTML = partes.join(' ');
+  }
+}
+
 async function fdRenderEstadoResultados(mesTexto, sigueVigente = () => true) {
   const card = document.getElementById('fd-er-card');
   const body = document.getElementById('fd-er-body');
@@ -1365,6 +1437,21 @@ function renderDashboardFinanciero() {
       <div id="fd-er-cascada" class="fd-chart-wrap" style="margin-top:1.1rem"></div>
       <p id="fd-er-conclusion" class="fd-er-conclusion"></p>
       <p class="fd-note">El Estado de Resultados incluye solo los intereses; el flujo registra la cuota completa a los bancos (capital + intereses). El flujo mide la operacion de la clinica: excluye el pago a cuenta de renta, el IVA neto y los retiros de la titular.</p>
+    </div>
+
+    <div class="card fd-card-tight" id="fd-reparto-card" style="display:none">
+      <div class="card-title"><i class="fas fa-code-branch" style="margin-right:.5rem"></i>Reparto de lo cobrado y cobertura de la cuota <span id="fd-reparto-anio"></span></div>
+      <p class="fd-chart-subtitle">Lo cobrado cada mes se reparte entre la operacion de la clinica y la titular. La cuota al banco se atiende desde el retiro de la titular, por eso no aparece en la caja.</p>
+      <div class="fd-table-wrap">
+        <table class="fd-table fd-reparto-tabla">
+          <thead><tr>
+            <th>Mes</th><th class="num">Cobrado</th><th class="num">A la operacion</th><th class="num">A la titular</th><th class="num">Cuota banco</th><th class="num">Margen</th>
+          </tr></thead>
+          <tbody id="fd-reparto-body"></tbody>
+        </table>
+      </div>
+      <p id="fd-reparto-nota" class="fd-note"></p>
+      <p class="fd-note"><strong>Pendiente de confirmar con Henry:</strong> que la cuota al banco salga efectivamente de ese retiro. Es una inferencia consistente con los numeros, no un dato declarado por la clinica.</p>
     </div>
 
     <div class="card fd-card-tight" id="fd-caja-diaria-card" style="display:none">
@@ -1763,6 +1850,8 @@ async function initDashboardFinanciero() {
       await fdRenderEstadoResultados(mesSolicitado, () => token === cargaToken);
       await fdRenderCajaDiariaDashboard(mesSolicitado, () => token === cargaToken);
     }
+    /* El reparto es anual: se muestra igual en vista mensual y acumulada. */
+    await fdRenderReparto(parsed.anio, () => token === cargaToken);
   };
 
   document.getElementById('fd-btn-informe')?.addEventListener('click', fdCompartirInformeEjecutivo);
