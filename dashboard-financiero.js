@@ -1007,7 +1007,8 @@ async function fdDrillDia(fechaISO) {
 }
 
 async function fdDrillCostos(mesTexto) {
-  fdDrillCargando(`Egresos en efectivo &mdash; ${mesTexto}`);
+  /* Texto plano: el titulo se escapa, asi que una entidad HTML saldria literal. */
+  fdDrillCargando(`Egresos en efectivo - ${mesTexto}`);
   const [cats, clasif] = await Promise.all([
     fdCargarEgresosCategoria(mesTexto),
     fdCargarClasificacionEgresos()
