@@ -1137,6 +1137,111 @@ function fdFilaER(etiqueta, valor, pct, clase = '') {
   </tr>`;
 }
 
+/* ══ Indicadores financieros clave ══
+   Los de balance salen de tabla (estados auditados, no se calculan mes a mes).
+   Los de paciente y el punto de equilibrio se calculan del periodo activo.
+   Convencion de color de la presentacion:
+     neutro = informativo | alerta = problema | umbral = meta por cruzar | meta = objetivo */
+async function fdCargarIndicadoresBalance() {
+  if (!fdSupabaseConfigurado()) return [];
+  try {
+    const rows = await fdSupabaseGetRows('indicadores_financieros?select=*&order=orden.asc');
+    return Array.isArray(rows) ? rows : [];
+  } catch (err) {
+    console.error('No se pudieron cargar los indicadores de balance:', err);
+    return [];
+  }
+}
+
+function fdFormatoIndicador(valor, formato) {
+  const v = parseFloat(valor || 0);
+  if (formato === 'pct') return fdPorcentaje(v);
+  if (formato === 'usd') return formatoDolar(v);
+  return `${v.toLocaleString('es-SV', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`;
+}
+
+function fdTarjetaIndicador(valor, etiqueta, estado = 'neutro', nota = '') {
+  return `<div class="fd-ind-card ${estado}">
+    <strong>${valor}</strong>
+    <span>${etiqueta}</span>
+    ${nota ? `<small>${nota}</small>` : ''}
+  </div>`;
+}
+
+async function fdRenderIndicadores(mensual, er, esAcumulado, mesesPeriodo, sigueVigente = () => true) {
+  const card = document.getElementById('fd-indicadores-card');
+  if (!card) return;
+  const pacientes = parseInt(mensual?.pacientes_atendidos || 0, 10);
+  const ingresos = parseFloat(mensual?.facturacion_total || 0);
+  if (!pacientes || !ingresos || !er) {
+    card.style.display = 'none';
+    return;
+  }
+
+  const balance = await fdCargarIndicadoresBalance();
+  if (!sigueVigente()) return;
+  card.style.display = '';
+  fdSetText('fd-ind-periodo', esAcumulado ? `— acumulado ${mesesPeriodo} mes(es)` : `— ${mensual.mes}`);
+
+  /* ── Por paciente ── */
+  const costoTotal = er.costosVariables + er.costosFijos;
+  const porPaciente = [
+    [formatoDolar(ingresos / pacientes), 'Ticket promedio ponderado', 'neutro', ''],
+    [formatoDolar(costoTotal / pacientes), 'Costo total por paciente', 'neutro', ''],
+    [formatoDolar(er.resultadoOperativo / pacientes), 'Margen operativo', er.resultadoOperativo >= 0 ? 'neutro' : 'alerta', fdPorcentaje(er.margenOperativo)],
+    [formatoDolar(er.utilidadBruta / pacientes), 'Margen de contribucion unitario', 'neutro', fdPorcentaje(er.margenBruto)]
+  ];
+  const contPac = document.getElementById('fd-ind-paciente');
+  if (contPac) contPac.innerHTML = porPaciente.map(([v, e, s, n]) => fdTarjetaIndicador(v, e, s, n)).join('');
+
+  /* ── Balance (tabla) + cobertura (calculada) ── */
+  const cuotaPeriodo = er.pagoBancos;
+  const cobertura = cuotaPeriodo > 0 ? er.resultadoOperativo / cuotaPeriodo : null;
+  const estadoCob = cobertura === null ? 'neutro' : cobertura < 1 ? 'alerta' : cobertura < 1.2 ? 'umbral' : 'meta';
+  const tarjetasBalance = balance.map(b =>
+    fdTarjetaIndicador(fdFormatoIndicador(b.valor, b.formato), b.etiqueta, b.estado || 'neutro', b.nota || ''));
+  if (cobertura !== null) {
+    tarjetasBalance.push(fdTarjetaIndicador(
+      `${cobertura.toLocaleString('es-SV', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`,
+      'Cobertura del pago a bancos', estadoCob,
+      `Por cada $1 de cuota, la operacion genera ${formatoDolar(cobertura)}`));
+  }
+  const contBal = document.getElementById('fd-ind-balance');
+  if (contBal) contBal.innerHTML = tarjetasBalance.join('');
+  const fuente = balance.find(b => b.fuente)?.fuente;
+  fdSetText('fd-ind-fuente', fuente ? `base: ${fuente}` : '');
+
+  /* ── Punto de equilibrio: actuales -> de caja -> meta ── */
+  const mcUnitario = pacientes > 0 ? er.utilidadBruta / pacientes : 0;
+  const peCaja = mcUnitario > 0 ? Math.round((er.costosFijos + cuotaPeriodo) / mcUnitario) : null;
+  const peOperativo = mcUnitario > 0 ? Math.round(er.costosFijos / mcUnitario) : null;
+  const metaOcupacion = Math.round(FD_CAPACIDAD_MENSUAL * 0.4 * Math.max(mesesPeriodo, 1));
+  const camino = document.getElementById('fd-ind-equilibrio');
+  if (camino) {
+    const paso = (valor, etiqueta, estado, detalle) =>
+      `<div class="fd-ind-paso ${estado}"><strong>${fdEntero(valor)}</strong><span>${etiqueta}</span>${detalle ? `<small>${detalle}</small>` : ''}</div>`;
+    camino.innerHTML =
+      paso(pacientes, 'Pacientes atendidos', peCaja && pacientes < peCaja ? 'alerta' : 'meta', '') +
+      '<span class="fd-ind-flecha">&rarr;</span>' +
+      (peOperativo ? paso(peOperativo, 'Equilibrio operativo', 'neutro', 'solo costos fijos') + '<span class="fd-ind-flecha">&rarr;</span>' : '') +
+      (peCaja ? paso(peCaja, 'Equilibrio de caja', 'umbral', 'con la cuota al banco') + '<span class="fd-ind-flecha">&rarr;</span>' : '') +
+      paso(metaOcupacion, 'Meta 1 (40% ocupacion)', 'meta', '');
+  }
+
+  const conclusion = document.getElementById('fd-ind-conclusion');
+  if (conclusion) {
+    if (peCaja && pacientes < peCaja) {
+      conclusion.className = 'fd-ind-conclusion alerta';
+      conclusion.textContent = `CLIDENTE atiende ${fdEntero(pacientes)} pacientes y esta ${fdEntero(peCaja - pacientes)} por debajo del punto de equilibrio de caja de ${fdEntero(peCaja)}.`;
+    } else if (peCaja) {
+      conclusion.className = 'fd-ind-conclusion ok';
+      conclusion.textContent = `CLIDENTE atiende ${fdEntero(pacientes)} pacientes y supera el punto de equilibrio de caja de ${fdEntero(peCaja)} por ${fdEntero(pacientes - peCaja)}.`;
+    } else {
+      conclusion.textContent = '';
+    }
+  }
+}
+
 /* Reparto de lo cobrado entre operacion y titular, y si el retiro de la
    titular alcanza para la cuota del banco. Responde la pregunta que la caja
    no puede responder, porque la cuota no pasa por la caja de la clinica. */
@@ -1437,6 +1542,21 @@ function renderDashboardFinanciero() {
       <div id="fd-er-cascada" class="fd-chart-wrap" style="margin-top:1.1rem"></div>
       <p id="fd-er-conclusion" class="fd-er-conclusion"></p>
       <p class="fd-note">El Estado de Resultados incluye solo los intereses; el flujo registra la cuota completa a los bancos (capital + intereses). El flujo mide la operacion de la clinica: excluye el pago a cuenta de renta, el IVA neto y los retiros de la titular.</p>
+    </div>
+
+    <div class="card fd-card-tight" id="fd-indicadores-card" style="display:none">
+      <div class="card-title"><i class="fas fa-gauge" style="margin-right:.5rem"></i>Indicadores financieros clave <span id="fd-ind-periodo"></span></div>
+
+      <p class="fd-ind-titulo">Por paciente</p>
+      <div class="fd-ind-grid" id="fd-ind-paciente"></div>
+
+      <p class="fd-ind-titulo">Indicadores de balance <em id="fd-ind-fuente" class="fd-ind-fuente"></em></p>
+      <div class="fd-ind-grid" id="fd-ind-balance"></div>
+
+      <p class="fd-ind-titulo">Punto de equilibrio</p>
+      <div class="fd-ind-camino" id="fd-ind-equilibrio"></div>
+      <p id="fd-ind-conclusion" class="fd-ind-conclusion"></p>
+      <p class="fd-note">El punto de equilibrio de caja incluye la cuota al banco; el operativo solo cubre los costos fijos. Son dos umbrales distintos: el primero es el que la clinica necesita para no depender de otras fuentes.</p>
     </div>
 
     <div class="card fd-card-tight" id="fd-reparto-card" style="display:none">
@@ -1849,6 +1969,30 @@ async function initDashboardFinanciero() {
     } else {
       await fdRenderEstadoResultados(mesSolicitado, () => token === cargaToken);
       await fdRenderCajaDiariaDashboard(mesSolicitado, () => token === cargaToken);
+    }
+
+    /* Indicadores: en mensual toman el ER del mes; en acumulado suman el
+       periodo para que ticket, margenes y equilibrio sean del conjunto. */
+    try {
+      const mesesPeriodo = esAcumulado ? Math.max(parseInt(data.mensual?.meses_registrados, 10) || 0, 1) : 1;
+      let erPeriodo = null;
+      if (esAcumulado) {
+        const serie = (await fdCargarSerieER(parsed.anio))
+          .filter(r => fdMesIndice(r.mes) <= fdMesIndice(mesSolicitado));
+        if (serie.length) {
+          erPeriodo = fdCalcularER(serie.reduce((acc, r) => {
+            FD_ER_LINEAS.forEach(k => { acc[k] = (acc[k] || 0) + parseFloat(r[k] || 0); });
+            return acc;
+          }, {}));
+        }
+      } else {
+        const { row } = await fdCargarER(mesSolicitado);
+        if (row) erPeriodo = fdCalcularER(row);
+      }
+      if (token !== cargaToken) return;
+      await fdRenderIndicadores(data.mensual, erPeriodo, esAcumulado, mesesPeriodo, () => token === cargaToken);
+    } catch (err) {
+      console.error('No se pudieron construir los indicadores:', err);
     }
     /* El reparto es anual: se muestra igual en vista mensual y acumulada. */
     await fdRenderReparto(parsed.anio, () => token === cargaToken);
