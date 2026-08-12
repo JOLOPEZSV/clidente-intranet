@@ -1127,7 +1127,7 @@ async function fdDrillOperativo(mesTexto) {
         valor: p.valor,
         css: p.valor >= 0 ? 'ok' : 'no'
       })), { col1: 'Efecto', col2: 'Impacto' }) +
-      `<p class="fd-note">El resultado operativo ${dRO >= 0 ? 'subio' : 'bajo'} ${formatoDolar(Math.abs(dRO))} contra ${fdEscapeXml(FD_MESES[idx - 2])} (${formatoDolar(ant.resultadoOperativo)} &rarr; ${formatoDolar(er.resultadoOperativo)})${dominante ? `, y lo que mas pesa es <strong>${fdEscapeXml(dominante.etiqueta.toLowerCase())}</strong> con ${formatoDolar(Math.abs(dominante.valor))}` : ''}. Los tres efectos suman la diferencia exacta.</p>`;
+      `<p class="fd-note">El resultado operativo ${dRO >= 0 ? 'subio' : 'bajo'} ${formatoDolar(Math.abs(dRO))} contra ${fdEscapeXml(FD_MESES[idx - 2])} (${formatoDolar(ant.resultadoOperativo)} &rarr; ${formatoDolar(er.resultadoOperativo)})${dominante ? `, y lo que mas pesa es <strong>${fdEscapeXml(dominante.etiqueta.toLowerCase())}</strong> con ${formatoDolar(Math.abs(dominante.valor))}` : ''}. Los efectos listados suman la diferencia exacta; los que no aparecen es porque no se movieron.</p>`;
   }
 
   const cuota = er.pagoBancos;
