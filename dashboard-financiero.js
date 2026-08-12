@@ -124,6 +124,9 @@ function fdMesActualLocal() {
   return `${FD_MESES[h.getMonth()]} ${h.getFullYear()}`;
 }
 let fdMesActivoSeleccionado = fdMesActualLocal();
+/* Una vez que el usuario elige un mes a mano, deja de aplicarse el salto
+   automatico al ultimo mes con datos. */
+let fdMesElegidoPorUsuario = false;
 const FD_LOCAL_DASHBOARD_KEY = 'clidente_fd_dashboard_mensual';
 const FD_LOCAL_DENTISTAS_KEY = 'clidente_fd_produccion_dentistas';
 
@@ -336,18 +339,36 @@ async function seedMayo2026() {
   return okDashboard && okDentistas;
 }
 
+/* Ultimo mes que realmente tiene datos. El dashboard debe abrir ahi y no en el
+   mes corriente: a inicios de mes (o antes de capturar el cierre) el mes actual
+   esta vacio y el portal mostraria ceros. */
+function fdMesMasReciente(meses) {
+  const orden = m => {
+    const p = fdParseMesActivo(m);
+    return p.anio * 100 + (FD_MESES.indexOf(p.mes) + 1);
+  };
+  return (Array.isArray(meses) ? meses : [])
+    .filter(Boolean)
+    .sort((a, b) => orden(b) - orden(a))[0] || null;
+}
+
 async function fdCargarAniosDisponibles() {
-  if (!fdSupabaseConfigurado()) return FD_ANIOS_BASE;
+  if (!fdSupabaseConfigurado()) return { anios: FD_ANIOS_BASE, ultimoConDatos: null };
   try {
     await seedMayo2026();
-    const rows = await fdSupabaseGetRows('dashboard_mensual?select=mes,created_at&order=created_at.desc');
-    const anios = (Array.isArray(rows) ? rows : [])
-      .map(row => fdParseMesActivo(row.mes).anio)
-      .filter(Boolean);
-    return [...new Set([...FD_ANIOS_BASE, ...anios])].sort((a, b) => a - b);
+    const rows = await fdSupabaseGetRows('dashboard_mensual?select=mes,facturacion_total,pacientes_atendidos');
+    const lista = Array.isArray(rows) ? rows : [];
+    const anios = lista.map(row => fdParseMesActivo(row.mes).anio).filter(Boolean);
+    const conDatos = lista
+      .filter(row => parseFloat(row.facturacion_total || 0) || parseInt(row.pacientes_atendidos || 0, 10))
+      .map(row => row.mes);
+    return {
+      anios: [...new Set([...FD_ANIOS_BASE, ...anios])].sort((a, b) => a - b),
+      ultimoConDatos: fdMesMasReciente(conDatos)
+    };
   } catch (err) {
     console.error('No se pudo cargar la lista de periodos:', err);
-    return FD_ANIOS_BASE;
+    return { anios: FD_ANIOS_BASE, ultimoConDatos: null };
   }
 }
 async function fdCargarDatosDashboard(mesActivo = fdMesActivoSeleccionado) {
@@ -1447,7 +1468,10 @@ async function initDashboardFinanciero() {
       if (btnIngresar) btnIngresar.style.display = 'none';
     }
   });
-  const anios = await fdCargarAniosDisponibles();
+  const { anios, ultimoConDatos } = await fdCargarAniosDisponibles();
+  /* Si el mes corriente aun no tiene cifras, se abre en el ultimo mes con datos
+     para que el dashboard nunca reciba al usuario con todo en cero. */
+  if (ultimoConDatos && !fdMesElegidoPorUsuario) fdMesActivoSeleccionado = ultimoConDatos;
   fdSetMesControls('fd-dashboard', fdMesActivoSeleccionado, anios);
 
   /* Token de secuencia: si el usuario cambia mes/anio/vista mientras una carga
@@ -1494,8 +1518,8 @@ async function initDashboardFinanciero() {
   };
 
   document.getElementById('fd-btn-informe')?.addEventListener('click', fdCompartirInformeEjecutivo);
-  monthSelect?.addEventListener('change', cargarVista);
-  yearSelect?.addEventListener('change', cargarVista);
+  monthSelect?.addEventListener('change', () => { fdMesElegidoPorUsuario = true; cargarVista(); });
+  yearSelect?.addEventListener('change', () => { fdMesElegidoPorUsuario = true; cargarVista(); });
   btnMensual?.addEventListener('click', () => { fdVistaDashboard = 'mensual'; cargarVista(); });
   btnAcumulado?.addEventListener('click', () => { fdVistaDashboard = 'acumulado'; cargarVista(); });
 
