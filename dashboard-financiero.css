@@ -249,6 +249,10 @@
 .fd-btn-informe:disabled { opacity:.6; cursor:progress; }
 @media(max-width:860px) { .fd-hero-acciones { width:100%; } }
 
+/* Nota bajo la etiqueta de una fila de metrica (de donde sale el numero) */
+.fd-metric-nota { display:block; font-style:normal; font-size:.7rem; font-weight:600; color:var(--text-muted); margin-top:.15rem; }
+.fd-metric-nota:empty { display:none; }
+
 /* ══ Estado de Resultados ══ */
 .fd-er-tabla { font-size:.86rem; }
 .fd-er-tabla th.num, .fd-er-tabla td.num { text-align:right; white-space:nowrap; }

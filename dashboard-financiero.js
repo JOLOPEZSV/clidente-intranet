@@ -1,7 +1,16 @@
 ﻿/* Dashboard Financiero CLIDENTE - Supabase + SPA */
 
-const FD_META_DENTISTA = 2500;
-const FD_PISO_RENTABILIDAD = 1800;
+/* Economia de la silla (Propuesta 4, version del 12/08/2026).
+   Se derivan de los costos fijos y del numero de sillas OPERATIVAS: antes se
+   repartia entre 8 sillas ($1,350) y ahora entre las 7 que realmente operan.
+   El piso de rentabilidad es lo que la silla debe PRODUCIR para cubrirse, dado
+   que la clinica retiene el 75% de lo producido. */
+const FD_COSTOS_FIJOS_MES = 10800;
+const FD_SILLAS_OPERATIVAS = 7;
+const FD_RETENCION_CLINICA = 0.75;
+const FD_COSTO_POR_SILLA = FD_COSTOS_FIJOS_MES / FD_SILLAS_OPERATIVAS;      /* 1,542.86 */
+const FD_PISO_RENTABILIDAD = FD_COSTO_POR_SILLA / FD_RETENCION_CLINICA;     /* 2,057.14 */
+const FD_META_DENTISTA = 2500;                                             /* "Meta Cero" */
 const FD_MAX_BARRA = 6500;
 /* Plan original del PPT (asume ~33% de costos variables). Se muestra como referencia;
    el punto de equilibrio operativo se calcula con los costos reales de cada periodo. */
@@ -1394,11 +1403,12 @@ function renderDashboardFinanciero() {
     <div class="fd-grid2">
       <div class="card fd-card-tight">
         <div class="card-title"><i class="fas fa-chair" style="margin-right:.5rem"></i>Analisis por silla</div>
-        <div class="fd-metric-row"><span>Costo fijo por silla</span><strong id="fd-silla-costo">$1,350/mes</strong></div>
-        <div class="fd-metric-row"><span>Piso de rentabilidad</span><strong id="fd-silla-piso">$1,800/mes</strong></div>
+        <div class="fd-metric-row"><span>Costo fijo por silla<em id="fd-silla-costo-nota" class="fd-metric-nota"></em></span><strong id="fd-silla-costo">&mdash;</strong></div>
+        <div class="fd-metric-row"><span>Piso de rentabilidad<em id="fd-silla-piso-nota" class="fd-metric-nota"></em></span><strong id="fd-silla-piso">&mdash;</strong></div>
         <div class="fd-metric-row"><span>Media aritmetica del grupo</span><strong id="fd-silla-media">$0/mes</strong></div>
-        <div class="fd-metric-row"><span>Meta politica</span><strong id="fd-silla-meta">$2,500/mes</strong></div>
+        <div class="fd-metric-row"><span>Meta Cero</span><strong id="fd-silla-meta">&mdash;</strong></div>
         <div class="fd-metric-row danger"><span id="fd-silla-neg-label">Sillas bajo piso</span><strong id="fd-silla-neg-valor">$0.00</strong></div>
+        <p id="fd-silla-neg-nota" class="fd-note" style="margin-top:.4rem"></p>
       </div>
 
       <div class="card fd-card-tight">
@@ -1573,13 +1583,20 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
 
   const promedioDentista = dentistasOrdenados.length ? dentistasOrdenados.reduce((sum, d) => sum + parseFloat(d.facturacion || 0), 0) / dentistasOrdenados.length : 0;
   const negativos = dentistasOrdenados.filter(d => parseFloat(d.facturacion || 0) < pisoDentista);
-  const brechaPiso = negativos.reduce((sum, d) => sum + Math.max(pisoDentista - parseFloat(d.facturacion || 0), 0), 0);
-  fdSetText('fd-silla-costo', isAcumulado ? `${formatoDolar(1350 * mesesMetas)} acumulado` : '$1,350/mes');
-  fdSetText('fd-silla-piso', isAcumulado ? `${formatoDolar(pisoDentista)} acumulado` : '$1,800/mes');
+  /* La brecha se expresa en dinero de la CLINICA: lo que falta de produccion
+     por el 75% que la clinica retiene. Es el criterio del informe. */
+  const brechaProduccion = negativos.reduce((sum, d) => sum + Math.max(pisoDentista - parseFloat(d.facturacion || 0), 0), 0);
+  const brechaPiso = brechaProduccion * FD_RETENCION_CLINICA;
+  const costoSilla = FD_COSTO_POR_SILLA * mesesMetas;
+  fdSetText('fd-silla-costo', isAcumulado ? `${formatoDolar(costoSilla)} acumulado` : `${formatoDolar(FD_COSTO_POR_SILLA)}/mes`);
+  fdSetText('fd-silla-costo-nota', `${formatoDolar(FD_COSTOS_FIJOS_MES)} de costos fijos entre ${FD_SILLAS_OPERATIVAS} sillas operativas`);
+  fdSetText('fd-silla-piso', isAcumulado ? `${formatoDolar(pisoDentista)} acumulado` : `${formatoDolar(FD_PISO_RENTABILIDAD)}/mes`);
+  fdSetText('fd-silla-piso-nota', `${formatoDolar(FD_COSTO_POR_SILLA)} entre ${fdPorcentaje(FD_RETENCION_CLINICA * 100)} de retencion`);
   fdSetText('fd-silla-media', isAcumulado ? `${formatoDolar(promedioDentista)} acumulado` : `${formatoDolar(promedioDentista)}/mes`);
-  fdSetText('fd-silla-meta', isAcumulado ? `${formatoDolar(metaDentista)} acumulado` : '$2,500/mes');
+  fdSetText('fd-silla-meta', isAcumulado ? `${formatoDolar(metaDentista)} acumulado` : `${formatoDolar(FD_META_DENTISTA)}/mes`);
   fdSetText('fd-silla-neg-label', `${negativos.length} silla(s) bajo piso`);
   fdSetText('fd-silla-neg-valor', brechaPiso ? '-' + formatoDolar(brechaPiso) : formatoDolar(0));
+  fdSetText('fd-silla-neg-nota', brechaPiso ? `${formatoDolar(brechaProduccion)} de produccion faltante, al ${fdPorcentaje(FD_RETENCION_CLINICA * 100)} que retiene la clinica` : '');
 
   const comisionesVal = parseFloat(mensual.comisiones || 0);
   const insumosVal = parseFloat(mensual.insumos || 0);
