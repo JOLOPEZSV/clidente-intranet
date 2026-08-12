@@ -162,7 +162,7 @@ INSERT INTO public.egresos_categoria (mes, categoria, orden, monto) VALUES
   ('Junio 2026', 'INVERSION', 17, 155.00),
   ('Junio 2026', 'PRESTAMOS', 18, 0.00),
   ('Junio 2026', 'SERVICIOS DE TERCEROS', 19, 452.00),
-  ('Junio 2026', 'REMESAS', 20, 4223.43);
+  ('Junio 2026', 'REMESAS', 20, 4223.43)
 ON CONFLICT (mes, categoria) DO UPDATE
   SET monto = EXCLUDED.monto, orden = EXCLUDED.orden, origen = EXCLUDED.origen;
 
