@@ -19,6 +19,11 @@
 --     Con la correccion el mix de mayo suma exacto 32,687.59, sin franja "Otros".
 --     Ver supabase-correccion-mayo-2026.sql para el detalle del descuadre.
 -- Re-ejecutable sin duplicar (borra los 6 meses y los reinserta).
+-- ⚠ OJO CON LA COLUMNA `estado`: los semaforos de este seed son los ORIGINALES
+--   (piso $1,800). En la base ya estan recalculados con el piso de $2,057.14 (7
+--   sillas) y ademas existe la columna `comparable`, que este seed NO escribe.
+--   Re-ejecutarlo tal cual REVIERTE ambas cosas. Si hay que recargar los 6 meses,
+--   volver a correr despues el SQL de semaforos/comparables.
 -- ⚠ EJECUTAR EL ARCHIVO COMPLETO, nunca por partes: el BEGIN/COMMIT garantiza que
 --   si algo falla (p.ej. correrlo antes de la migracion) no queden los DELETE aplicados.
 
