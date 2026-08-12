@@ -868,6 +868,10 @@ function fdDrillAbrir(titulo, subtitulo, html) {
     <div class="fd-drill-body">${html}</div>
   </div>`;
   ov.addEventListener('click', ev => { if (ev.target === ov) fdDrillCerrar(); });
+  /* El overlay cuelga de <body>, fuera del root del dashboard, asi que necesita
+     su propio handler para que se pueda encadenar un nivel mas (del mes al dia). */
+  ov.addEventListener('click', fdDrillHandler);
+  ov.addEventListener('keydown', fdDrillTeclado);
   ov.querySelector('.fd-drill-close').addEventListener('click', fdDrillCerrar);
   document.body.appendChild(ov);
   document.addEventListener('keydown', fdDrillEsc);
@@ -924,6 +928,126 @@ function fdDrillBarras(items, opciones = {}) {
     <tbody>${filas}</tbody></table>`;
 }
 
+/* 'Marzo 2026' a partir de '2026-03-15'. El detalle de un dia tiene que saber
+   de que mes es sin depender del mes que este activo en el dashboard: desde el
+   panel de un mes se puede abrir un dia de OTRO mes. */
+function fdMesTextoDeISO(fechaISO) {
+  const [a, m] = String(fechaISO).split('-').map(Number);
+  return `${FD_MESES[(m || 1) - 1]} ${a}`;
+}
+
+/* Barras de un dia por columna, con la linea del promedio. Los fines de semana
+   van en un tono mas claro: el patron semanal es la mitad de la historia. */
+function fdSvgDiarioMes(detalle, mesTexto, promedio) {
+  const W = 700, H = 210, L = 52, R = 10, T = 16, B = 34;
+  const plotW = W - L - R, plotH = H - T - B;
+  const diasMes = fdDiasDelMes(mesTexto) || 31;
+  const porDia = new Map(detalle.map(r => [parseInt(String(r.fecha).slice(-2), 10), r]));
+  const maxV = Math.max(...detalle.map(r => r.ingreso), 1);
+  const yMax = maxV * 1.14;
+  const y = v => T + plotH - (v / yMax) * plotH;
+  const slot = plotW / diasMes;
+  const barW = Math.max(Math.min(slot * 0.72, 20), 2);
+  let out = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Facturacion dia a dia de ${fdEscapeXml(mesTexto)}" style="width:100%;height:auto;display:block">`;
+  [0, yMax / 2, yMax].forEach(v => {
+    out += `<line x1="${L}" y1="${y(v).toFixed(1)}" x2="${W - R}" y2="${y(v).toFixed(1)}" stroke="${v === 0 ? '#94a3b8' : '#e2e8f0'}" stroke-width="1"/>`;
+    out += `<text x="${L - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" font-size="10" fill="#64748b">${fdDolarCorto(v)}</text>`;
+  });
+  for (let d = 1; d <= diasMes; d++) {
+    const cx = L + slot * (d - 1) + slot / 2;
+    const r = porDia.get(d);
+    const iso = fdFechaISO(mesTexto, d);
+    const [ay, am, ad] = iso.split('-').map(Number);
+    const finde = [0, 6].includes(new Date(ay, am - 1, ad).getDay());
+    if (r && r.ingreso > 0) {
+      const alto = Math.max(plotH * r.ingreso / yMax, 1.5);
+      out += `<g class="fd-drill-zona" data-fd-drill="dia" data-fd-fecha="${iso}" tabindex="0" role="button" aria-label="${fdEscapeXml(`Ver el detalle del ${iso}`)}">
+        <rect x="${(cx - slot / 2).toFixed(1)}" y="${T}" width="${slot.toFixed(1)}" height="${plotH.toFixed(1)}" fill="#0f2340" opacity="0"><title>${fdEscapeXml(`${iso} (${fdDiaSemana(iso)}): ${formatoDolar(r.ingreso)}${r.pacientes ? ' - ' + r.pacientes + ' pacientes' : ''} - clic para el detalle`)}</title></rect>
+        <rect x="${(cx - barW / 2).toFixed(1)}" y="${y(r.ingreso).toFixed(1)}" width="${barW.toFixed(1)}" height="${alto.toFixed(1)}" rx="2" fill="${finde ? '#86c9a0' : '#16a34a'}" pointer-events="none"/>
+      </g>`;
+    } else {
+      /* Dia sin movimiento: un tic gris al pie, para que se vea que existio y
+         estuvo cerrado en vez de desaparecer del eje. */
+      out += `<rect x="${(cx - barW / 2).toFixed(1)}" y="${(T + plotH - 2).toFixed(1)}" width="${barW.toFixed(1)}" height="2" fill="#e2e8f0"><title>${fdEscapeXml(`${iso} (${fdDiaSemana(iso)}): sin movimiento`)}</title></rect>`;
+    }
+    if (d === 1 || d % 5 === 0) {
+      out += `<text x="${cx.toFixed(1)}" y="${(H - 16).toFixed(1)}" text-anchor="middle" font-size="10" fill="#64748b">${d}</text>`;
+    }
+  }
+  if (promedio > 0) {
+    out += `<line x1="${L}" y1="${y(promedio).toFixed(1)}" x2="${W - R}" y2="${y(promedio).toFixed(1)}" stroke="#b45309" stroke-width="1.5" stroke-dasharray="5 3" pointer-events="none"/>`;
+    out += `<text x="${W - R}" y="${(y(promedio) - 5).toFixed(1)}" text-anchor="end" font-size="10" font-weight="700" fill="#b45309" pointer-events="none">promedio ${fdDolarCorto(promedio)}</text>`;
+  }
+  out += `<text x="${(L + plotW / 2).toFixed(1)}" y="${H - 2}" text-anchor="middle" font-size="10" fill="#94a3b8">Dia del mes &middot; barra clara = fin de semana</text>`;
+  out += '</svg>';
+  return out;
+}
+
+async function fdDrillMes(mesTexto) {
+  fdDrillCargando(`Facturacion diaria - ${mesTexto}`);
+  let rows = [], mensual = null;
+  try {
+    const [caja, serie] = await Promise.all([
+      fdCargarCajaDiaria(mesTexto),
+      fdCargarSerieAnual(fdParseMesActivo(mesTexto).anio)
+    ]);
+    rows = caja.rows;
+    mensual = (serie || []).find(m => m.mes === mesTexto) || null;
+  } catch (err) {
+    console.error('No se pudo cargar la facturacion diaria:', err);
+  }
+  if (!document.getElementById('fd-drill-overlay')) return;
+  const conMov = rows.filter(r => parseFloat(r.ingreso || 0) > 0);
+  const irAlMes = `<p class="fd-drill-acciones"><button type="button" class="fd-drill-ir" data-fd-drill="ir-mes" data-fd-mes="${fdEscapeXml(mesTexto)}">Abrir ${fdEscapeXml(mesTexto)} en el dashboard &rarr;</button></p>`;
+  if (!conMov.length) {
+    fdDrillBody(`<p class="fd-note">No hay caja diaria capturada para ${fdEscapeXml(mesTexto)}. El detalle por dia se ingresa en "Ingresar datos del mes".</p>${irAlMes}`);
+    return;
+  }
+  const res = fdResumenCajaDiaria(rows.filter(r =>
+    parseFloat(r.ingreso || 0) || parseFloat(r.egreso || 0) || parseFloat(r.pago_banco || 0)));
+  const diarios = res.detalle.filter(r => r.ingreso > 0);
+  const total = diarios.reduce((s, r) => s + r.ingreso, 0);
+  const prom = total / diarios.length;
+  const pacientes = diarios.reduce((s, r) => s + (parseInt(r.pacientes, 10) || 0), 0);
+  const orden = diarios.slice().sort((a, b) => b.ingreso - a.ingreso);
+  const mejor = orden[0], peor = orden[orden.length - 1];
+  const facturado = parseFloat(mensual?.facturacion_total || 0);
+
+  /* Por dia de la semana: es el patron que decide en que dias conviene abrir. */
+  const semana = Array.from({ length: 7 }, () => ({ suma: 0, n: 0 }));
+  diarios.forEach(r => {
+    const [a, m, d] = String(r.fecha).split('-').map(Number);
+    const i = new Date(a, m - 1, d).getDay();
+    semana[i].suma += r.ingreso;
+    semana[i].n++;
+  });
+  const itemsSemana = [1, 2, 3, 4, 5, 6, 0].filter(i => semana[i].n).map(i => ({
+    etiqueta: FD_DIAS_SEMANA[i],
+    valor: semana[i].suma / semana[i].n,
+    nota: `${semana[i].n} ${semana[i].n === 1 ? 'dia' : 'dias'}`,
+    css: 'ok'
+  }));
+
+  const brecha = facturado ? facturado - total : 0;
+  const avisoBrecha = facturado && Math.abs(brecha) > 1
+    ? `<p class="fd-note"><strong class="fd-negative">Los dias suman ${formatoDolar(total)} y el mes cerro en ${formatoDolar(facturado)}: ${formatoDolar(Math.abs(brecha))} de diferencia.</strong> El detalle diario es lo cobrado en caja; la facturacion del mes es la cifra oficial. Cuando no cuadran, el bueno es el cierre.</p>`
+    : (facturado ? `<p class="fd-note">Los dias suman exactamente la facturacion del mes.</p>` : '');
+
+  fdDrillSub(`${diarios.length} dias con ingreso · promedio ${formatoDolar(prom)}/dia${pacientes ? ` · ${fdEntero(pacientes)} pacientes` : ''}`);
+  fdDrillBody(
+    fdSvgDiarioMes(res.detalle, mesTexto, prom) +
+    `<div class="fd-drill-cifras">
+       <div><span>Cobrado en el mes</span><strong>${formatoDolar(total)}</strong></div>
+       <div><span>Mejor dia</span><strong>${formatoDolar(mejor.ingreso)}</strong><em>${mejor.fecha} (${fdDiaSemana(mejor.fecha)})</em></div>
+       <div><span>Mas flojo</span><strong>${formatoDolar(peor.ingreso)}</strong><em>${peor.fecha} (${fdDiaSemana(peor.fecha)})</em></div>
+     </div>` +
+    avisoBrecha +
+    `<p class="fd-chart-subtitle" style="margin-top:1rem">Promedio por dia de la semana</p>` +
+    fdDrillBarras(itemsSemana, { col1: 'Dia', col2: 'Promedio' }) +
+    `<p class="fd-note">Clic en cualquier dia de la grafica para ver su detalle.</p>` +
+    irAlMes);
+}
+
 async function fdDrillDentista(nombre) {
   const anio = fdParseMesActivo(fdMesActivoSeleccionado).anio;
   fdDrillCargando(nombre);
@@ -969,7 +1093,9 @@ async function fdDrillDentista(nombre) {
 }
 
 async function fdDrillDia(fechaISO) {
-  const mesTexto = fdMesActivoSeleccionado;
+  /* El mes sale de la fecha, no del selector: desde el panel de un mes se puede
+     abrir un dia que no pertenece al mes activo del dashboard. */
+  const mesTexto = fdMesTextoDeISO(fechaISO);
   fdDrillCargando(`${fechaISO} (${fdDiaSemana(fechaISO)})`);
   let res = null;
   try {
@@ -1003,7 +1129,8 @@ async function fdDrillDia(fechaISO) {
        <div><span>Acumulado del mes hasta hoy</span><strong class="${dia.saldo >= 0 ? 'fd-positive' : 'fd-negative'}">${formatoDolar(dia.saldo)}</strong></div>
        <div><span>Ticket del dia</span><strong>${dia.pacientes ? formatoDolar(dia.ingreso / dia.pacientes) : '&mdash;'}</strong></div>
      </div>
-     <p class="fd-note">Puesto ${puesto} de ${conIngreso.length} dias con ingreso del mes; ${vsProm >= 0 ? 'arriba' : 'abajo'} del promedio diario (${formatoDolar(promDia)}) por ${fdPorcentaje(Math.abs(vsProm))}. El acumulado arranca en cero cada mes: es flujo del periodo, no saldo bancario.</p>`);
+     <p class="fd-note">Puesto ${puesto} de ${conIngreso.length} dias con ingreso del mes; ${vsProm >= 0 ? 'arriba' : 'abajo'} del promedio diario (${formatoDolar(promDia)}) por ${fdPorcentaje(Math.abs(vsProm))}. El acumulado arranca en cero cada mes: es flujo del periodo, no saldo bancario.</p>
+     <p class="fd-drill-acciones"><button type="button" class="fd-drill-ir" data-fd-drill="mes" data-fd-mes="${fdEscapeXml(mesTexto)}">&larr; Ver los ${conIngreso.length} dias de ${fdEscapeXml(mesTexto)}</button></p>`);
 }
 
 async function fdDrillCostos(mesTexto) {
@@ -1052,28 +1179,33 @@ async function fdDrillCostos(mesTexto) {
 
 /* Un solo listener para todo el dashboard: los SVG se redibujan enteros en
    cada carga, asi que enganchar handlers por elemento los perderia. */
+function fdDrillHandler(ev) {
+  const objetivo = ev.target.closest?.('[data-fd-drill]');
+  if (!objetivo) return;
+  const tipo = objetivo.getAttribute('data-fd-drill');
+  if (tipo === 'mes') fdDrillMes(objetivo.getAttribute('data-fd-mes'));
+  else if (tipo === 'dentista') fdDrillDentista(objetivo.getAttribute('data-fd-nombre'));
+  else if (tipo === 'dia') fdDrillDia(objetivo.getAttribute('data-fd-fecha'));
+  else if (tipo === 'costos') fdDrillCostos(objetivo.getAttribute('data-fd-mes') || fdMesActivoSeleccionado);
+  else if (tipo === 'ir-mes') { fdDrillCerrar(); fdDrillIrAMes(objetivo.getAttribute('data-fd-mes')); }
+}
+
+/* Teclado: las filas y los grupos SVG llevan tabindex, asi que Enter/Espacio
+   deben hacer lo mismo que el clic. */
+function fdDrillTeclado(ev) {
+  if (ev.key !== 'Enter' && ev.key !== ' ') return;
+  const objetivo = ev.target.closest?.('[data-fd-drill]');
+  if (!objetivo) return;
+  ev.preventDefault();
+  objetivo.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+}
+
 function fdDrillInit() {
   const root = document.getElementById('dashboard-financiero-root');
   if (!root || root.dataset.drillListo === '1') return;
   root.dataset.drillListo = '1';
-  root.addEventListener('click', ev => {
-    const objetivo = ev.target.closest('[data-fd-drill]');
-    if (!objetivo) return;
-    const tipo = objetivo.getAttribute('data-fd-drill');
-    if (tipo === 'mes') fdDrillIrAMes(objetivo.getAttribute('data-fd-mes'));
-    else if (tipo === 'dentista') fdDrillDentista(objetivo.getAttribute('data-fd-nombre'));
-    else if (tipo === 'dia') fdDrillDia(objetivo.getAttribute('data-fd-fecha'));
-    else if (tipo === 'costos') fdDrillCostos(objetivo.getAttribute('data-fd-mes') || fdMesActivoSeleccionado);
-  });
-  /* Teclado: las filas y los grupos SVG llevan tabindex, asi que Enter/Espacio
-     deben hacer lo mismo que el clic. */
-  root.addEventListener('keydown', ev => {
-    if (ev.key !== 'Enter' && ev.key !== ' ') return;
-    const objetivo = ev.target.closest?.('[data-fd-drill]');
-    if (!objetivo) return;
-    ev.preventDefault();
-    objetivo.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  });
+  root.addEventListener('click', fdDrillHandler);
+  root.addEventListener('keydown', fdDrillTeclado);
 }
 
 /* ══════════════════════════════════════════════════════════════════════

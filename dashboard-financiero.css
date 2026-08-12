@@ -348,6 +348,13 @@
 }
 .fd-drill-cifras span { display:block; font-size:.68rem; text-transform:uppercase; letter-spacing:.03em; color:#64748b; }
 .fd-drill-cifras strong { font-size:1.02rem; color:#0f2340; }
+.fd-drill-cifras em { display:block; font-style:normal; font-size:.7rem; color:#64748b; }
+.fd-drill-acciones { margin:1rem 0 0; }
+.fd-drill-ir {
+  border:1px solid #1d4ed8; background:#eff6ff; color:#1d4ed8; font-weight:700;
+  font-size:.8rem; padding:.45rem .8rem; border-radius:8px; cursor:pointer;
+}
+.fd-drill-ir:hover { background:#1d4ed8; color:#fff; }
 @media(max-width:520px) {
   .fd-drill-overlay { padding:0; align-items:flex-end; }
   .fd-drill-panel { max-height:92vh; border-radius:12px 12px 0 0; }
