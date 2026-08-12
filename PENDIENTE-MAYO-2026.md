@@ -1,6 +1,8 @@
-# Mayo 2026 — corrección pendiente de aplicar
+# Mayo 2026 — estado de la corrección
 
-Estado al 12/08/2026. **Nada de esto está aplicado todavía** ni en el portal ni en Supabase.
+Actualizado 12/08/2026. **El código ya está aplicado; falta correr el SQL en Supabase.**
+
+Archivo a ejecutar: `supabase-correccion-mayo-2026.sql` (completo, de una sola vez).
 
 ## Qué pasó
 
@@ -32,32 +34,31 @@ corregir, así que no eran independientes. El PDF corregido y el PPT coinciden e
 
 Por medio de cobro: efectivo **+3,812.18**, POS **−85.21**, transferencia sin cambio.
 
-## Lo que se puede aplicar con confianza (sale directo del PDF)
+---
 
-1. **Mix de cobro de mayo** en `dashboard_mensual`:
-   `efectivo = 24536.85`, `tarjeta = 7971.45`, `transferencia = 179.29`
-   (hoy tiene 20724.67 / 8056.66 / 179.29)
+# ✅ Aplicado
 
-2. **Producción por dentista de mayo** en `produccion_dentistas`:
-   - Dra. Olga Vigil → `5642.47`
-   - Dra. Miriam Avelar → `4075.01`
-   - Dr. Oscar Guardado → `664.41`
-   - Dr. Nelson Erazo → `1926.89`
-   (los demás no cambian; Flotante y N/A no son filas de esta tabla)
+## 1. Mix de cobro de mayo — `dashboard_mensual`
 
-   Efecto en semáforos: ninguno cambia de estado. Olga y Miriam siguen sobre meta,
-   Nelson sigue crítico, Oscar está fuera de comparativa en mayo. Sí cambia la
-   **media del grupo**.
+`efectivo = 24536.85`, `tarjeta = 7971.45`, `transferencia = 179.29`
+(antes 20724.67 / 8056.66 / 179.29).
 
-3. La **facturación de mayo ya está correcta** en el portal ($32,687.59, venía del PPT).
+Con la corrección los tres suman **exacto $32,687.59**, así que mayo pierde la franja
+"Otros / ajustes" que tenía en la gráfica de mix. Eso es, por sí solo, una confirmación
+de que la corrección es la buena.
 
-## Lo que NO se puede aplicar sin la hoja corregida
+## 2. Producción por dentista de mayo — `produccion_dentistas`
 
-### Reparto administración / titular de mayo — ⚠️ AFECTA UNA CONCLUSIÓN PRESENTABLE
+Olga `5642.47` · Miriam `4075.01` · Oscar `664.41` · Nelson `1926.89`. Los demás no cambian
+(Flotante y N/A no son filas de esta tabla).
 
-Hoy la tabla dice `admin 16,706.63 + titular 12,254.00` = 28,960.63, y de ahí sale el
-hallazgo **"mayo cerró con $254 de margen sobre la cuota"**, que se presentó como uno de
-los dos meses más apretados.
+Ningún semáforo cambia de estado. Sí cambia la media del grupo.
+
+## 3. Reparto administración / titular de mayo → **NULL**
+
+El reparto viejo (`admin 16,706.63 + titular 12,254.00` = 28,960.63) salía del Excel sin
+corregir, y de ahí venía el hallazgo **"mayo cerró con $254 de margen sobre la cuota"**.
+Ese hallazgo queda retirado.
 
 Con la corrección hay **dos lecturas posibles y dan resultados opuestos**:
 
@@ -66,30 +67,34 @@ Con la corrección hay **dos lecturas posibles y dan resultados opuestos**:
 | A — el dinero extra se lo llevó la titular | 16,706.63 | 15,980.96 | **+3,980.96** |
 | B — el dinero extra se quedó en caja | 20,518.81 | 12,168.78 | **+168.78** |
 
-Con A, mayo deja de ser un mes apretado. Con B, es aún más apretado que lo que dijimos.
-**No se puede elegir sin la hoja `ADMINISTRACION DE FONDOS EFECTI` corregida.**
+Elegir una sería inventar, así que mayo va en NULL y **la tarjeta lo muestra como
+"pendiente de corrección"** (fila gris, en su lugar cronológico, con el cobrado del mes y
+una nota que explica por qué está en blanco). El código de la tarjeta ya no esconde los
+meses sin reparto que caen dentro del período: los marca.
 
 Regla verificada con junio: `admin = egresos en efectivo (sin remesas) + sobrante de caja`.
 Junio: 18,369.76 − 4,223.43 = 14,146.33 + 0.00 = 14,146.33 ✓
 
-**Acción recomendada:** poner `admin_operacion` y `retiro_titular` de mayo en NULL y que la
-tarjeta muestre "pendiente de corrección", en vez de dejar un dato que ya sabemos falso.
+## 4. Aviso de caja diaria descuadrada — nuevo, sirve para cualquier mes
 
-### Caja diaria de mayo (31 días)
+Los 31 días de mayo suman $28,960.63 y el mes cerró en $32,687.59. El PDF solo da totales
+por quincena, así que **no se puede repartir día por día sin inventar** y los días se
+dejaron como están.
 
-Los días suman $28,960.63 de ingreso; ya están desactualizados en $3,726.97. El PDF solo
-da totales por quincena, no día por día, así que no se puede repartir sin inventar.
+En vez de eso, el dashboard ahora avisa **solo cuando la suma de los días capturados no
+cuadra con la facturación del mes**, en meses ya cerrados (en el mes en curso faltan días
+por definición, así que no molesta). Mayo dispara el aviso; los demás meses no.
 
-**Acción recomendada:** dejar los días como están pero agregar al dashboard un aviso
-general cuando la suma diaria no cuadre con la facturación del mes. Sirve para mayo y para
-cualquier mes futuro.
+---
 
-### Egresos por categoría de mayo
+# ⏳ Sigue pendiente
+
+## Egresos por categoría de mayo
 
 La corrección fue de **ingresos**, no de egresos, así que los $18,979.21 probablemente
 siguen válidos. No verificado.
 
-## Otro tema abierto: conteo de pacientes de mayo
+## Conteo de pacientes de mayo
 
 El PDF `RECEPCION MAYO 2026.pdf` (31 páginas, una por día) es una **fuente nueva e
 independiente**: da **858 registros** de pacientes con nombre. Sigue a la caja día por día

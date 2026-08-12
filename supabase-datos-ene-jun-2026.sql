@@ -12,8 +12,12 @@
 --   * Produccion por doctor y mix de cobro: CAJA <MES> 2026.xlsx, hoja RESUMEN DEL MES.
 --     "N/A" grande del resumen = Dra. Dayana Carmona (validado contra slide 4).
 --   * NOTA Mayo: reemplaza el seed anterior (30,443.34 / 783 px) por la cifra oficial
---     de la presentacion (32,687.59 / 841 px). El mix de cobro de mayo suma 28,960.62
---     (lo efectivamente cobrado en caja); la diferencia se muestra como "Otros".
+--     de la presentacion (32,687.59 / 841 px).
+--   * NOTA Mayo (12/08/2026): mix de cobro y produccion de mayo YA VIENEN CORREGIDOS
+--     aqui, tomados del PDF "CAJA MAYO 2026 - RESUMEN DEL MES.pdf" (unica fuente
+--     corregida del mes; el Excel de mayo nunca se corrigio y esta corto en 3,726.97).
+--     Con la correccion el mix de mayo suma exacto 32,687.59, sin franja "Otros".
+--     Ver supabase-correccion-mayo-2026.sql para el detalle del descuadre.
 -- Re-ejecutable sin duplicar (borra los 6 meses y los reinserta).
 -- ⚠ EJECUTAR EL ARCHIVO COMPLETO, nunca por partes: el BEGIN/COMMIT garantiza que
 --   si algo falla (p.ej. correrlo antes de la migracion) no queden los DELETE aplicados.
@@ -30,7 +34,7 @@ VALUES
   ('Febrero 2026', 28156.24, 843, 33.4, 7754.96, 10800.0, 7039.06, 2562.22, 491, 19541.84, 8540.13, 74.27),
   ('Marzo 2026', 33036.84, 974, 33.92, 10971.28, 10800.0, 8259.21, 3006.35, 484, 22611.47, 9721.8, 703.57),
   ('Abril 2026', 34055.72, 931, 36.58, 11416.69, 10800.0, 8513.93, 3325.1, 453, 21648.21, 11411.79, 995.72),
-  ('Mayo 2026', 32687.59, 841, 38.87, 10934.59, 10800.0, 8171.9, 2781.1, 418, 20724.67, 8056.66, 179.29),
+  ('Mayo 2026', 32687.59, 841, 38.87, 10934.59, 10800.0, 8171.9, 2781.1, 418, 24536.85, 7971.45, 179.29),
   ('Junio 2026', 27665.23, 839, 32.97, 7498.71, 10800.0, 6916.31, 2450.21, 496, 18369.76, 8769.68, 525.79);
 
 INSERT INTO public.produccion_dentistas (mes, nombre, facturacion, meta, estado)
@@ -85,13 +89,13 @@ VALUES
   ('Abril 2026', 'Dra. Dayana Carmona', 5631.44, 2500, 'sobre_meta'),
   ('Abril 2026', 'Dra. Nancy', 544.75, 2500, 'critico'),
   ('Abril 2026', 'Dr. Osegueda', 159.29, 2500, 'critico'),
-  ('Mayo 2026', 'Dra. Olga Vigil', 3466.74, 2500, 'sobre_meta'),
-  ('Mayo 2026', 'Dra. Miriam Avelar', 4256.23, 2500, 'sobre_meta'),
+  ('Mayo 2026', 'Dra. Olga Vigil', 5642.47, 2500, 'sobre_meta'),
+  ('Mayo 2026', 'Dra. Miriam Avelar', 4075.01, 2500, 'sobre_meta'),
   ('Mayo 2026', 'Dra. Cindy Artiga', 3220.42, 2500, 'sobre_meta'),
   ('Mayo 2026', 'Dr. Luis Alarcon', 3516.47, 2500, 'sobre_meta'),
   ('Mayo 2026', 'Dr. Rafael Mendez', 1320.45, 2500, 'critico'),
-  ('Mayo 2026', 'Dr. Oscar Guardado', 727.27, 2500, 'critico'),
-  ('Mayo 2026', 'Dr. Nelson Erazo', 1926.88, 2500, 'advertencia'),
+  ('Mayo 2026', 'Dr. Oscar Guardado', 664.41, 2500, 'critico'),
+  ('Mayo 2026', 'Dr. Nelson Erazo', 1926.89, 2500, 'advertencia'),
   ('Mayo 2026', 'Dra. Haybi Figueroa', 2497.91, 2500, 'advertencia'),
   ('Mayo 2026', 'Dra. Arriaza', 1300.0, 2500, 'critico'),
   ('Mayo 2026', 'Dra. Dayana Carmona', 6279.31, 2500, 'sobre_meta'),

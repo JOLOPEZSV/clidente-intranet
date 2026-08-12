@@ -304,6 +304,7 @@
 .fd-reparto-tabla td { padding:.42rem .7rem; }
 .fd-reparto-warn td { background:#fef3c7; }
 .fd-reparto-bad td { background:#fee2e2; }
+.fd-reparto-pendiente td { background:#f1f5f9; color:#64748b; }
 .fd-descuadre { display:block; font-style:normal; font-size:.68rem; font-weight:800; color:#b91c1c; }
 
 /* ══ Estado de Resultados ══ */

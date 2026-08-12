@@ -1269,9 +1269,29 @@ async function fdRenderReparto(anio, sigueVigente = () => true) {
   card.style.display = '';
   fdSetText('fd-reparto-anio', String(anio));
 
+  /* Un mes SIN reparto pero dentro del periodo que si lo tiene no es un mes que
+     falte capturar: es un mes cuyo reparto sabemos que esta mal (mayo 2026, ver
+     PENDIENTE-MAYO-2026.md). Mostrarlo vacio y marcado es mas honesto que
+     esconder la fila, que dejaria pensar que el mes no existe. */
+  const indices = conReparto.map(m => fdMesIndice(m.mes));
+  const desde = Math.min(...indices);
+  const hasta = Math.max(...indices);
+  const pendientes = meses.filter(m =>
+    (m.retiro_titular == null || !parseFloat(m.retiro_titular)) &&
+    parseFloat(m.facturacion_total || 0) > 0 &&
+    fdMesIndice(m.mes) >= desde && fdMesIndice(m.mes) <= hasta);
+  const filas = conReparto.concat(pendientes).sort((a, b) => fdMesIndice(a.mes) - fdMesIndice(b.mes));
+
   const ajustados = [];
   const descuadrados = [];
-  body.innerHTML = conReparto.map(m => {
+  body.innerHTML = filas.map(m => {
+    if (m.retiro_titular == null || !parseFloat(m.retiro_titular)) {
+      return `<tr class="fd-reparto-pendiente">
+        <td>${fdParseMesActivo(m.mes).mes}</td>
+        <td class="num">${formatoDolar(parseFloat(m.facturacion_total || 0))}</td>
+        <td colspan="4"><em class="fd-descuadre">Pendiente de correccion: falta la hoja de administracion de fondos corregida.</em></td>
+      </tr>`;
+    }
     const cobrado = parseFloat(m.facturacion_total || 0);
     const admin = parseFloat(m.admin_operacion || 0);
     const titular = parseFloat(m.retiro_titular || 0);
@@ -1310,6 +1330,10 @@ async function fdRenderReparto(anio, sigueVigente = () => true) {
     descuadrados.forEach(d => {
       partes.push(`<strong class="fd-negative">En ${d.mes} el reparto del Excel suma ${formatoDolar(d.reparto)} y la facturacion registrada es ${formatoDolar(d.cobrado)}: faltan ${formatoDolar(Math.abs(d.descuadre))} por explicar.</strong> Los demas meses cuadran al centavo, asi que conviene revisar de donde sale esa cifra antes de usarla.`);
     });
+    if (pendientes.length) {
+      const sinDato = pendientes.map(m => fdParseMesActivo(m.mes).mes).join(' y ');
+      partes.push(`<strong class="fd-negative">${sinDato} queda fuera del cuadro: su reparto salia de una hoja que la clinica corrigio despues, y las dos lecturas posibles del dato corregido dan conclusiones opuestas.</strong> Se deja en blanco a proposito hasta tener la hoja corregida; poner cualquiera de las dos seria inventar.`);
+    }
     nota.innerHTML = partes.join(' ');
   }
 }
@@ -1369,7 +1393,7 @@ async function fdRenderEstadoResultados(mesTexto, sigueVigente = () => true) {
   }
 }
 
-async function fdRenderCajaDiariaDashboard(mesTexto, sigueVigente = () => true) {
+async function fdRenderCajaDiariaDashboard(mesTexto, sigueVigente = () => true, mensual = null) {
   const card = document.getElementById('fd-caja-diaria-card');
   const cont = document.getElementById('fd-caja-diaria-chart');
   if (!card || !cont) return;
@@ -1410,6 +1434,14 @@ async function fdRenderCajaDiariaDashboard(mesTexto, sigueVigente = () => true) 
     const diasMes = fdDiasDelMes(mesTexto);
     if (res.diasConDatos < diasMes) {
       partes.push(`<em>Acumulado con ${res.diasConDatos} de ${diasMes} dias capturados.</em>`);
+    }
+    /* Los dias tienen que sumar lo que factura el mes. Cuando no cuadra, uno de
+       los dos lados quedo desactualizado (le paso a mayo 2026: la clinica
+       corrigio el resumen del mes y nunca reemitio el detalle diario). Solo se
+       revisa en meses ya cerrados; en el mes en curso faltan dias por captura. */
+    const brecha = fdBrechaCajaDiaria(mesTexto, res.ingresos, mensual);
+    if (brecha) {
+      partes.push(`<strong class="fd-negative">Los dias capturados suman ${formatoDolar(brecha.diario)} y el mes cerro en ${formatoDolar(brecha.mensual)}: ${formatoDolar(Math.abs(brecha.diferencia))} de diferencia.</strong> El detalle diario y el cierre del mes no vienen de la misma version del archivo; el bueno es el cierre, asi que el grafico de abajo se queda corto.`);
     }
     if (res.primerNegativo) {
       partes.push(`<strong class="fd-negative">A partir del ${res.primerNegativo} el mes consume mas efectivo del que genera; toca fondo el ${res.peorSaldo.fecha} en ${formatoDolar(res.peorSaldo.valor)}.</strong>`);
@@ -1969,7 +2001,7 @@ async function initDashboardFinanciero() {
       if (cardER) cardER.style.display = 'none';
     } else {
       await fdRenderEstadoResultados(mesSolicitado, () => token === cargaToken);
-      await fdRenderCajaDiariaDashboard(mesSolicitado, () => token === cargaToken);
+      await fdRenderCajaDiariaDashboard(mesSolicitado, () => token === cargaToken, data.mensual);
     }
 
     /* Indicadores: en mensual toman el ER del mes; en acumulado suman el
@@ -2136,6 +2168,22 @@ function fdResumenCajaDiaria(rows) {
     primerNegativo,
     diasConDatos: detalle.filter(r => r.ingreso || r.egreso || r.pago_banco).length
   };
+}
+
+/* Diferencia entre lo que suman los dias capturados y lo que dice el cierre del
+   mes. Devuelve null cuando no hay nada que reportar: mes aun en curso (faltan
+   dias por capturar por definicion), mes sin facturacion registrada, o cuadre
+   dentro de un dolar (redondeos del Excel). */
+function fdBrechaCajaDiaria(mesTexto, ingresosDiarios, mensual) {
+  const mensualVal = parseFloat(mensual?.facturacion_total || 0);
+  if (!mensualVal) return null;
+  const ultimoDia = fdFechaISO(mesTexto, fdDiasDelMes(mesTexto));
+  const hoy = new Date();
+  const hoyISO = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  if (ultimoDia >= hoyISO) return null;
+  const diferencia = ingresosDiarios - mensualVal;
+  if (Math.abs(diferencia) <= 1) return null;
+  return { diario: ingresosDiarios, mensual: mensualVal, diferencia };
 }
 
 function fdSlug(texto) {
