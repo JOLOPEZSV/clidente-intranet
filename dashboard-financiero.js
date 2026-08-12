@@ -1675,15 +1675,19 @@ async function initDashboardFinanciero() {
       : await fdCargarDatosDashboard(mesSolicitado);
     if (token !== cargaToken) return;
 
-    /* Reintento del salto al ultimo mes con datos: solo si el usuario no ha
-       elegido mes, el actual salio vacio y aun no se intento. */
+    /* Salto al ultimo mes con datos. La bandera solo se marca cuando la
+       consulta REALMENTE respondio: si la sesion de Supabase aun no estaba
+       lista (401), se vuelve a intentar en la siguiente carga en vez de
+       quedar desactivado para siempre. */
     if (!esAcumulado && !fdMesElegidoPorUsuario && !saltoMesAplicado && !fdTieneDatos(data.mensual)) {
-      saltoMesAplicado = true;
       const { ultimoConDatos: ultimo } = await fdCargarAniosDisponibles();
-      if (ultimo && ultimo !== mesSolicitado) {
-        fdMesActivoSeleccionado = ultimo;
-        fdSetMesControls('fd-dashboard', ultimo);
-        return cargarVista();
+      if (ultimo) {
+        saltoMesAplicado = true;
+        if (ultimo !== mesSolicitado) {
+          fdMesActivoSeleccionado = ultimo;
+          fdSetMesControls('fd-dashboard', ultimo);
+          return cargarVista();
+        }
       }
     }
 
@@ -1728,6 +1732,11 @@ async function initDashboardFinanciero() {
   btnAcumulado?.addEventListener('click', () => { fdVistaDashboard = 'acumulado'; cargarVista(); });
 
   await cargarVista();
+  /* Red de seguridad: si en la primera carga la sesion aun no estaba lista, el
+     mes pudo quedar en uno vacio. Se reintenta una vez pasado un momento. */
+  if (!saltoMesAplicado && !fdMesElegidoPorUsuario) {
+    setTimeout(() => { if (!saltoMesAplicado && !fdMesElegidoPorUsuario) cargarVista(); }, 1500);
+  }
 }
 /* ══════════════════════════════════════════════════════════════════════
    CAJA DIARIA (propuesta 1 de la consultoria)
