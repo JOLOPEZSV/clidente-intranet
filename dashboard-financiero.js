@@ -917,7 +917,8 @@ function fdDrillBarras(items, opciones = {}) {
   const max = Math.max(...items.map(i => Math.abs(i.valor)), 1);
   const filas = items.map(i => {
     const w = Math.max((Math.abs(i.valor) / max) * 100, i.valor ? 1.5 : 0);
-    return `<tr${i.tenue ? ' class="fd-drill-tenue"' : ''}>
+    const clases = [i.tenue ? 'fd-drill-tenue' : '', i.attrs ? 'fd-drill-fila' : ''].filter(Boolean).join(' ');
+    return `<tr${clases ? ` class="${clases}"` : ''}${i.attrs || ''}>
       <td>${fdEscapeXml(i.etiqueta)}${i.nota ? ` <em class="fd-drill-nota">${fdEscapeXml(i.nota)}</em>` : ''}</td>
       <td class="num"><strong>${formatoDolar(i.valor)}</strong></td>
       ${opciones.pct ? `<td class="num">${fdPorcentaje(i.pct || 0)}</td>` : ''}
@@ -1143,6 +1144,71 @@ async function fdDrillOperativo(mesTexto) {
      </p>`);
 }
 
+/* Nivel mas fino que existe: los cobros de un doctor en un mes, tal como
+   quedaron en las hojas diarias. Sale de produccion_detalle. */
+async function fdDrillDentistaMes(nombre, mesTexto) {
+  fdDrillCargando(`${nombre} - ${mesTexto}`);
+  let filas = [];
+  try {
+    filas = await fdSupabaseGetRows(
+      `produccion_detalle?select=fecha,paciente,efectivo,pos,transferencia,total` +
+      `&doctor=eq.${encodeURIComponent(nombre)}&mes=eq.${encodeURIComponent(mesTexto)}&order=fecha.asc`);
+  } catch (err) {
+    console.error('No se pudo cargar el detalle del dentista:', err);
+  }
+  if (!document.getElementById('fd-drill-overlay')) return;
+  const volver = `<p class="fd-drill-acciones"><button type="button" class="fd-drill-ir" data-fd-drill="dentista" data-fd-nombre="${fdEscapeXml(nombre)}">&larr; Volver al anio de ${fdEscapeXml(nombre)}</button></p>`;
+  if (!Array.isArray(filas) || !filas.length) {
+    fdDrillBody(`<p class="fd-note">No hay detalle cargado para ${fdEscapeXml(nombre)} en ${fdEscapeXml(mesTexto)}. El detalle diario existe desde enero 2026 y se carga con <code>supabase-produccion-detalle.sql</code>.</p>${volver}`);
+    return;
+  }
+  const num = (r, k) => parseFloat(r[k] || 0);
+  const total = filas.reduce((s, r) => s + num(r, 'total'), 0);
+  const efectivo = filas.reduce((s, r) => s + num(r, 'efectivo'), 0);
+  const pos = filas.reduce((s, r) => s + num(r, 'pos'), 0);
+  const transf = filas.reduce((s, r) => s + num(r, 'transferencia'), 0);
+  /* Un paciente puede pagar varias veces en el mes: para el ticket interesa
+     cuanta gente distinta atendio, no cuantos cobros hubo. */
+  const pacientes = new Set(filas.map(r => String(r.paciente || '').trim()).filter(Boolean)).size;
+  const negativos = filas.filter(r => num(r, 'total') < 0);
+
+  const porDia = new Map();
+  filas.forEach(r => porDia.set(r.fecha, (porDia.get(r.fecha) || 0) + num(r, 'total')));
+  const dias = [...porDia.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const mejor = dias.slice().sort((a, b) => b[1] - a[1])[0];
+
+  const mix = [
+    { etiqueta: 'Efectivo', valor: efectivo, css: 'ok' },
+    { etiqueta: 'POS / tarjeta', valor: pos, css: 'warn' },
+    { etiqueta: 'Transferencia', valor: transf, css: 'neutro' }
+  ].filter(i => Math.abs(i.valor) > 0.005);
+
+  const cobros = filas.slice().sort((a, b) => num(b, 'total') - num(a, 'total')).slice(0, 40);
+  const tabla = `<table class="fd-table fd-drill-tabla">
+    <thead><tr><th>Fecha</th><th>Paciente</th><th class="num">Monto</th></tr></thead>
+    <tbody>${cobros.map(r => `<tr${num(r, 'total') < 0 ? ' class="fd-drill-tenue"' : ''}>
+      <td>${fdEscapeXml(String(r.fecha))}</td>
+      <td>${fdEscapeXml(String(r.paciente || '(sin nombre)'))}</td>
+      <td class="num ${num(r, 'total') < 0 ? 'fd-negative' : ''}"><strong>${formatoDolar(num(r, 'total'))}</strong></td>
+    </tr>`).join('')}</tbody></table>`;
+
+  fdDrillSub(`${filas.length} cobros · ${pacientes} pacientes distintos · ${dias.length} dias con produccion`);
+  fdDrillBody(
+    `<div class="fd-drill-cifras">
+       <div><span>Producido en el mes</span><strong>${formatoDolar(total)}</strong></div>
+       <div><span>Ticket por paciente</span><strong>${pacientes ? formatoDolar(total / pacientes) : '&mdash;'}</strong></div>
+       <div><span>Mejor dia</span><strong>${formatoDolar(mejor[1])}</strong><em>${mejor[0]} (${fdDiaSemana(mejor[0])})</em></div>
+     </div>` +
+    `<p class="fd-chart-subtitle" style="margin-top:1rem">Como le pagaron</p>` +
+    fdDrillBarras(mix, { col1: 'Medio de cobro', col2: 'Monto' }) +
+    `<p class="fd-chart-subtitle" style="margin-top:1rem">Cobros del mes${filas.length > 40 ? ` &middot; los 40 mas altos de ${filas.length}` : ''}</p>` +
+    tabla +
+    (negativos.length
+      ? `<p class="fd-note">${negativos.length} ${negativos.length === 1 ? 'linea es negativa' : 'lineas son negativas'} (nota de credito o reverso) y ya ${negativos.length === 1 ? 'esta restada' : 'estan restadas'} del total.</p>`
+      : '') +
+    volver);
+}
+
 async function fdDrillDentista(nombre) {
   const anio = fdParseMesActivo(fdMesActivoSeleccionado).anio;
   fdDrillCargando(nombre);
@@ -1174,7 +1240,9 @@ async function fdDrillDentista(nombre) {
       valor: v,
       nota: fuera ? 'fuera de comparativa' : (v < piso ? 'bajo el piso' : ''),
       tenue: fuera,
-      css: fuera ? 'neutro' : fdEstadoDentista(v, meta, piso).css
+      css: fuera ? 'neutro' : fdEstadoDentista(v, meta, piso).css,
+      /* Cada mes baja un nivel mas: los cobros de ese doctor en ese mes. */
+      attrs: ` data-fd-drill="dentista-mes" data-fd-nombre="${fdEscapeXml(nombre)}" data-fd-mes="${fdEscapeXml(f.mes)}" tabindex="0" role="button" title="Ver los cobros de ${fdEscapeXml(f.mes)}"`
     };
   });
   const bajoPiso = items.filter(i => !i.tenue && i.valor < piso).length;
@@ -1184,7 +1252,8 @@ async function fdDrillDentista(nombre) {
   fdDrillSub(`${anio} · promedio ${formatoDolar(prom)}/mes en ${activos.length} meses con produccion`);
   fdDrillBody(
     fdDrillBarras(items, { col1: 'Mes', col2: 'Produccion' }) +
-    `<p class="fd-note">Meta Cero ${formatoDolar(meta)} · piso de rentabilidad ${formatoDolar(piso)} (${formatoDolar(FD_COSTOS_FIJOS_MES)} entre ${FD_SILLAS_OPERATIVAS} sillas, sobre ${fdPorcentaje(FD_RETENCION_CLINICA * 100)} de retencion). ${resumen}</p>`);
+    `<p class="fd-note">Meta Cero ${formatoDolar(meta)} · piso de rentabilidad ${formatoDolar(piso)} (${formatoDolar(FD_COSTOS_FIJOS_MES)} entre ${FD_SILLAS_OPERATIVAS} sillas, sobre ${fdPorcentaje(FD_RETENCION_CLINICA * 100)} de retencion). ${resumen}</p>
+     <p class="fd-note">Clic en cualquier mes para ver sus cobros, paciente por paciente.</p>`);
 }
 
 async function fdDrillDia(fechaISO) {
@@ -1281,6 +1350,7 @@ function fdDrillHandler(ev) {
   if (tipo === 'mes') fdDrillMes(objetivo.getAttribute('data-fd-mes'));
   else if (tipo === 'operativo') fdDrillOperativo(objetivo.getAttribute('data-fd-mes'));
   else if (tipo === 'dentista') fdDrillDentista(objetivo.getAttribute('data-fd-nombre'));
+  else if (tipo === 'dentista-mes') fdDrillDentistaMes(objetivo.getAttribute('data-fd-nombre'), objetivo.getAttribute('data-fd-mes'));
   else if (tipo === 'dia') fdDrillDia(objetivo.getAttribute('data-fd-fecha'));
   else if (tipo === 'costos') fdDrillCostos(objetivo.getAttribute('data-fd-mes') || fdMesActivoSeleccionado);
   else if (tipo === 'ir-mes') { fdDrillCerrar(); fdDrillIrAMes(objetivo.getAttribute('data-fd-mes')); }
