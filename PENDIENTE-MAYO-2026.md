@@ -165,3 +165,87 @@ real, pero **no es una medición silla por silla**. Queda anotado en la columna
 `notas` de cada fila.
 
 Cuando Henry capture su primera semana de verdad, esa fila se reemplaza.
+
+---
+
+# De dónde sale cada uno de los cuatro números (13/08/2026)
+
+Se auditaron los archivos fuente (`CAJA MAYO 2026.xlsx`, 42 hojas) buscando el
+origen real de cada número. Resultado:
+
+| # | Número | ¿Existe el dato fuente? | Origen hoy |
+|---|---|---|---|
+| 1 | Ocupación por silla | **No** | Captura semanal de Henry |
+| 2 | Pacientes contra meta | **Sí** | `produccion_detalle`, automático |
+| 3 | Horas de silla vacía | **No** | Se deriva de 1 |
+| 4 | Garantías | **No** | Captura semanal de Henry |
+
+## Los números 1 y 3 no tienen fuente
+
+Las hojas diarias 1..31 tienen: cajero, paciente y tres columnas de forma de
+pago por doctor. **No hay columna de silla, ni hora de inicio, ni duración, ni
+cita.** Se buscaron esas palabras en las 42 hojas del libro y en todos los xlsx
+del equipo: cero coincidencias.
+
+La lámina 11 pudo dar 78.83 horas porque fue un **muestreo manual de una
+semana**, no una extracción. Nadie está midiendo tiempo de silla hoy.
+
+## El número 2 ya es automático (commit de hoy)
+
+`produccion_detalle` tiene fecha, paciente y doctor cobro a cobro. La sección 12
+y el formulario ahora **cuentan pacientes distintos con cobro entre el lunes y
+el domingo** de la semana (`fdPacientesSemanaSistema`). La columna de pacientes
+por silla del formulario quedó **opcional**: sirve para saber qué silla atendió
+a quién, no para el total.
+
+⚠️ El conteo automático solo ve a **quien pagó**. Los atendidos sin cobro no
+están en esa tabla, así que subestima la atención real. El formulario avisa la
+diferencia contra lo capturado en vez de esconderla.
+
+## El número 4 no tiene registro — y ahí hay un hallazgo
+
+En todo mayo hay **dos** menciones de garantía, ambas escritas a mano dentro de
+la columna del nombre del paciente:
+
+- Día 26: `SONIA FIGUEROA GALICIA  entrega de una garantia`
+- Día 22: `MARIA FELICITA ORTEGA DE GONZALEZ DEVOLUCION`
+
+No es un registro: no hay campo, ni catálogo, ni monto.
+
+Lo más cercano que existe es la marca **`XXX`**: paciente atendido, doctor
+asignado, sin monto cobrado ese día. Aparece **168 veces en mayo**. Pero mezcla
+garantías, controles, continuaciones y cortesías, y nadie las distingue.
+
+**El hallazgo, dicho en una línea:** la clínica atendió 168 veces en un mes sin
+registrar cobro y no puede decir cuántas de esas fueron retrabajo propio.
+
+**Arreglo propuesto (cambia el proceso, no el sistema):** que el `XXX` lleve
+motivo — garantía / control / continuación / cortesía. Una columna en la hoja
+diaria.
+
+## Factor de conversión pacientes → horas (por si hace falta estimar)
+
+Se contaron los pacientes de la semana del muestreo directo del Excel:
+
+| Día | | Pacientes |
+|---|---|---|
+| 25 | Lun | 29 |
+| 26 | Mar | 27 |
+| 27 | Mié | 29 |
+| 28 | Jue | 25 |
+| 29 | Vie | 24 |
+| 30 | Sáb | 40 |
+| 31 | Dom | 10 |
+| | **Total** | **184** |
+
+Control: mayo completo da **882 pacientes** contra la meta de 878, así que el
+conteo es bueno.
+
+**78.83 h ÷ 184 pacientes = 0.43 h = 26 minutos por paciente.**
+
+⚠️ **No se implementó, a propósito.** Estimar las horas así vuelve la ocupación
+un múltiplo constante de los pacientes: los cuatro números se convierten en
+tres, y deja de poder distinguirse "muchos pacientes cortos" de "pocos pacientes
+largos" — que es justo la decisión que la Dirección tiene que tomar. Y nunca
+diría *cuál* silla está vacía. Queda anotado como último recurso, rotulado como
+estimación si algún día se usa.

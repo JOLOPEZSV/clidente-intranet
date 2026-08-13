@@ -1772,6 +1772,42 @@ function fdMetaPacientesSemana() {
   return Math.round((FD_META_PACIENTES * 12) / 52);
 }
 
+/* Domingo de esa semana (el lunes mas seis dias). */
+function fdDomingoDeLaSemana(lunesISO) {
+  const [a, m, d] = lunesISO.split('-').map(Number);
+  const f = new Date(a, m - 1, d + 6);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+}
+
+/* Numero 2 de la reunion del viernes: los pacientes NO se capturan, se derivan.
+   produccion_detalle ya tiene un renglon por cobro, con fecha y paciente; pedirle
+   a Henry que los cuente otra vez a mano era duplicar la fuente e invitar al
+   descuadre. Un paciente puede pagar varias veces en la semana, asi que cuenta
+   gente distinta, no cobros.
+
+   ⚠ Solo ve a quien pago. Los atendidos sin cobro -- las marcas "XXX" de las
+   hojas diarias, 168 de ellas solo en mayo -- no estan en esta tabla, asi que
+   este numero subestima la atencion real. Mientras el XXX no lleve motivo, no
+   hay forma de saber cuantos de esos eran garantia, control o continuacion.
+
+   Devuelve null si no hay dato (Supabase sin configurar, error, o semana sin
+   cobros cargados); quien llama decide si cae al valor capturado a mano. */
+async function fdPacientesSemanaSistema(lunesISO) {
+  if (!fdSupabaseConfigurado()) return null;
+  try {
+    const rows = await fdSupabaseGetRows(
+      `produccion_detalle?select=paciente` +
+      `&fecha=gte.${lunesISO}&fecha=lte.${fdDomingoDeLaSemana(lunesISO)}`);
+    if (!Array.isArray(rows) || !rows.length) return null;
+    const distintos = new Set(
+      rows.map(r => String(r.paciente || '').trim().toUpperCase()).filter(Boolean));
+    return distintos.size || null;
+  } catch (err) {
+    console.error('No se pudieron contar los pacientes de la semana:', err);
+    return null;
+  }
+}
+
 async function fdCargarSeguimiento(semanaISO) {
   if (!fdSupabaseConfigurado()) return { rows: [], lecturaOk: false };
   try {
@@ -1795,17 +1831,24 @@ async function fdSemanasConDatos() {
   }
 }
 
-function fdResumenSemana(rows) {
+/* pacientesSistema: el conteo derivado de produccion_detalle. Manda sobre lo
+   capturado a mano, que solo queda como respaldo cuando el sistema no tiene la
+   semana cargada. El total por silla sigue siendo capturado: los cobros no
+   saben en que silla se atendio. */
+function fdResumenSemana(rows, pacientesSistema = null) {
   const n = k => rows.reduce((s, r) => s + (parseFloat(r[k]) || 0), 0);
   const disponibles = n('horas_disponibles');
   const utilizadas = n('horas_utilizadas');
   const vacias = Math.max(disponibles - utilizadas, 0);
   const ocupacion = disponibles > 0 ? (utilizadas / disponibles) * 100 : 0;
-  const pacientes = rows.reduce((s, r) => s + (parseInt(r.pacientes, 10) || 0), 0);
+  const capturados = rows.reduce((s, r) => s + (parseInt(r.pacientes, 10) || 0), 0);
+  const pacientes = pacientesSistema != null ? pacientesSistema : capturados;
   const meta = fdMetaPacientesSemana();
   return {
     disponibles, utilizadas, vacias, ocupacion,
-    pacientes, meta, cumplimiento: meta > 0 ? (pacientes / meta) * 100 : 0,
+    pacientes, capturados,
+    pacientesOrigen: pacientesSistema != null ? 'sistema' : 'capturado',
+    meta, cumplimiento: meta > 0 ? (pacientes / meta) * 100 : 0,
     garantiasCasos: rows.reduce((s, r) => s + (parseInt(r.garantias_casos, 10) || 0), 0),
     garantiasMonto: n('garantias_monto'),
     porSilla: rows.map(r => {
@@ -1839,8 +1882,10 @@ async function fdRenderViernes(sigueVigente = () => true) {
   const { rows } = await fdCargarSeguimiento(semana);
   if (!sigueVigente()) return;
   if (!rows.length) { card.style.display = 'none'; return; }
+  const pacientesSistema = await fdPacientesSemanaSistema(semana);
+  if (!sigueVigente()) return;
   card.style.display = '';
-  const r = fdResumenSemana(rows);
+  const r = fdResumenSemana(rows, pacientesSistema);
 
   /* Los cuatro numeros, con la convencion de color de la presentacion. */
   const estOcup = r.ocupacion < FD_META_OCUPACION ? 'alerta' : r.ocupacion < 60 ? 'umbral' : 'meta';
@@ -1854,7 +1899,10 @@ async function fdRenderViernes(sigueVigente = () => true) {
       fdTarjetaIndicador(fdPorcentaje(r.ocupacion), '1. Ocupacion por silla', estOcup,
         `${r.utilizadas.toFixed(1)} de ${r.disponibles.toFixed(0)} horas &middot; meta ${FD_META_OCUPACION}%`) +
       fdTarjetaIndicador(`${fdEntero(r.pacientes)} / ${fdEntero(r.meta)}`, '2. Pacientes contra meta', estPac,
-        `${fdPorcentaje(r.cumplimiento)} de la meta semanal`) +
+        `${fdPorcentaje(r.cumplimiento)} de la meta semanal &middot; ` +
+        (r.pacientesOrigen === 'sistema'
+          ? 'contados por el sistema, solo quienes pagaron'
+          : 'capturado a mano: el sistema no tiene cobros de esta semana')) +
       fdTarjetaIndicador(`${r.vacias.toFixed(0)} h`, '3. Horas de silla vacia', estVac,
         `${fdPorcentaje(100 - r.ocupacion)} de capacidad ociosa`) +
       fdTarjetaIndicador(fdEntero(r.garantiasCasos), '4. Garantias', estGar,
@@ -3157,7 +3205,7 @@ function renderFormularioHenry() {
     <div id="henry-panel-viernes" style="display:none">
       <div class="card fd-card-tight">
         <div class="card-title"><i class="fas fa-calendar-check" style="margin-right:.5rem"></i>Los cuatro numeros de la semana</div>
-        <p class="fd-subtitle">Una fila por silla. De aqui salen los cuatro numeros del viernes: ocupacion por silla, pacientes contra meta, horas de silla vacia y garantias. Capacidad por defecto: 62 horas por silla a la semana.</p>
+        <p class="fd-subtitle">Una fila por silla. De aqui salen los cuatro numeros del viernes: ocupacion por silla, pacientes contra meta, horas de silla vacia y garantias. Capacidad por defecto: 62 horas por silla a la semana. <strong>Los pacientes ya no hay que contarlos:</strong> el total lo saca el sistema de los cobros del periodo. La columna de pacientes por silla es opcional y solo sirve para saber que silla atendio a quien.</p>
 
         <label class="fd-month-control" style="margin-top:.6rem">Semana que inicia el lunes
           <input type="date" id="sv-semana">
@@ -3170,10 +3218,12 @@ function renderFormularioHenry() {
           <div class="fd-kpi-card"><span>Garantias</span><strong id="sv-kpi-garantias">0</strong><small id="sv-kpi-garantias-monto" class="fd-delta"></small></div>
         </div>
 
+        <div id="sv-aviso-pacientes" class="fd-note" style="display:none;margin-top:.6rem"></div>
+
         <div class="fd-table-wrap" style="margin-top:1rem">
           <table class="fd-table fd-input-table">
             <thead><tr>
-              <th>Silla</th><th>Horas disponibles</th><th>Horas usadas</th><th>Pacientes</th><th>Garantias</th><th>Costo garantias ($)</th><th class="num">Ocupacion</th>
+              <th>Silla</th><th>Horas disponibles</th><th>Horas usadas</th><th>Pacientes <small>(opcional)</small></th><th>Garantias</th><th>Costo garantias ($)</th><th class="num">Ocupacion</th>
             </tr></thead>
             <tbody id="sv-body"></tbody>
           </table>
@@ -3228,9 +3278,35 @@ function fdLeerTablaViernes() {
   });
 }
 
+/* Pacientes que el sistema conto para la semana abierta en el formulario.
+   Se refresca al cambiar de semana; null mientras no haya respuesta. */
+let fdSvPacientesSistema = null;
+
+/* Le dice a Henry de donde salio el numero 2 y, si tambien lo capturo a mano,
+   si los dos coinciden. No bloquea nada: el capturado por silla sigue siendo
+   util para saber que silla atendio a quien. */
+function fdAvisoPacientesViernes(r) {
+  const el = document.getElementById('sv-aviso-pacientes');
+  if (!el) return;
+  if (fdSvPacientesSistema == null) {
+    el.style.display = '';
+    el.innerHTML = 'El sistema no encontro cobros cargados para esta semana, ' +
+      'asi que el numero 2 usa lo que captures por silla.';
+    return;
+  }
+  const dif = r.capturados - fdSvPacientesSistema;
+  el.style.display = '';
+  el.innerHTML = `El sistema conto <strong>${fdEntero(fdSvPacientesSistema)} pacientes</strong> ` +
+    `distintos con cobro esta semana, y ese es el numero que va al tablero.` +
+    (r.capturados > 0 && dif !== 0
+      ? ` Por silla capturaste ${fdEntero(r.capturados)}: ${dif > 0 ? 'sobran' : 'faltan'} ` +
+        `${fdEntero(Math.abs(dif))}. La diferencia es normal si hubo pacientes atendidos sin cobro.`
+      : '');
+}
+
 function fdActualizarViernesPreview() {
   const filas = fdLeerTablaViernes();
-  const r = fdResumenSemana(filas);
+  const r = fdResumenSemana(filas, fdSvPacientesSistema);
   document.querySelectorAll('#sv-body tr').forEach((tr, i) => {
     const f = filas[i];
     const celda = tr.querySelector('.sv-ocupacion');
@@ -3243,6 +3319,7 @@ function fdActualizarViernesPreview() {
   fdSetText('sv-kpi-horas', `${r.utilizadas.toFixed(1)} de ${r.disponibles.toFixed(0)} horas`);
   fdSetText('sv-kpi-pacientes', `${fdEntero(r.pacientes)} / ${fdEntero(r.meta)}`);
   fdSetText('sv-kpi-meta', `${fdPorcentaje(r.cumplimiento)} de la meta semanal`);
+  fdAvisoPacientesViernes(r);
   fdSetText('sv-kpi-vacias', `${r.vacias.toFixed(0)} h`);
   fdSetText('sv-kpi-garantias', fdEntero(r.garantiasCasos));
   fdSetText('sv-kpi-garantias-monto', r.garantiasMonto > 0 ? formatoDolar(r.garantiasMonto) : '');
@@ -3254,7 +3331,10 @@ function fdActualizarViernesPreview() {
 
 async function fdCargarSemanaEnFormulario() {
   const input = document.getElementById('sv-semana');
-  if (!input?.value) { fdRenderTablaViernes([]); fdActualizarViernesPreview(); return; }
+  if (!input?.value) {
+    fdSvPacientesSistema = null;
+    fdRenderTablaViernes([]); fdActualizarViernesPreview(); return;
+  }
   /* Si eligen cualquier dia, se normaliza al lunes de esa semana. */
   const lunes = fdLunesDeLaSemana(input.value);
   if (lunes !== input.value) input.value = lunes;
@@ -3265,6 +3345,8 @@ async function fdCargarSemanaEnFormulario() {
   } catch (err) {
     console.error('No se pudo cargar la semana:', err);
   }
+  /* El numero 2 lo pone el sistema, no la captura: se pide junto con la semana. */
+  fdSvPacientesSistema = await fdPacientesSemanaSistema(lunes);
   fdRenderTablaViernes(rows);
   fdActualizarViernesPreview();
 }
