@@ -1185,14 +1185,26 @@ async function fdDrillDentistaMes(nombre, mesTexto) {
     { etiqueta: 'Transferencia', valor: transf, css: 'neutro' }
   ].filter(i => Math.abs(i.valor) > 0.005);
 
-  const cobros = filas.slice().sort((a, b) => num(b, 'total') - num(a, 'total')).slice(0, 40);
-  const tabla = `<table class="fd-table fd-drill-tabla">
+  /* En orden de fecha, y todos: asi la columna suma exactamente lo producido
+     en el mes y se puede seguir el dia a dia del doctor. El panel scrollea. */
+  const cobros = filas.slice().sort((a, b) =>
+    String(a.fecha).localeCompare(String(b.fecha)) || num(b, 'total') - num(a, 'total'));
+  let ultimoDia = null;
+  const tabla = `<table class="fd-table fd-drill-tabla fd-drill-cobros">
     <thead><tr><th>Fecha</th><th>Paciente</th><th class="num">Monto</th></tr></thead>
-    <tbody>${cobros.map(r => `<tr${num(r, 'total') < 0 ? ' class="fd-drill-tenue"' : ''}>
-      <td>${fdEscapeXml(String(r.fecha))}</td>
-      <td>${fdEscapeXml(String(r.paciente || '(sin nombre)'))}</td>
-      <td class="num ${num(r, 'total') < 0 ? 'fd-negative' : ''}"><strong>${formatoDolar(num(r, 'total'))}</strong></td>
-    </tr>`).join('')}</tbody></table>`;
+    <tbody>${cobros.map(r => {
+      const v = num(r, 'total');
+      /* La fecha solo se escribe cuando cambia el dia: repetirla 8 veces
+         seguidas hace que no se vea donde empieza cada jornada. */
+      const nuevoDia = r.fecha !== ultimoDia;
+      if (nuevoDia) ultimoDia = r.fecha;
+      const subtotal = porDia.get(r.fecha) || 0;
+      return `<tr class="${nuevoDia ? 'fd-dia-nuevo ' : ''}${v < 0 ? 'fd-drill-tenue' : ''}">
+        <td>${nuevoDia ? `${fdEscapeXml(String(r.fecha).slice(-2))} ${fdDiaSemana(r.fecha)} <em class="fd-drill-nota">${formatoDolar(subtotal)}</em>` : ''}</td>
+        <td>${fdEscapeXml(String(r.paciente || '(sin nombre)'))}</td>
+        <td class="num ${v < 0 ? 'fd-negative' : ''}"><strong>${formatoDolar(v)}</strong></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
 
   fdDrillSub(`${filas.length} cobros · ${pacientes} pacientes distintos · ${dias.length} dias con produccion`);
   fdDrillBody(
@@ -1203,7 +1215,7 @@ async function fdDrillDentistaMes(nombre, mesTexto) {
      </div>` +
     `<p class="fd-chart-subtitle" style="margin-top:1rem">Como le pagaron</p>` +
     fdDrillBarras(mix, { col1: 'Medio de cobro', col2: 'Monto' }) +
-    `<p class="fd-chart-subtitle" style="margin-top:1rem">Cobros del mes${filas.length > 40 ? ` &middot; los 40 mas altos de ${filas.length}` : ''}</p>` +
+    `<p class="fd-chart-subtitle" style="margin-top:1rem">Cobros del mes, dia por dia &middot; ${filas.length} en total</p>` +
     tabla +
     (negativos.length
       ? `<p class="fd-note">${negativos.length} ${negativos.length === 1 ? 'linea es negativa' : 'lineas son negativas'} (nota de credito o reverso) y ya ${negativos.length === 1 ? 'esta restada' : 'estan restadas'} del total.</p>`

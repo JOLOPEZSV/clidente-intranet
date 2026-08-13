@@ -323,6 +323,13 @@
 /* La fila atenuada no debe perder la senal de que se puede abrir. */
 .fd-drill-tenue.fd-drill-fila:hover td { background:#e2e8f0; }
 
+/* Lista de cobros: una linea separa cada jornada, y la fecha solo se escribe
+   cuando cambia el dia. */
+.fd-drill-cobros td:first-child { white-space:nowrap; font-variant-numeric:tabular-nums; color:#0f2340; font-weight:700; }
+.fd-drill-cobros tr.fd-dia-nuevo td { border-top:1px solid #cbd5e1; }
+.fd-drill-cobros tr.fd-dia-nuevo:first-child td { border-top:none; }
+.fd-drill-cobros td:nth-child(2) { color:#475569; }
+
 .fd-drill-overlay {
   position:fixed; inset:0; z-index:9000; background:rgba(15,35,64,.55);
   display:flex; align-items:center; justify-content:center; padding:1.2rem;
