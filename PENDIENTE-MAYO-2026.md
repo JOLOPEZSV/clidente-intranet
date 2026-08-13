@@ -113,3 +113,55 @@ Conviene cerrar el criterio con Ricardo, y aplicar el mismo a los seis meses.
 1. El Excel corregido de mayo, del que salió ese PDF (para el detalle diario y el reparto).
 2. ¿La cuota de $12,000 al banco sale del retiro de la titular? (sigue sin confirmar)
 3. ¿Qué criterio de conteo de pacientes usamos: recepción, caja o el del PPT?
+
+---
+
+# Reunión del viernes — los cuatro números (12/08/2026)
+
+**Ya está en vivo** (commits `da6c4e9` + `fafa79a`, SQL corrido).
+
+La lámina 23 promete: *"cada viernes, cuatro números. 1. Ocupación por silla.
+2. Pacientes contra meta. 3. Horas de silla vacía. 4. Garantías."*
+
+Verificación de lo que había antes:
+
+| Número | Estado previo |
+|---|---|
+| 1. Ocupación por silla | Existía, pero mensual, global y **en pacientes**, no por silla ni en horas |
+| 2. Pacientes contra meta | Existía, pero mensual (878/mes) |
+| 3. Horas de silla vacía | **No existía** |
+| 4. Garantías | **No existía** |
+
+Y el portal entero era mensual: no había concepto de semana.
+
+## Lo que se agregó
+
+- Tabla `seguimiento_semanal`: una fila por **silla y semana** (la semana se
+  identifica por su lunes). Los números 1 y 3 solo existen a ese nivel porque
+  se miden en **horas de silla**, no en pacientes.
+- Sección 12: tarjeta "Reunión del viernes" con los cuatro números y el detalle
+  por silla ordenado por ocupación (para ver dónde está la silla vacía).
+- Sección 13: cuarta pestaña para capturar la semana. La fecha se normaliza al
+  lunes automáticamente.
+- Capacidad: **62 horas por silla a la semana** (lámina 11). Meta de pacientes:
+  la mensual de 878 prorrateada a **203 por semana**.
+
+## ⚠️ Inconsistencia detectada en la lámina 11
+
+La lámina calcula la capacidad ociosa sobre **496 horas = 8 sillas**, y da 84%.
+Pero el resto de la presentación ya usa **7 sillas operativas** (fue el cambio
+de $1,350 a $1,542.86 por silla). Con 7 sillas la capacidad es **434 horas** y
+la ociosa **81.8%**, no 84%.
+
+El portal usa 7 sillas, consistente con el resto. **Conviene corregir la lámina
+11** o explicar por qué ahí se usan 8.
+
+## ⚠️ El dato del muestreo es un prorrateo
+
+De la lámina 11 solo se conoce el **agregado** de la semana 25-31 de mayo
+(78.83 horas utilizadas). El detalle por silla que se cargó reparte esas horas
+en partes iguales entre las 7 sillas: sirve para que el tablero muestre algo
+real, pero **no es una medición silla por silla**. Queda anotado en la columna
+`notas` de cada fila.
+
+Cuando Henry capture su primera semana de verdad, esa fila se reemplaza.
