@@ -15,11 +15,20 @@
 -- ⚠ DOS FUENTES REPARTEN ESTO DISTINTO, y hay que saberlo:
 --     PDF corregido de mayo:  Oscar 664.41 + "N/A" 62.86  = 727.27
 --     Hojas diarias:          Oscar 582.51 + Valezka 144.76 = 727.27
---   Difieren en 81.90. Se toma el de las hojas diarias porque tiene evidencia
---   dia por dia y porque es el unico consistente con que Oscar dejo de trabajar
---   el 6 de mayo: con 664.41 tendria que haber cobrado 81.90 despues de esa
---   fecha, y no hay ningun dia que lo respalde. La "linea nueva N/A" del PDF es
---   casi con seguridad esta misma persona, contada con otro monto.
+--   Difieren en 81.90, y el detalle explica POR QUE:
+--     * del 1 al 6 hay 14 cobros, todos bajo el encabezado DR OSCAR  -> 582.51
+--     * el dia 30 hay 4 cobros, los cuatro bajo el encabezado DRA VALEZKA
+--       -> 144.76, y entre el 7 y el 29 Oscar no tiene ni un cobro
+--     * uno de esos cuatro, el de 62.86, trae ademas escrito a mano
+--       "Dra. Valeska" en la celda del paciente
+--   Es decir: quien corrigio el resumen vio SOLO la linea anotada a mano y
+--   movio esos 62.86, cuando el encabezado de la columna ese dia ya estaba a
+--   nombre de ella para los cuatro cobros. Por eso se toma el reparto de las
+--   hojas diarias: 582.51 / 144.76.
+--
+-- Nota de nombre: el encabezado dice "DRA VALEZKA" (con z) y la anotacion a
+-- mano dice "Dra. Valeska" (con s). Se usa la forma del encabezado, que es la
+-- que aparece en los seis archivos.
 --
 -- ⚠ NO CAMBIA LA FACTURACION DE MAYO. El bloque sigue sumando 727.27, asi que
 --   los 32,687.59 del mes quedan igual. Lo unico que cambia es a quien se le
