@@ -19,6 +19,13 @@ const FD_PUNTO_EQUILIBRIO = FD_PLAN_PPT.punto_equilibrio_px;
 const FD_META_PACIENTES = 878;
 const FD_CAPACIDAD_MENSUAL = 3000;
 const FD_MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+/* ══ Reunion del viernes: los cuatro numeros ══
+   Capacidad de silla segun la lamina 11: 62 horas por silla a la semana.
+   La meta de pacientes es mensual (878); se prorratea a semana. */
+const FD_HORAS_SILLA_SEMANA = 62;
+const FD_SILLAS = Array.from({ length: 7 }, (_, i) => `Unidad ${i + 1}`);
+const FD_META_OCUPACION = 40;   /* Meta 1 de la Propuesta: 40% de ocupacion */
 let fdVistaDashboard = 'mensual';
 
 /* Punto de equilibrio real: costos fijos / margen de contribucion observado.
@@ -1736,6 +1743,160 @@ function fdFilaER(etiqueta, valor, pct, clase = '') {
   </tr>`;
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   REUNION DEL VIERNES: LOS CUATRO NUMEROS
+   El resto del portal es mensual; esto es semanal y por silla, porque la
+   ocupacion y las horas vacias solo existen a ese nivel y se miden en HORAS.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Lunes de la semana que contiene esa fecha (hora local, sin toISOString). */
+function fdLunesDeLaSemana(fecha) {
+  const d = fecha instanceof Date ? new Date(fecha) : new Date(`${fecha}T12:00:00`);
+  const dow = d.getDay();                       /* 0=domingo */
+  d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+function fdEtiquetaSemana(lunesISO) {
+  const [a, m, d] = lunesISO.split('-').map(Number);
+  const ini = new Date(a, m - 1, d);
+  const fin = new Date(a, m - 1, d + 6);
+  const fmt = f => `${f.getDate()} ${FD_MESES_CORTOS[f.getMonth()].toLowerCase()}`;
+  return `${fmt(ini)} al ${fmt(fin)}`;
+}
+
+/* Meta de pacientes de la semana: la mensual prorrateada. */
+function fdMetaPacientesSemana() {
+  return Math.round((FD_META_PACIENTES * 12) / 52);
+}
+
+async function fdCargarSeguimiento(semanaISO) {
+  if (!fdSupabaseConfigurado()) return { rows: [], lecturaOk: false };
+  try {
+    const rows = await fdSupabaseGetRows(`seguimiento_semanal?select=*&semana_inicio=eq.${semanaISO}&order=silla.asc`);
+    return { rows: Array.isArray(rows) ? rows : [], lecturaOk: true };
+  } catch (err) {
+    console.error('No se pudo cargar el seguimiento semanal:', err);
+    return { rows: [], lecturaOk: false };
+  }
+}
+
+async function fdSemanasConDatos() {
+  if (!fdSupabaseConfigurado()) return [];
+  try {
+    const rows = await fdSupabaseGetRows('seguimiento_semanal?select=semana_inicio');
+    return [...new Set((Array.isArray(rows) ? rows : []).map(r => String(r.semana_inicio)))]
+      .sort((a, b) => b.localeCompare(a));   /* mas reciente primero */
+  } catch (err) {
+    console.error('No se pudieron cargar las semanas:', err);
+    return [];
+  }
+}
+
+function fdResumenSemana(rows) {
+  const n = k => rows.reduce((s, r) => s + (parseFloat(r[k]) || 0), 0);
+  const disponibles = n('horas_disponibles');
+  const utilizadas = n('horas_utilizadas');
+  const vacias = Math.max(disponibles - utilizadas, 0);
+  const ocupacion = disponibles > 0 ? (utilizadas / disponibles) * 100 : 0;
+  const pacientes = rows.reduce((s, r) => s + (parseInt(r.pacientes, 10) || 0), 0);
+  const meta = fdMetaPacientesSemana();
+  return {
+    disponibles, utilizadas, vacias, ocupacion,
+    pacientes, meta, cumplimiento: meta > 0 ? (pacientes / meta) * 100 : 0,
+    garantiasCasos: rows.reduce((s, r) => s + (parseInt(r.garantias_casos, 10) || 0), 0),
+    garantiasMonto: n('garantias_monto'),
+    porSilla: rows.map(r => {
+      const disp = parseFloat(r.horas_disponibles) || 0;
+      const usa = parseFloat(r.horas_utilizadas) || 0;
+      return {
+        silla: r.silla, disponibles: disp, utilizadas: usa,
+        vacias: Math.max(disp - usa, 0),
+        ocupacion: disp > 0 ? (usa / disp) * 100 : 0,
+        pacientes: parseInt(r.pacientes, 10) || 0,
+        garantias: parseInt(r.garantias_casos, 10) || 0
+      };
+    }).sort((a, b) => b.ocupacion - a.ocupacion)
+  };
+}
+
+async function fdRenderViernes(sigueVigente = () => true) {
+  const card = document.getElementById('fd-viernes-card');
+  if (!card) return;
+  const semanas = await fdSemanasConDatos();
+  if (!sigueVigente()) return;
+  if (!semanas.length) { card.style.display = 'none'; return; }
+
+  const sel = document.getElementById('fd-viernes-semana');
+  if (sel && sel.options.length !== semanas.length) {
+    sel.innerHTML = semanas.map(s => `<option value="${s}">${fdEtiquetaSemana(s)}</option>`).join('');
+  }
+  const semana = sel?.value && semanas.includes(sel.value) ? sel.value : semanas[0];
+  if (sel) sel.value = semana;
+
+  const { rows } = await fdCargarSeguimiento(semana);
+  if (!sigueVigente()) return;
+  if (!rows.length) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  const r = fdResumenSemana(rows);
+
+  /* Los cuatro numeros, con la convencion de color de la presentacion. */
+  const estOcup = r.ocupacion < FD_META_OCUPACION ? 'alerta' : r.ocupacion < 60 ? 'umbral' : 'meta';
+  const estPac = r.pacientes < r.meta ? 'alerta' : 'meta';
+  const estVac = r.ocupacion < FD_META_OCUPACION ? 'alerta' : 'umbral';
+  const estGar = r.garantiasCasos === 0 ? 'meta' : r.garantiasCasos <= 2 ? 'umbral' : 'alerta';
+
+  const cont = document.getElementById('fd-viernes-numeros');
+  if (cont) {
+    cont.innerHTML =
+      fdTarjetaIndicador(fdPorcentaje(r.ocupacion), '1. Ocupacion por silla', estOcup,
+        `${r.utilizadas.toFixed(1)} de ${r.disponibles.toFixed(0)} horas &middot; meta ${FD_META_OCUPACION}%`) +
+      fdTarjetaIndicador(`${fdEntero(r.pacientes)} / ${fdEntero(r.meta)}`, '2. Pacientes contra meta', estPac,
+        `${fdPorcentaje(r.cumplimiento)} de la meta semanal`) +
+      fdTarjetaIndicador(`${r.vacias.toFixed(0)} h`, '3. Horas de silla vacia', estVac,
+        `${fdPorcentaje(100 - r.ocupacion)} de capacidad ociosa`) +
+      fdTarjetaIndicador(fdEntero(r.garantiasCasos), '4. Garantias', estGar,
+        r.garantiasMonto > 0 ? `${formatoDolar(r.garantiasMonto)} en retrabajos` : 'sin costo registrado');
+  }
+
+  /* Detalle por silla: donde esta la silla vacia. */
+  const body = document.getElementById('fd-viernes-sillas');
+  if (body) {
+    body.innerHTML = r.porSilla.map(s => {
+      const est = s.ocupacion < FD_META_OCUPACION ? 'no' : s.ocupacion < 60 ? 'warn' : 'ok';
+      return `<tr>
+        <td>${fdEscapeXml(s.silla)}</td>
+        <td class="num">${s.utilizadas.toFixed(1)} h</td>
+        <td class="num">${s.vacias.toFixed(1)} h</td>
+        <td><div class="fd-mini-track"><div class="fd-mini-fill ${est}" style="width:${Math.min(s.ocupacion, 100).toFixed(1)}%"></div></div></td>
+        <td class="num"><strong>${fdPorcentaje(s.ocupacion)}</strong></td>
+        <td class="num">${fdEntero(s.pacientes)}</td>
+        <td class="num">${s.garantias ? fdEntero(s.garantias) : '&mdash;'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const conclusion = document.getElementById('fd-viernes-conclusion');
+  if (conclusion) {
+    const peor = r.porSilla[r.porSilla.length - 1];
+    const partes = [];
+    if (r.ocupacion < FD_META_OCUPACION) {
+      partes.push(`<strong class="fd-negative">La semana cerro con ${fdPorcentaje(r.ocupacion)} de ocupacion, bajo la meta de ${FD_META_OCUPACION}%: quedaron ${r.vacias.toFixed(0)} horas de silla sin usar.</strong>`);
+    } else {
+      partes.push(`La semana alcanzo ${fdPorcentaje(r.ocupacion)} de ocupacion, sobre la meta de ${FD_META_OCUPACION}%.`);
+    }
+    if (peor && r.porSilla.length > 1) {
+      partes.push(`La silla mas desocupada fue ${peor.silla} con ${peor.vacias.toFixed(0)} horas libres.`);
+    }
+    if (r.garantiasCasos > 0) {
+      partes.push(`<strong class="fd-negative">${fdEntero(r.garantiasCasos)} garantia(s) en la semana${r.garantiasMonto > 0 ? ` por ${formatoDolar(r.garantiasMonto)}` : ''}.</strong>`);
+    }
+    conclusion.innerHTML = partes.join(' ');
+  }
+}
+
 /* ══ Indicadores financieros clave ══
    Los de balance salen de tabla (estados auditados, no se calculan mes a mes).
    Los de paciente y el punto de equilibrio se calculan del periodo activo.
@@ -2173,6 +2334,31 @@ function renderDashboardFinanciero() {
       <div id="fd-er-cascada" class="fd-chart-wrap" style="margin-top:1.1rem"></div>
       <p id="fd-er-conclusion" class="fd-er-conclusion"></p>
       <p class="fd-note">El Estado de Resultados incluye solo los intereses; el flujo registra la cuota completa a los bancos (capital + intereses). El flujo mide la operacion de la clinica: excluye el pago a cuenta de renta, el IVA neto y los retiros de la titular.</p>
+    </div>
+
+    <div class="card fd-card-tight fd-viernes" id="fd-viernes-card" style="display:none">
+      <div class="fd-viernes-head">
+        <div>
+          <div class="card-title" style="margin-bottom:.15rem"><i class="fas fa-calendar-check" style="margin-right:.5rem"></i>Reunion del viernes</div>
+          <p class="fd-chart-subtitle" style="margin:0">Cuatro numeros. La Direccion decide, la administracion opera, el sistema mide.</p>
+        </div>
+        <label class="fd-month-control">Semana <select id="fd-viernes-semana"></select></label>
+      </div>
+
+      <div class="fd-ind-grid" id="fd-viernes-numeros" style="margin-top:.9rem"></div>
+
+      <div class="fd-table-wrap" style="margin-top:1.1rem">
+        <table class="fd-table">
+          <thead><tr>
+            <th>Silla</th><th class="num">Horas usadas</th><th class="num">Horas vacias</th>
+            <th>Ocupacion</th><th class="num">%</th><th class="num">Pacientes</th><th class="num">Garantias</th>
+          </tr></thead>
+          <tbody id="fd-viernes-sillas"></tbody>
+        </table>
+      </div>
+
+      <p id="fd-viernes-conclusion" class="fd-note" style="margin-top:.9rem"></p>
+      <p class="fd-note">Capacidad de 62 horas por silla a la semana (lamina 11). La meta de pacientes es la mensual de ${FD_META_PACIENTES} prorrateada a ${fdMetaPacientesSemana()} por semana.</p>
     </div>
 
     <div class="card fd-card-tight" id="fd-indicadores-card" style="display:none">
@@ -2632,9 +2818,12 @@ async function initDashboardFinanciero() {
     }
     /* El reparto es anual: se muestra igual en vista mensual y acumulada. */
     await fdRenderReparto(parsed.anio, () => token === cargaToken);
+    /* La reunion del viernes es semanal: independiente del mes activo. */
+    await fdRenderViernes(() => token === cargaToken);
   };
 
   document.getElementById('fd-btn-informe')?.addEventListener('click', fdCompartirInformeEjecutivo);
+  document.getElementById('fd-viernes-semana')?.addEventListener('change', () => fdRenderViernes());
   monthSelect?.addEventListener('change', () => { fdMesElegidoPorUsuario = true; cargarVista(); });
   yearSelect?.addEventListener('change', () => { fdMesElegidoPorUsuario = true; cargarVista(); });
   btnMensual?.addEventListener('click', () => { fdVistaDashboard = 'mensual'; cargarVista(); });
@@ -2808,6 +2997,7 @@ function renderFormularioHenry() {
       <button type="button" id="henry-tab-diario" class="active">Caja diaria</button>
       <button type="button" id="henry-tab-mensual">Cierre mensual</button>
       <button type="button" id="henry-tab-er">Estado de Resultados</button>
+      <button type="button" id="henry-tab-viernes">Reunion del viernes</button>
     </div>
 
     <div id="henry-config-warning" class="fd-warning" style="display:none">
@@ -2962,7 +3152,155 @@ function renderFormularioHenry() {
         <button class="fd-secondary" onclick="navigate('dashboard-financiero')">Volver al dashboard</button>
       </div>
     </div>
+
+    <!-- ══ PESTANA 4: REUNION DEL VIERNES ══════════════════════════ -->
+    <div id="henry-panel-viernes" style="display:none">
+      <div class="card fd-card-tight">
+        <div class="card-title"><i class="fas fa-calendar-check" style="margin-right:.5rem"></i>Los cuatro numeros de la semana</div>
+        <p class="fd-subtitle">Una fila por silla. De aqui salen los cuatro numeros del viernes: ocupacion por silla, pacientes contra meta, horas de silla vacia y garantias. Capacidad por defecto: 62 horas por silla a la semana.</p>
+
+        <label class="fd-month-control" style="margin-top:.6rem">Semana que inicia el lunes
+          <input type="date" id="sv-semana">
+        </label>
+
+        <div class="fd-kpi-grid compact" style="margin-top:1rem">
+          <div class="fd-kpi-card"><span>Ocupacion</span><strong id="sv-kpi-ocupacion">0.0%</strong><small id="sv-kpi-horas" class="fd-delta"></small></div>
+          <div class="fd-kpi-card"><span>Pacientes vs meta</span><strong id="sv-kpi-pacientes">0</strong><small id="sv-kpi-meta" class="fd-delta"></small></div>
+          <div class="fd-kpi-card"><span>Horas de silla vacia</span><strong id="sv-kpi-vacias">0 h</strong></div>
+          <div class="fd-kpi-card"><span>Garantias</span><strong id="sv-kpi-garantias">0</strong><small id="sv-kpi-garantias-monto" class="fd-delta"></small></div>
+        </div>
+
+        <div class="fd-table-wrap" style="margin-top:1rem">
+          <table class="fd-table fd-input-table">
+            <thead><tr>
+              <th>Silla</th><th>Horas disponibles</th><th>Horas usadas</th><th>Pacientes</th><th>Garantias</th><th>Costo garantias ($)</th><th class="num">Ocupacion</th>
+            </tr></thead>
+            <tbody id="sv-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="fd-actions">
+        <button id="sv-guardar" class="fd-save">Guardar la semana</button>
+        <button class="fd-secondary" onclick="navigate('dashboard-financiero')">Volver al dashboard</button>
+      </div>
+    </div>
   </div>`;
+}
+
+/* ══ Captura semanal de los cuatro numeros ══ */
+function fdRenderTablaViernes(rows) {
+  const body = document.getElementById('sv-body');
+  if (!body) return;
+  const porSilla = new Map((Array.isArray(rows) ? rows : []).map(r => [r.silla, r]));
+  body.innerHTML = FD_SILLAS.map(silla => {
+    const r = porSilla.get(silla) || {};
+    const val = (k, def = '') => (r[k] != null && r[k] !== '' ? r[k] : def);
+    return `<tr data-silla="${silla}">
+      <td>${silla}</td>
+      <td><input class="sv-in" data-campo="horas_disponibles" type="number" min="0" step="0.5" value="${val('horas_disponibles', FD_HORAS_SILLA_SEMANA)}"></td>
+      <td><input class="sv-in" data-campo="horas_utilizadas" type="number" min="0" step="0.25" placeholder="0" value="${val('horas_utilizadas')}"></td>
+      <td><input class="sv-in" data-campo="pacientes" type="number" min="0" step="1" placeholder="0" value="${val('pacientes')}"></td>
+      <td><input class="sv-in" data-campo="garantias_casos" type="number" min="0" step="1" placeholder="0" value="${val('garantias_casos')}"></td>
+      <td><input class="sv-in" data-campo="garantias_monto" type="number" min="0" step="0.01" placeholder="0.00" value="${val('garantias_monto')}"></td>
+      <td class="num sv-ocupacion">&mdash;</td>
+    </tr>`;
+  }).join('');
+}
+
+function fdLeerTablaViernes() {
+  const semana = document.getElementById('sv-semana')?.value || '';
+  return Array.from(document.querySelectorAll('#sv-body tr')).map(tr => {
+    const num = campo => {
+      const el = tr.querySelector(`.sv-in[data-campo="${campo}"]`);
+      const v = parseFloat(String(el?.value ?? '').replace(/[$\s,]/g, ''));
+      return Number.isFinite(v) ? v : 0;
+    };
+    return {
+      semana_inicio: semana,
+      silla: tr.dataset.silla,
+      horas_disponibles: num('horas_disponibles'),
+      horas_utilizadas: num('horas_utilizadas'),
+      pacientes: Math.trunc(num('pacientes')),
+      garantias_casos: Math.trunc(num('garantias_casos')),
+      garantias_monto: num('garantias_monto')
+    };
+  });
+}
+
+function fdActualizarViernesPreview() {
+  const filas = fdLeerTablaViernes();
+  const r = fdResumenSemana(filas);
+  document.querySelectorAll('#sv-body tr').forEach((tr, i) => {
+    const f = filas[i];
+    const celda = tr.querySelector('.sv-ocupacion');
+    if (!celda) return;
+    const pct = f.horas_disponibles > 0 ? (f.horas_utilizadas / f.horas_disponibles) * 100 : 0;
+    celda.textContent = f.horas_utilizadas ? fdPorcentaje(pct) : '—';
+    celda.className = `num sv-ocupacion ${!f.horas_utilizadas ? '' : pct < FD_META_OCUPACION ? 'fd-negative' : 'fd-positive'}`;
+  });
+  fdSetText('sv-kpi-ocupacion', fdPorcentaje(r.ocupacion));
+  fdSetText('sv-kpi-horas', `${r.utilizadas.toFixed(1)} de ${r.disponibles.toFixed(0)} horas`);
+  fdSetText('sv-kpi-pacientes', `${fdEntero(r.pacientes)} / ${fdEntero(r.meta)}`);
+  fdSetText('sv-kpi-meta', `${fdPorcentaje(r.cumplimiento)} de la meta semanal`);
+  fdSetText('sv-kpi-vacias', `${r.vacias.toFixed(0)} h`);
+  fdSetText('sv-kpi-garantias', fdEntero(r.garantiasCasos));
+  fdSetText('sv-kpi-garantias-monto', r.garantiasMonto > 0 ? formatoDolar(r.garantiasMonto) : '');
+  const ocup = document.getElementById('sv-kpi-ocupacion');
+  ocup?.classList.toggle('fd-negative', r.ocupacion < FD_META_OCUPACION);
+  ocup?.classList.toggle('fd-positive', r.ocupacion >= FD_META_OCUPACION);
+  return r;
+}
+
+async function fdCargarSemanaEnFormulario() {
+  const input = document.getElementById('sv-semana');
+  if (!input?.value) { fdRenderTablaViernes([]); fdActualizarViernesPreview(); return; }
+  /* Si eligen cualquier dia, se normaliza al lunes de esa semana. */
+  const lunes = fdLunesDeLaSemana(input.value);
+  if (lunes !== input.value) input.value = lunes;
+  let rows = [];
+  try {
+    const data = await fdCargarSeguimiento(lunes);
+    rows = data.rows;
+  } catch (err) {
+    console.error('No se pudo cargar la semana:', err);
+  }
+  fdRenderTablaViernes(rows);
+  fdActualizarViernesPreview();
+}
+
+async function fdGuardarViernes() {
+  if (fdRolPropio === 'viewer') {
+    alert('Tu usuario es de solo lectura: el guardado esta reservado a los editores del equipo.');
+    return;
+  }
+  const input = document.getElementById('sv-semana');
+  if (!input?.value) { alert('Elige la semana antes de guardar.'); return; }
+  const filas = fdLeerTablaViernes();
+  if (filas.some(f => f.horas_utilizadas > f.horas_disponibles)) {
+    if (!confirm('Hay sillas con mas horas usadas que disponibles. Guardar de todos modos?')) return;
+  }
+  if (filas.every(f => !f.horas_utilizadas && !f.pacientes && !f.garantias_casos)) {
+    alert('La semana no tiene ningun dato capturado.');
+    return;
+  }
+  const ahora = new Date().toISOString();
+  try {
+    await fdSupabaseUpsert('seguimiento_semanal', filas.map(f => ({ ...f, created_at: ahora })), 'semana_inicio,silla');
+    alert(`Semana del ${fdEtiquetaSemana(input.value)} guardada.`);
+    navigate('dashboard-financiero');
+  } catch (err) {
+    console.error(err);
+    if (fdErrorDePermisos(err)) {
+      alert('Supabase rechazo el guardado por permisos. Si tu usuario es de solo lectura, pide a un editor que registre la semana.');
+      return;
+    }
+    if (/seguimiento_semanal/i.test(err?.message || '') && /does not exist|PGRST205|42P01/i.test(err?.message || '')) {
+      alert('La tabla seguimiento_semanal todavia no existe en la base. Ejecutar supabase-seguimiento-semanal.sql en Supabase.');
+      return;
+    }
+    alert(`No se pudo guardar (${err?.message || 'error desconocido'}).`);
+  }
 }
 
 /* ══ Captura del Estado de Resultados ══ */
@@ -3521,7 +3859,8 @@ function fdPasarDiarioAMensual() {
 function fdMostrarPanelHenry(cual) {
   [['diario', 'henry-panel-diario', 'henry-tab-diario'],
    ['mensual', 'henry-panel-mensual', 'henry-tab-mensual'],
-   ['er', 'henry-panel-er', 'henry-tab-er']].forEach(([clave, panelId, tabId]) => {
+   ['er', 'henry-panel-er', 'henry-tab-er'],
+   ['viernes', 'henry-panel-viernes', 'henry-tab-viernes']].forEach(([clave, panelId, tabId]) => {
     const panel = document.getElementById(panelId);
     const tab = document.getElementById(tabId);
     if (panel) panel.style.display = cual === clave ? '' : 'none';
@@ -3854,7 +4193,7 @@ function initFormularioHenry() {
 
   fdCargarRolPropio().then(rol => {
     if (rol !== 'viewer') return;
-    ['henry-guardar', 'cd-guardar'].forEach(id => {
+    ['henry-guardar', 'cd-guardar', 'er-guardar', 'sv-guardar'].forEach(id => {
       const btn = document.getElementById(id);
       if (!btn) return;
       btn.disabled = true;
@@ -3940,6 +4279,19 @@ function initFormularioHenry() {
   document.getElementById('henry-tab-diario')?.addEventListener('click', () => fdMostrarPanelHenry('diario'));
   document.getElementById('henry-tab-mensual')?.addEventListener('click', () => fdMostrarPanelHenry('mensual'));
   document.getElementById('henry-tab-er')?.addEventListener('click', () => fdMostrarPanelHenry('er'));
+  document.getElementById('henry-tab-viernes')?.addEventListener('click', () => fdMostrarPanelHenry('viernes'));
+
+  /* Reunion del viernes: arranca en la semana en curso */
+  const svSemana = document.getElementById('sv-semana');
+  if (svSemana) {
+    svSemana.value = fdLunesDeLaSemana(new Date());
+    svSemana.addEventListener('change', fdCargarSemanaEnFormulario);
+  }
+  document.getElementById('sv-body')?.addEventListener('input', ev => {
+    if (ev.target.classList.contains('sv-in')) fdActualizarViernesPreview();
+  });
+  document.getElementById('sv-guardar')?.addEventListener('click', fdGuardarViernes);
+  fdCargarSemanaEnFormulario();
 
   /* Estado de Resultados */
   FD_ER_LINEAS.forEach(k => {

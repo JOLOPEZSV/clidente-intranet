@@ -259,6 +259,11 @@
 .fd-metric-nota { display:block; font-style:normal; font-size:.7rem; font-weight:600; color:var(--text-muted); margin-top:.15rem; }
 .fd-metric-nota:empty { display:none; }
 
+/* ══ Reunion del viernes ══ */
+.fd-viernes { border-top:3px solid var(--blue); }
+.fd-viernes-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; }
+.sv-ocupacion { font-weight:800; white-space:nowrap; }
+
 /* ══ Indicadores financieros clave ══
    Convencion de color de la presentacion:
      neutro = informativo | alerta = problema | umbral = meta por cruzar | meta = objetivo */
