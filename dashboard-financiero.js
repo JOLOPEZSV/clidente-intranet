@@ -2210,7 +2210,7 @@ async function fdRenderEstadoResultados(mesTexto, sigueVigente = () => true) {
     fdFilaER('Flujo de efectivo', er.flujoEfectivo, er.pctFlujo, 'fd-er-total');
 
   const cascada = document.getElementById('fd-er-cascada');
-  if (cascada) cascada.innerHTML = `<p class="fd-chart-subtitle">Cascada del flujo de efectivo &middot; <em>clic en Costos para ver en que se fue</em></p>` + fdSvgCascadaFlujo(er, mesTexto);
+  if (cascada) cascada.innerHTML = `<p class="fd-chart-subtitle">Cascada del flujo de efectivo &middot; <em>clic en Costos para ver en que se fue</em></p>` + fdSvgCascadaFlujo(er, mesTexto) + '<p class="fd-chart-hint">desliza para ver todo</p>';
 
   const conclusion = document.getElementById('fd-er-conclusion');
   if (conclusion) {
@@ -2248,7 +2248,7 @@ async function fdRenderCajaDiariaDashboard(mesTexto, sigueVigente = () => true, 
   card.style.display = '';
   fdSetText('fd-caja-diaria-mes', mesTexto);
   const res = fdResumenCajaDiaria(conMovimiento);
-  cont.innerHTML = fdSvgCajaDiaria(res.detalle, mesTexto);
+  cont.innerHTML = fdSvgCajaDiaria(res.detalle, mesTexto) + '<p class="fd-chart-hint">desliza para ver el mes completo</p>';
 
   fdSetText('fd-cd-ingresos', formatoDolar(res.ingresos));
   fdSetText('fd-cd-egresos', formatoDolar(res.egresos));
@@ -2341,8 +2341,8 @@ function fdRenderTendencia(rows, anio) {
     contFlujo.innerHTML = '';
     return;
   }
-  contFact.innerHTML = `<p class="fd-chart-subtitle">Facturacion mensual vs punto de equilibrio real &middot; <em>clic en un mes para ver su facturacion diaria</em></p>` + fdSvgFacturacionVsPE(rows);
-  contFlujo.innerHTML = `<p class="fd-chart-subtitle">Resultado operativo mensual (antes de la cuota al banco) &middot; <em>clic en un mes para ver como se formo</em></p>` + fdSvgFlujoMensual(rows);
+  contFact.innerHTML = `<p class="fd-chart-subtitle">Facturacion mensual vs punto de equilibrio real &middot; <em>clic en un mes para ver su facturacion diaria</em></p>` + fdSvgFacturacionVsPE(rows) + '<p class="fd-chart-hint">desliza para ver el mes completo</p>';
+  contFlujo.innerHTML = `<p class="fd-chart-subtitle">Resultado operativo mensual (antes de la cuota al banco) &middot; <em>clic en un mes para ver como se formo</em></p>` + fdSvgFlujoMensual(rows) + '<p class="fd-chart-hint">desliza para ver el mes completo</p>';
 }
 
 function renderDashboardFinanciero() {

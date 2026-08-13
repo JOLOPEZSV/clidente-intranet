@@ -207,8 +207,12 @@
 .fd-pct { font-style:normal; font-size:.76rem; font-weight:700; color:var(--text-muted); margin-left:.3rem; }
 
 /* Graficas de evolucion mensual */
-.fd-chart-wrap { overflow-x:auto; }
-.fd-chart-wrap svg { min-width:560px; }
+/* Las graficas no se escalan a lo ancho del telefono: un viewBox de 760 en
+   306px dejaria el texto en 4px. Se deslizan, y el min-width garantiza que
+   las etiquetas sigan siendo legibles. */
+.fd-chart-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; }
+.fd-chart-wrap svg { min-width:560px; scroll-snap-align:start; }
+.fd-chart-hint { display:none; }
 .fd-chart-subtitle { color:var(--text); font-size:.85rem; font-weight:700; margin:0 0 .45rem; }
 
 /* Franja de cuadre FG Dental vs Excel caja en el formulario */
@@ -258,6 +262,75 @@
 /* Nota bajo la etiqueta de una fila de metrica (de donde sale el numero) */
 .fd-metric-nota { display:block; font-style:normal; font-size:.7rem; font-weight:600; color:var(--text-muted); margin-top:.15rem; }
 .fd-metric-nota:empty { display:none; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   MOVIL
+   Henry consulta esto desde el telefono, y el compartir del informe a
+   WhatsApp solo existe ahi. Reglas: nada se corta en silencio, la primera
+   columna de cada tabla se queda fija al deslizar, y se avisa cuando hay
+   contenido a la derecha.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 700px) {
+  /* Mas densidad: en 375px cada rem de padding cuesta media linea de texto */
+  .fd-shell .card { padding: .9rem .85rem; }
+  .fd-card-tight { padding: .9rem .85rem; }
+
+  /* Indicadores de 3 columnas a 2: con 3 no cabe "$2,905.72" */
+  .fd-ind-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.5rem; }
+  .fd-ind-card { padding:.6rem .65rem; }
+  .fd-ind-card strong { font-size:1.1rem; }
+  .fd-ind-card span { font-size:.7rem; }
+  .fd-ind-card small { font-size:.63rem; }
+
+  /* El camino del punto de equilibrio: dos pasos por fila, sin flechas */
+  .fd-ind-paso { flex:1 1 calc(50% - .3rem); padding:.6rem .5rem; }
+  .fd-ind-paso strong { font-size:1.2rem; }
+
+  /* Al deslizar una tabla no se debe perder de vista de quien es la fila */
+  .fd-table-wrap table td:first-child,
+  .fd-table-wrap table th:first-child {
+    position:sticky; left:0; z-index:2;
+    box-shadow:2px 0 4px -2px rgba(15,35,64,.18);
+  }
+  .fd-table-wrap table td:first-child { background:#fff; }
+  .fd-table-wrap table th:first-child { background:var(--blue); z-index:3; }
+
+  /* Aviso de que hay mas contenido a la derecha */
+  .fd-table-wrap, .fd-chart-wrap {
+    background:linear-gradient(to left, rgba(15,35,64,.07), rgba(15,35,64,0) 26px) right center no-repeat;
+    background-size:26px 100%;
+  }
+  /* Y dicho con palabras, que el degradado solo no basta */
+  .fd-chart-hint {
+    display:block; font-size:.68rem; font-weight:700; color:var(--text-muted);
+    margin:.3rem 0 0; text-align:right;
+  }
+  .fd-chart-hint::before { content:'\2194\00a0'; }
+
+  /* Hero: el mes activo y los botones a lo ancho, sin apretarse */
+  .fd-hero { flex-direction:column; align-items:stretch; gap:.7rem; }
+  .fd-hero-acciones { width:100%; }
+  .fd-hero-acciones button { width:100%; }
+  .fd-month-pair select { flex:1; }
+
+  /* Pestanas de la seccion 13: cuatro no caben en una linea */
+  .fd-tabs { flex-wrap:wrap; }
+  .fd-tabs button { flex:1 1 calc(50% - .25rem); font-size:.78rem; padding:.5rem .4rem; }
+
+  /* Cabecera de la reunion del viernes */
+  .fd-viernes-head { flex-direction:column; align-items:stretch; }
+
+  /* Formularios: una columna, campos comodos para el pulgar */
+  .fd-form-grid { grid-template-columns:1fr; }
+  .fd-form-grid input, .fd-tabla-diaria input, .fd-input-table input { font-size:16px; }
+}
+
+/* Telefono angosto */
+@media (max-width: 400px) {
+  .fd-ind-grid { grid-template-columns:1fr; }
+  .fd-ind-paso { flex:1 1 100%; }
+  .fd-kpi-card strong { font-size:1.28rem; }
+}
 
 /* ══ Reunion del viernes ══ */
 .fd-viernes { border-top:3px solid var(--blue); }
