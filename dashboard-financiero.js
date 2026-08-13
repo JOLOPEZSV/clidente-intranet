@@ -1779,6 +1779,32 @@ function fdDomingoDeLaSemana(lunesISO) {
   return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
 }
 
+/* Hasta donde llega el detalle de cobros. Sirve para que, cuando una semana no
+   traiga pacientes, el aviso diga POR QUE: casi siempre es que la semana es
+   posterior al ultimo mes cargado, no que la clinica no atendio. Se pide una
+   sola vez por sesion. */
+let fdUltimoCobroCache;
+async function fdUltimaFechaCobros() {
+  if (fdUltimoCobroCache !== undefined) return fdUltimoCobroCache;
+  fdUltimoCobroCache = null;
+  if (fdSupabaseConfigurado()) {
+    try {
+      const rows = await fdSupabaseGetRows('produccion_detalle?select=fecha&order=fecha.desc&limit=1');
+      if (Array.isArray(rows) && rows.length) fdUltimoCobroCache = String(rows[0].fecha);
+    } catch (err) {
+      console.error('No se pudo leer la ultima fecha de cobros:', err);
+    }
+  }
+  return fdUltimoCobroCache;
+}
+
+/* '2026-06-30' -> '30 de junio de 2026' */
+function fdFechaLarga(iso) {
+  const [a, m, d] = String(iso).split('-').map(Number);
+  if (!a || !m || !d) return String(iso);
+  return `${d} de ${FD_MESES[m - 1].toLowerCase()} de ${a}`;
+}
+
 /* Numero 2 de la reunion del viernes: los pacientes NO se capturan, se derivan.
    produccion_detalle ya tiene un renglon por cobro, con fecha y paciente; pedirle
    a Henry que los cuente otra vez a mano era duplicar la fuente e invitar al
@@ -3281,6 +3307,7 @@ function fdLeerTablaViernes() {
 /* Pacientes que el sistema conto para la semana abierta en el formulario.
    Se refresca al cambiar de semana; null mientras no haya respuesta. */
 let fdSvPacientesSistema = null;
+let fdSvUltimoCobro = null;
 
 /* Le dice a Henry de donde salio el numero 2 y, si tambien lo capturo a mano,
    si los dos coinciden. No bloquea nada: el capturado por silla sigue siendo
@@ -3289,9 +3316,18 @@ function fdAvisoPacientesViernes(r) {
   const el = document.getElementById('sv-aviso-pacientes');
   if (!el) return;
   if (fdSvPacientesSistema == null) {
+    const semana = document.getElementById('sv-semana')?.value || '';
+    const posterior = fdSvUltimoCobro && semana && semana > fdSvUltimoCobro;
     el.style.display = '';
-    el.innerHTML = 'El sistema no encontro cobros cargados para esta semana, ' +
-      'asi que el numero 2 usa lo que captures por silla.';
+    el.innerHTML = posterior
+      ? `El detalle de cobros llega hasta el <strong>${fdFechaLarga(fdSvUltimoCobro)}</strong>, ` +
+        'asi que para esta semana todavia no hay pacientes que contar. Cuando se ' +
+        'cargue el mes, el numero 2 se llena solo; mientras tanto usa lo que captures por silla.'
+      : (fdSvUltimoCobro
+          ? 'El sistema no encontro cobros en esta semana, aunque si tiene cargado el periodo. ' +
+            'Puede ser una semana sin atencion, o que falte cargar esos dias.'
+          : 'El sistema no encontro cobros cargados para esta semana, ' +
+            'asi que el numero 2 usa lo que captures por silla.');
     return;
   }
   const dif = r.capturados - fdSvPacientesSistema;
@@ -3347,6 +3383,7 @@ async function fdCargarSemanaEnFormulario() {
   }
   /* El numero 2 lo pone el sistema, no la captura: se pide junto con la semana. */
   fdSvPacientesSistema = await fdPacientesSemanaSistema(lunes);
+  fdSvUltimoCobro = await fdUltimaFechaCobros();
   fdRenderTablaViernes(rows);
   fdActualizarViernesPreview();
 }
