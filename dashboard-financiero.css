@@ -313,8 +313,15 @@
 .fd-drill-zona:focus { outline:none; }
 .fd-drill-zona:focus-visible rect[opacity="0"], .fd-drill-zona:focus-visible circle[opacity="0"] { opacity:.18 !important; }
 .fd-drill-fila { cursor:pointer; }
-.fd-drill-fila:hover td { background:#eff6ff; }
+.fd-drill-fila:hover td { background:#dbeafe; }
+.fd-drill-fila:hover .fd-drill-chevron { transform:translateX(2px); color:#1d4ed8; }
 .fd-drill-fila:focus-visible { outline:2px solid #1d4ed8; outline-offset:-2px; }
+.fd-drill-chevron {
+  display:inline-block; margin-right:.4rem; color:#94a3b8; font-weight:900;
+  transition:transform .12s ease, color .12s ease;
+}
+/* La fila atenuada no debe perder la senal de que se puede abrir. */
+.fd-drill-tenue.fd-drill-fila:hover td { background:#e2e8f0; }
 
 .fd-drill-overlay {
   position:fixed; inset:0; z-index:9000; background:rgba(15,35,64,.55);

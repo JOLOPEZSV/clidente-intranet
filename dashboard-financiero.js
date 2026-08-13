@@ -869,11 +869,10 @@ function fdDrillAbrir(titulo, subtitulo, html) {
     <div class="fd-drill-body">${html}</div>
   </div>`;
   ov.addEventListener('click', ev => { if (ev.target === ov) fdDrillCerrar(); });
-  /* El overlay cuelga de <body>, fuera del root del dashboard, asi que necesita
-     su propio handler para que se pueda encadenar un nivel mas (del mes al dia). */
-  ov.addEventListener('click', fdDrillHandler);
-  ov.addEventListener('keydown', fdDrillTeclado);
   ov.querySelector('.fd-drill-close').addEventListener('click', fdDrillCerrar);
+  /* El overlay cuelga de <body>, fuera del root del dashboard: lo atiende el
+     listener de document que engancha fdDrillInit, no uno propio. */
+  fdDrillInit();
   document.body.appendChild(ov);
   document.addEventListener('keydown', fdDrillEsc);
   ov.querySelector('.fd-drill-close').focus();
@@ -918,8 +917,11 @@ function fdDrillBarras(items, opciones = {}) {
   const filas = items.map(i => {
     const w = Math.max((Math.abs(i.valor) / max) * 100, i.valor ? 1.5 : 0);
     const clases = [i.tenue ? 'fd-drill-tenue' : '', i.attrs ? 'fd-drill-fila' : ''].filter(Boolean).join(' ');
+    /* Sin una marca visible, una fila clicable no se distingue de una de solo
+       lectura y el drill-down queda escondido. */
+    const chevron = i.attrs ? '<span class="fd-drill-chevron" aria-hidden="true">&rsaquo;</span>' : '';
     return `<tr${clases ? ` class="${clases}"` : ''}${i.attrs || ''}>
-      <td>${fdEscapeXml(i.etiqueta)}${i.nota ? ` <em class="fd-drill-nota">${fdEscapeXml(i.nota)}</em>` : ''}</td>
+      <td>${chevron}${fdEscapeXml(i.etiqueta)}${i.nota ? ` <em class="fd-drill-nota">${fdEscapeXml(i.nota)}</em>` : ''}</td>
       <td class="num"><strong>${formatoDolar(i.valor)}</strong></td>
       ${opciones.pct ? `<td class="num">${fdPorcentaje(i.pct || 0)}</td>` : ''}
       <td class="fd-drill-barra"><div class="fd-mini-track"><div class="fd-mini-fill ${i.css || 'neutro'}" style="width:${w.toFixed(1)}%"></div></div></td>
@@ -1366,12 +1368,17 @@ function fdDrillTeclado(ev) {
   objetivo.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 }
 
+/* Un unico listener, en document. Antes habia uno en el root del dashboard y
+   otro en el overlay: si el root se re-renderizaba o el overlay se recreaba en
+   otro orden, algun clic se quedaba sin handler. document siempre existe y
+   nunca se reemplaza, asi que el drill-down no depende de que tan vivo este el
+   nodo donde nacio el clic. */
+let fdDrillEnganchado = false;
 function fdDrillInit() {
-  const root = document.getElementById('dashboard-financiero-root');
-  if (!root || root.dataset.drillListo === '1') return;
-  root.dataset.drillListo = '1';
-  root.addEventListener('click', fdDrillHandler);
-  root.addEventListener('keydown', fdDrillTeclado);
+  if (fdDrillEnganchado) return;
+  fdDrillEnganchado = true;
+  document.addEventListener('click', fdDrillHandler);
+  document.addEventListener('keydown', fdDrillTeclado);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
