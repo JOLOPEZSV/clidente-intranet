@@ -147,6 +147,23 @@
   background:white;
   box-shadow:0 2px 8px rgba(15,35,64,.12);
 }
+/* Selector de trimestre: solo visible en la vista de trimestre, pegado al
+   grupo de botones para que se lea como parte de la misma decision. */
+.fd-trim-control { margin:-.45rem 0 .85rem .55rem; }
+.fd-trim-control select { min-width:130px; }
+@media (max-width:700px) {
+  /* Con tres vistas ya no caben en una linea del telefono: dos arriba y
+     "Acumulado anual" abajo a todo el ancho, para que ninguna etiqueta se
+     parta en dos lineas y el area tactil quede en 44px. */
+  .fd-view-toggle {
+    display:grid; grid-template-columns:1fr 1fr; gap:.3rem;
+    width:100%; border-radius:14px;
+  }
+  .fd-view-toggle button { min-height:44px; white-space:nowrap; }
+  .fd-view-toggle button:last-child { grid-column:1 / -1; }
+  .fd-trim-control { margin:.1rem 0 .85rem; }
+  .fd-trim-control select { min-width:0; width:100%; }
+}
 .fd-periodo-summary {
   color:var(--text-muted);
   font-size:.84rem;

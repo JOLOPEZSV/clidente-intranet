@@ -27,6 +27,10 @@ const FD_HORAS_SILLA_SEMANA = 62;
 const FD_SILLAS = Array.from({ length: 7 }, (_, i) => `Unidad ${i + 1}`);
 const FD_META_OCUPACION = 40;   /* Meta 1 de la Propuesta: 40% de ocupacion */
 let fdVistaDashboard = 'mensual';
+/* 0 = derivar el trimestre del mes activo; 1-4 = elegido por el usuario. */
+let fdTrimestreSeleccionado = 0;
+/* Mientras sea false, el dashboard puede reposicionar el trimestre solo. */
+let fdTrimestreElegidoPorUsuario = false;
 
 /* Punto de equilibrio real: costos fijos / margen de contribucion observado.
    Margen de contribucion = 1 - (comisiones + insumos) / facturacion.
@@ -79,15 +83,21 @@ function fdDolarCorto(n) {
   return signo + '$' + abs.toLocaleString('es-SV', { maximumFractionDigits: 0 });
 }
 
+/* Respaldo de mayo para cuando Supabase no responde. Cifras OFICIALES del mes,
+   corregidas el 12/08/2026 contra "CAJA MAYO 2026 - RESUMEN DEL MES.pdf" (el
+   Excel de mayo nunca se corrigio y viene corto en 3,726.97). Debe coincidir
+   con supabase-datos-ene-jun-2026.sql: si se corrige alla, corregir aqui, o el
+   trimestre T2 mostrara un mayo distinto cuando la red falle.
+   flujo_neto = resultado operativo = 32687.59 - 8171.90 - 2781.10 - 10800. */
 const FD_MAYO_2026 = {
   mes: 'Mayo 2026',
-  facturacion_total: 30443.34,
-  pacientes_atendidos: 783,
+  facturacion_total: 32687.59,
+  pacientes_atendidos: 841,
   ticket_promedio: 38.87,
-  flujo_neto: -964.66,
+  flujo_neto: 10934.59,
   costos_fijos: 10800,
-  comisiones: 7611,
-  insumos: 12997,
+  comisiones: 8171.90,
+  insumos: 2781.10,
   punto_equilibrio: 418
 };
 
@@ -423,6 +433,41 @@ function fdMesIndice(mesTexto) {
   return FD_MESES.indexOf(parsed.mes) + 1;
 }
 
+/* Trimestres calendario: T1 Ene-Mar, T2 Abr-Jun, T3 Jul-Sep, T4 Oct-Dic. */
+function fdTrimestreDeMes(idx) {
+  return Math.floor((Math.max(parseInt(idx, 10) || 1, 1) - 1) / 3) + 1;
+}
+
+function fdRangoTrimestre(t) {
+  const tt = Math.min(Math.max(parseInt(t, 10) || 1, 1), 4);
+  return { trimestre: tt, desde: (tt - 1) * 3 + 1, hasta: tt * 3 };
+}
+
+/* El trimestre activo: el que eligio el usuario o, si no ha elegido, el que
+   contiene al mes activo. */
+function fdTrimestreActivo() {
+  return fdTrimestreSeleccionado || fdTrimestreDeMes(fdMesIndice(fdMesActivoSeleccionado));
+}
+
+function fdEtiquetaTrimestre(t, anio) {
+  const r = fdRangoTrimestre(t);
+  return `T${r.trimestre} ${anio} - ${FD_MESES[r.desde - 1]} a ${FD_MESES[r.hasta - 1]}`;
+}
+
+/* Trimestre anterior; en T1 retrocede a T4 del anio previo. */
+function fdTrimestreAnterior(t, anio) {
+  const tt = fdRangoTrimestre(t).trimestre;
+  return tt === 1 ? { trimestre: 4, anio: Number(anio) - 1 } : { trimestre: tt - 1, anio: Number(anio) };
+}
+
+function fdTrimOptions(selected) {
+  return [1, 2, 3, 4].map(t => {
+    const r = fdRangoTrimestre(t);
+    const rango = `${FD_MESES[r.desde - 1].slice(0, 3)}-${FD_MESES[r.hasta - 1].slice(0, 3)}`;
+    return `<option value="${t}" ${t === selected ? 'selected' : ''}>T${t} (${rango})</option>`;
+  }).join('');
+}
+
 function fdBuildEmptyMensual(mes) {
   return {
     mes,
@@ -448,12 +493,12 @@ function fdDentistasCero(mes) {
   }));
 }
 
-function fdFiltrarMensualesAnio(rows, anio, mesLimite) {
+function fdFiltrarMensualesAnio(rows, anio, mesLimite, mesDesde = 1) {
   return (Array.isArray(rows) ? rows : [])
     .filter(row => {
       const parsed = fdParseMesActivo(row.mes);
       const idx = fdMesIndice(row.mes);
-      return parsed.anio === Number(anio) && idx > 0 && idx <= mesLimite;
+      return parsed.anio === Number(anio) && idx >= mesDesde && idx <= mesLimite;
     })
     .sort((a, b) => fdMesIndice(a.mes) - fdMesIndice(b.mes));
 }
@@ -513,8 +558,8 @@ function fdDepurarLocalMes(mes) {
   fdSetLocalJson(FD_LOCAL_DENTISTAS_KEY, fdGetLocalJson(FD_LOCAL_DENTISTAS_KEY).filter(row => row.mes !== mes));
 }
 
-function fdRowsConMayoBase(rows, anio, mesLimite) {
-  const incluyeMayo = Number(anio) === 2026 && mesLimite >= 5;
+function fdRowsConMayoBase(rows, anio, mesLimite, mesDesde = 1) {
+  const incluyeMayo = Number(anio) === 2026 && mesLimite >= 5 && mesDesde <= 5;
   if (!incluyeMayo || rows.some(row => row.mes === 'Mayo 2026')) return rows;
   return rows.concat(FD_MAYO_2026);
 }
@@ -545,9 +590,19 @@ function fdAgruparDentistas(rows, mesesRegistrados) {
   });
 }
 
-async function fdCargarDatosAcumulados(mesActivo = fdMesActivoSeleccionado) {
+/* Agrega cualquier rango de meses del mismo anio. El acumulado anual es el
+   caso mesDesde=1; un trimestre es mesDesde/mesHasta dentro del anio. Toda la
+   matematica (sumas, metas escaladas por mes, agrupacion de dentistas) es la
+   misma: lo unico que cambia es el rango. */
+async function fdCargarDatosPeriodo(opciones = {}) {
+  const mesActivo = opciones.mesActivo || fdMesActivoSeleccionado;
   const parsed = fdParseMesActivo(mesActivo);
-  const mesLimite = fdMesIndice(mesActivo);
+  const anio = opciones.anio || parsed.anio;
+  const mesDesde = Math.max(parseInt(opciones.mesDesde, 10) || 1, 1);
+  const mesLimite = Math.min(parseInt(opciones.mesHasta, 10) || fdMesIndice(mesActivo), 12);
+  const vista = opciones.vista || 'acumulado';
+  const tituloBase = opciones.titulo || `Acumulado ${anio}`;
+  const tituloLargo = opciones.tituloLargo || `Acumulado ${anio} hasta ${parsed.mes}`;
   let remoteMensual = [];
   let remoteDentistas = [];
   let fallback = !fdSupabaseConfigurado();
@@ -567,23 +622,23 @@ async function fdCargarDatosAcumulados(mesActivo = fdMesActivoSeleccionado) {
   const localDentistas = fdGetLocalJson(FD_LOCAL_DENTISTAS_KEY);
 
   let mensuales = fdMergeMensuales(remoteMensual, localMensual);
-  mensuales = fdRowsConMayoBase(mensuales, parsed.anio, mesLimite);
-  mensuales = fdFiltrarMensualesAnio(mensuales, parsed.anio, mesLimite);
+  mensuales = fdRowsConMayoBase(mensuales, anio, mesLimite, mesDesde);
+  mensuales = fdFiltrarMensualesAnio(mensuales, anio, mesLimite, mesDesde);
 
   if (!mensuales.length) {
     return {
       mensual: {
         ...fdBuildEmptyMensual(mesActivo),
-        mes: `Acumulado ${parsed.anio}`,
+        mes: tituloBase,
         mes_activo: mesActivo,
-        periodo_titulo: `Acumulado ${parsed.anio} hasta ${parsed.mes}`,
+        periodo_titulo: tituloLargo,
         meses_registrados: 0,
         meta_pacientes: 0,
         punto_equilibrio: 0
       },
       dentistas: fdDentistasCero(mesActivo),
       fallback,
-      vista: 'acumulado'
+      vista
     };
   }
 
@@ -603,9 +658,9 @@ async function fdCargarDatosAcumulados(mesActivo = fdMesActivoSeleccionado) {
 
   return {
     mensual: {
-      mes: `Acumulado ${parsed.anio}`,
+      mes: tituloBase,
       mes_activo: mesActivo,
-      periodo_titulo: `Acumulado ${parsed.anio} hasta ${parsed.mes}`,
+      periodo_titulo: tituloLargo,
       periodo_detalle: `${mesesRegistrados} mes(es) registrado(s): ${mesesTexto}`,
       facturacion_total: facturacion,
       pacientes_atendidos: pacientes,
@@ -620,8 +675,27 @@ async function fdCargarDatosAcumulados(mesActivo = fdMesActivoSeleccionado) {
     },
     dentistas: fdAgruparDentistas(dentistasRows, mesesRegistrados || 1),
     fallback,
-    vista: 'acumulado'
+    vista
   };
+}
+
+/* Acumulado anual: el periodo que arranca en enero. */
+function fdCargarDatosAcumulados(mesActivo = fdMesActivoSeleccionado) {
+  return fdCargarDatosPeriodo({ mesActivo, mesDesde: 1, vista: 'acumulado' });
+}
+
+/* Un trimestre completo del anio indicado. */
+function fdCargarDatosTrimestre(trimestre, anio) {
+  const r = fdRangoTrimestre(trimestre);
+  return fdCargarDatosPeriodo({
+    mesActivo: fdBuildMesActivo(FD_MESES[r.hasta - 1], anio),
+    anio,
+    mesDesde: r.desde,
+    mesHasta: r.hasta,
+    vista: 'trimestre',
+    titulo: `T${r.trimestre} ${anio}`,
+    tituloLargo: fdEtiquetaTrimestre(r.trimestre, anio)
+  });
 }
 
 /* Serie con todos los meses del anio que tienen datos (para las graficas de evolucion). */
@@ -2015,7 +2089,7 @@ async function fdRenderIndicadores(mensual, er, esAcumulado, mesesPeriodo, sigue
   const balance = await fdCargarIndicadoresBalance();
   if (!sigueVigente()) return;
   card.style.display = '';
-  fdSetText('fd-ind-periodo', esAcumulado ? `— acumulado ${mesesPeriodo} mes(es)` : `— ${mensual.mes}`);
+  fdSetText('fd-ind-periodo', esAcumulado ? `— ${mensual.mes || 'acumulado'}: ${mesesPeriodo} mes(es)` : `— ${mensual.mes}`);
 
   /* ── Por paciente ── */
   const costoTotal = er.costosVariables + er.costosFijos;
@@ -2354,8 +2428,10 @@ function renderDashboardFinanciero() {
         <label class="fd-month-control">Mes activo <span class="fd-month-pair"><select id="fd-dashboard-mes">${fdMesOptions()}</select><select id="fd-dashboard-anio">${fdAnioOptions()}</select></span></label>
         <div class="fd-view-toggle" role="group" aria-label="Vista del dashboard">
           <button type="button" id="fd-vista-mensual" class="active">Mensual</button>
+          <button type="button" id="fd-vista-trimestre">Trimestre</button>
           <button type="button" id="fd-vista-acumulado">Acumulado anual</button>
         </div>
+        <label class="fd-month-control fd-trim-control" id="fd-trim-control" style="display:none">Trimestre <select id="fd-dashboard-trim">${fdTrimOptions(fdTrimestreActivo())}</select></label>
         <p id="fd-periodo-summary" class="fd-periodo-summary">Vista mensual: Mayo 2026</p>
         <div class="fd-source-row">
           <span class="fd-source blue">FG Dental</span>
@@ -2548,16 +2624,22 @@ function fdSetText(id, value) {
 }
 
 function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboard, prevMensual = null, prevLabel = '', prevDentistas = null) {
-  const isAcumulado = vista === 'acumulado';
-  /* En acumulado el periodo puede tener 0 meses; las metas por dentista usan
+  /* Trimestre y acumulado anual comparten toda la logica de periodo: suman
+     varios meses y escalan las metas. Solo cambia el rango y las etiquetas. */
+  const isPeriodo = vista === 'trimestre' || vista === 'acumulado';
+  const isTrimestre = vista === 'trimestre';
+  /* Palabra con que se nombra el periodo en las etiquetas. */
+  const perPal = isTrimestre ? 'del trimestre' : 'acumulado';
+  const perAdj = isTrimestre ? 'del trimestre' : 'acumulada';
+  /* En un periodo pueden venir 0 meses con datos; las metas por dentista usan
      al menos 1 mes para no degenerar en meta cero. */
-  const mesesRegistrados = isAcumulado ? (parseInt(mensual.meses_registrados, 10) || 0) : 1;
+  const mesesRegistrados = isPeriodo ? (parseInt(mensual.meses_registrados, 10) || 0) : 1;
   const mesesMetas = Math.max(mesesRegistrados, 1);
   const facturacion = parseFloat(mensual.facturacion_total || 0);
   const pacientes = parseInt(mensual.pacientes_atendidos || 0, 10);
   const ticket = pacientes > 0 ? facturacion / pacientes : 0;
   const flujo = parseFloat(mensual.flujo_neto || 0);
-  const metaPacientes = isAcumulado ? (parseInt(mensual.meta_pacientes, 10) || FD_META_PACIENTES * mesesRegistrados) : FD_META_PACIENTES;
+  const metaPacientes = isPeriodo ? (parseInt(mensual.meta_pacientes, 10) || FD_META_PACIENTES * mesesRegistrados) : FD_META_PACIENTES;
   const pe = fdPuntoEquilibrioReal(mensual);
   const pePxPlan = FD_PLAN_PPT.punto_equilibrio_px * mesesMetas;
   const peUsdPlan = FD_PLAN_PPT.punto_equilibrio_usd * mesesMetas;
@@ -2567,14 +2649,14 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   const metaDentista = FD_META_DENTISTA * mesesMetas;
   const pisoDentista = FD_PISO_RENTABILIDAD * mesesMetas;
   const maxBarra = FD_MAX_BARRA * mesesMetas;
-  const periodoVacio = isAcumulado && mesesRegistrados === 0;
+  const periodoVacio = isPeriodo && mesesRegistrados === 0;
 
   fdMesActivoSeleccionado = mensual.mes_activo || mensual.mes || fdMesActivoSeleccionado;
   fdSetMesControls('fd-dashboard', fdMesActivoSeleccionado);
-  fdSetText('fd-periodo-summary', isAcumulado ? (mensual.periodo_titulo || `Acumulado anual`) : `Vista mensual: ${fdMesActivoSeleccionado}`);
-  fdSetText('fd-label-facturacion', isAcumulado ? 'Facturacion acumulada' : 'Facturacion total');
-  fdSetText('fd-label-pacientes', isAcumulado ? 'Pacientes acumulados' : 'Pacientes atendidos');
-  fdSetText('fd-label-flujo', isAcumulado ? 'Resultado operativo acumulado' : 'Resultado operativo');
+  fdSetText('fd-periodo-summary', isPeriodo ? (mensual.periodo_titulo || `Acumulado anual`) : `Vista mensual: ${fdMesActivoSeleccionado}`);
+  fdSetText('fd-label-facturacion', isPeriodo ? `Facturacion ${perAdj}` : 'Facturacion total');
+  fdSetText('fd-label-pacientes', isPeriodo ? `Pacientes ${isTrimestre ? 'del trimestre' : 'acumulados'}` : 'Pacientes atendidos');
+  fdSetText('fd-label-flujo', isPeriodo ? `Resultado operativo ${perPal}` : 'Resultado operativo');
   fdSetText('fd-kpi-facturacion', formatoDolar(facturacion));
   fdSetText('fd-kpi-pacientes', fdEntero(pacientes));
   fdSetText('fd-kpi-ticket', formatoDolar(ticket));
@@ -2598,11 +2680,14 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
     fdSetText('fd-extra-equilibrio-note', `Valor del plan PPT (${fdDolarCorto(peUsdPlan)}); sin datos suficientes del periodo para calcular el real`);
   }
   fdSetText('fd-extra-meta', `${fdEntero(metaPacientes)} px`);
-  fdSetText('fd-extra-meta-note', isAcumulado ? `${mesesRegistrados} x 878 pacientes/mes` : '878 pacientes/mes');
-  fdSetText('fd-extra-meses', isAcumulado ? fdEntero(mensual.meses_registrados || 0) : '1');
-  fdSetText('fd-extra-periodo', isAcumulado ? (mensual.periodo_detalle || 'Meses del periodo con datos') : 'Mes activo');
+  fdSetText('fd-extra-meta-note', isPeriodo ? `${mesesRegistrados} x 878 pacientes/mes` : '878 pacientes/mes');
+  fdSetText('fd-extra-meses', isPeriodo ? fdEntero(mensual.meses_registrados || 0) : '1');
+  fdSetText('fd-extra-periodo', isPeriodo ? (mensual.periodo_detalle || 'Meses del periodo con datos') : 'Mes activo');
 
-  const cmp = !isAcumulado && prevMensual && fdTieneDatos(prevMensual) ? prevMensual : null;
+  /* Las variaciones se pintan contra el periodo anterior comparable: mes vs
+     mes anterior y trimestre vs trimestre anterior. El acumulado anual no
+     tiene contra que compararse. */
+  const cmp = vista !== 'acumulado' && prevMensual && fdTieneDatos(prevMensual) ? prevMensual : null;
   const pintarDelta = (id, actual, previo, esDinero) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -2639,8 +2724,11 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   pintarDelta('fd-delta-ticket', ticket, prevTicket, 'pct');
   pintarDelta('fd-delta-flujo', flujo, prevFlujo, 'monto');
 
-  document.getElementById('fd-vista-mensual')?.classList.toggle('active', !isAcumulado);
-  document.getElementById('fd-vista-acumulado')?.classList.toggle('active', isAcumulado);
+  document.getElementById('fd-vista-mensual')?.classList.toggle('active', vista === 'mensual');
+  document.getElementById('fd-vista-trimestre')?.classList.toggle('active', isTrimestre);
+  document.getElementById('fd-vista-acumulado')?.classList.toggle('active', vista === 'acumulado');
+  const trimControl = document.getElementById('fd-trim-control');
+  if (trimControl) trimControl.style.display = isTrimestre ? '' : 'none';
   document.getElementById('fd-kpi-flujo')?.classList.toggle('fd-positive', flujo >= 0);
   document.getElementById('fd-kpi-flujo')?.classList.toggle('fd-negative', flujo < 0);
   const configWarning = document.getElementById('fd-config-warning');
@@ -2652,8 +2740,12 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
     .sort((a, b) => parseFloat(b.facturacion || 0) - parseFloat(a.facturacion || 0));
   const prevPorNombre = new Map((Array.isArray(prevDentistas) ? prevDentistas : [])
     .map(d => [d.nombre, parseFloat(d.facturacion || 0)]));
-  const hayComparativo = !isAcumulado && prevPorNombre.size > 0;
-  fdSetText('fd-th-tendencia', hayComparativo ? `vs ${prevLabel || 'mes anterior'}` : 'vs mes anterior');
+  /* El comparativo por dentista vale igual mes contra mes que trimestre
+     contra trimestre; solo el acumulado anual no tiene con que compararse. */
+  const hayComparativo = vista !== 'acumulado' && prevPorNombre.size > 0;
+  fdSetText('fd-th-tendencia', hayComparativo
+    ? `vs ${prevLabel || 'periodo anterior'}`
+    : (vista === 'acumulado' ? 'sin comparativo' : (isTrimestre ? 'vs trimestre anterior' : 'vs mes anterior')));
   if (tbody) {
     tbody.innerHTML = dentistasOrdenados.map(d => {
       const valor = parseFloat(d.facturacion || 0);
@@ -2708,12 +2800,16 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   const brechaProduccion = negativos.reduce((sum, d) => sum + Math.max(pisoDentista - parseFloat(d.facturacion || 0), 0), 0);
   const brechaPiso = brechaProduccion * FD_RETENCION_CLINICA;
   const costoSilla = FD_COSTO_POR_SILLA * mesesMetas;
-  fdSetText('fd-silla-costo', isAcumulado ? `${formatoDolar(costoSilla)} acumulado` : `${formatoDolar(FD_COSTO_POR_SILLA)}/mes`);
+  fdSetText('fd-silla-costo', isPeriodo ? `${formatoDolar(costoSilla)} ${perPal}` : `${formatoDolar(FD_COSTO_POR_SILLA)}/mes`);
   fdSetText('fd-silla-costo-nota', `${formatoDolar(FD_COSTOS_FIJOS_MES)} de costos fijos entre ${FD_SILLAS_OPERATIVAS} sillas operativas`);
-  fdSetText('fd-silla-piso', isAcumulado ? `${formatoDolar(pisoDentista)} acumulado` : `${formatoDolar(FD_PISO_RENTABILIDAD)}/mes`);
+  fdSetText('fd-silla-piso', isPeriodo
+    ? (periodoVacio ? 'sin meses registrados' : `${formatoDolar(pisoDentista)} ${perPal} (${mesesRegistrados} mes/es)`)
+    : `${formatoDolar(FD_PISO_RENTABILIDAD)}/mes`);
   fdSetText('fd-silla-piso-nota', `${formatoDolar(FD_COSTO_POR_SILLA)} entre ${fdPorcentaje(FD_RETENCION_CLINICA * 100)} de retencion`);
-  fdSetText('fd-silla-media', isAcumulado ? `${formatoDolar(promedioDentista)} acumulado` : `${formatoDolar(promedioDentista)}/mes`);
-  fdSetText('fd-silla-meta', isAcumulado ? `${formatoDolar(metaDentista)} acumulado` : `${formatoDolar(FD_META_DENTISTA)}/mes`);
+  fdSetText('fd-silla-media', isPeriodo ? `${formatoDolar(promedioDentista)} ${perPal}` : `${formatoDolar(promedioDentista)}/mes`);
+  fdSetText('fd-silla-meta', isPeriodo
+    ? (periodoVacio ? 'sin meses registrados' : `${formatoDolar(metaDentista)} ${perPal} (${mesesRegistrados} mes/es)`)
+    : `${formatoDolar(FD_META_DENTISTA)}/mes`);
   fdSetText('fd-silla-grupo', comparables.length && comparables.length !== dentistasOrdenados.length
     ? `${comparables.length} comparables de ${dentistasOrdenados.length} registrados`
     : `${baseComparacion.length} profesional(es)`);
@@ -2726,7 +2822,7 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   const costosVal = parseFloat(mensual.costos_fijos || 0);
   const margenContribucionUsd = facturacion - comisionesVal - insumosVal;
   const pctDe = valor => facturacion > 0 ? `(${fdPorcentaje((valor / facturacion) * 100)})` : '';
-  fdSetText('fd-caja-title', isAcumulado ? 'Del ingreso al resultado operativo (acumulado)' : 'Del ingreso al resultado operativo');
+  fdSetText('fd-caja-title', isPeriodo ? `Del ingreso al resultado operativo (${isTrimestre ? 'trimestre' : 'acumulado'})` : 'Del ingreso al resultado operativo');
   fdSetText('fd-caja-facturacion', formatoDolar(facturacion));
   fdSetText('fd-caja-comisiones', '-' + formatoDolar(comisionesVal));
   fdSetText('fd-caja-comisiones-pct', pctDe(comisionesVal));
@@ -2742,13 +2838,13 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
   document.getElementById('fd-caja-flujo')?.classList.toggle('fd-positive', flujo >= 0);
   document.getElementById('fd-caja-flujo')?.classList.toggle('fd-negative', flujo < 0);
 
-  fdSetText('fd-equilibrio-texto', `${fdEntero(pacientes)} de ${fdEntero(metaPacientes)} pacientes - ${isAcumulado ? 'meta acumulada' : 'meta mensual'}`);
+  fdSetText('fd-equilibrio-texto', `${fdEntero(pacientes)} de ${fdEntero(metaPacientes)} pacientes - ${isPeriodo ? (isTrimestre ? 'meta del trimestre' : 'meta acumulada') : 'meta mensual'}`);
   fdSetText('fd-equilibrio-pct', fdPorcentaje(metaPct));
   fdSetText('fd-equilibrio-note', pe.valido && pe.px
-    ? `Punto de equilibrio real: ${fdEntero(pe.px)} pacientes${isAcumulado ? ' acumulados' : '/mes'} (${formatoDolar(pe.usd)}); plan PPT: ${fdEntero(pePxPlan)} px; meta comercial: ${fdEntero(metaPacientes)} pacientes.`
+    ? `Punto de equilibrio real: ${fdEntero(pe.px)} pacientes${isPeriodo ? (isTrimestre ? ' en el trimestre' : ' acumulados') : '/mes'} (${formatoDolar(pe.usd)}); plan PPT: ${fdEntero(pePxPlan)} px; meta comercial: ${fdEntero(metaPacientes)} pacientes.`
     : (pe.motivo === 'margen_negativo'
       ? `Los costos variables superan la facturacion: no hay punto de equilibrio alcanzable este periodo; plan PPT: ${fdEntero(pePxPlan)} px; meta comercial: ${fdEntero(metaPacientes)} pacientes.`
-      : `Punto de equilibrio (plan PPT): ${fdEntero(pePxPlan)} pacientes${isAcumulado ? ' acumulados' : '/mes'}; meta comercial: ${fdEntero(metaPacientes)} pacientes.`));
+      : `Punto de equilibrio (plan PPT): ${fdEntero(pePxPlan)} pacientes${isPeriodo ? (isTrimestre ? ' en el trimestre' : ' acumulados') : '/mes'}; meta comercial: ${fdEntero(metaPacientes)} pacientes.`));
   const bar = document.getElementById('fd-equilibrio-bar');
   if (bar) {
     bar.style.width = Math.min(metaPct, 100) + '%';
@@ -2770,7 +2866,7 @@ function fdRenderDashboard(mensual, dentistas, fallback, vista = fdVistaDashboar
           : `<div class="fd-alert yellow">Punto de equilibrio real no calculable: faltan datos de facturacion o costos del periodo</div>`));
     alertas.innerHTML = `
       <div class="fd-alert ${negativos.length ? 'red' : 'green'}">${negativos.length} silla(s) bajo piso de rentabilidad${nombresNegativos ? ` - ${nombresNegativos}` : ''}: ${brechaPiso ? '-' + formatoDolar(brechaPiso) : formatoDolar(0)}</div>
-      <div class="fd-alert ${flujo < 0 ? 'red' : 'green'}">Flujo ${flujo < 0 ? 'negativo' : 'positivo'} - ${isAcumulado ? 'el periodo cerro en' : 'el mes cerro en'} ${formatoDolar(flujo)}</div>
+      <div class="fd-alert ${flujo < 0 ? 'red' : 'green'}">Flujo ${flujo < 0 ? 'negativo' : 'positivo'} - ${isPeriodo ? 'el periodo cerro en' : 'el mes cerro en'} ${formatoDolar(flujo)}</div>
       ${alertaEquilibrio}
       <div class="fd-alert ${bajoMeta.length ? 'yellow' : 'green'}">${bajoMeta.length} dentista(s) bajo meta ${formatoDolar(metaDentista)} - brecha total: ${formatoDolar(brechaMeta)}</div>`;
   }
@@ -2784,7 +2880,9 @@ async function initDashboardFinanciero() {
   const monthSelect = document.getElementById('fd-dashboard-mes');
   const yearSelect = document.getElementById('fd-dashboard-anio');
   const btnMensual = document.getElementById('fd-vista-mensual');
+  const btnTrimestre = document.getElementById('fd-vista-trimestre');
   const btnAcumulado = document.getElementById('fd-vista-acumulado');
+  const trimSelect = document.getElementById('fd-dashboard-trim');
   /* Antes de cualquier await: solo engancha listeners al DOM, no consulta nada,
      asi que no le afecta que la sesion de Supabase todavia no exista. */
   fdDrillInit();
@@ -2812,10 +2910,51 @@ async function initDashboardFinanciero() {
     fdMesActivoSeleccionado = fdReadMesControls('fd-dashboard');
     const mesSolicitado = fdMesActivoSeleccionado;
     const parsed = fdParseMesActivo(mesSolicitado);
-    const esAcumulado = fdVistaDashboard === 'acumulado';
-    const data = esAcumulado
-      ? await fdCargarDatosAcumulados(mesSolicitado)
-      : await fdCargarDatosDashboard(mesSolicitado);
+    const esTrimestre = fdVistaDashboard === 'trimestre';
+    /* Trimestre y acumulado son el mismo tipo de vista: un periodo de varios
+       meses. La caja diaria y el ER mensual se ocultan en ambos. */
+    const esAcumulado = esTrimestre || fdVistaDashboard === 'acumulado';
+    /* `let`: si el trimestre derivado esta vacio, el bloque de abajo lo
+       reposiciona y el comparativo debe seguir al trimestre que se pinto. */
+    let trimActivo = fdTrimestreActivo();
+    let anioTrim = parsed.anio;
+    const rangoTrim = fdRangoTrimestre(trimActivo);
+    /* Rango de meses del periodo, para el ER y para el comparativo. */
+    const periodoDesde = esTrimestre ? rangoTrim.desde : 1;
+    const periodoHasta = esTrimestre ? rangoTrim.hasta : fdMesIndice(mesSolicitado);
+    let data;
+    if (esTrimestre) {
+      data = await fdCargarDatosTrimestre(trimActivo, parsed.anio);
+      /* Si el trimestre derivado del mes activo aun no tiene cifras (p.ej. se
+         entra en agosto y T3 esta vacio), retrocede al ultimo trimestre con
+         datos en vez de recibir al usuario con todo en cero. Solo mientras el
+         usuario no haya elegido trimestre a mano. */
+      if (!fdTrimestreElegidoPorUsuario && !fdTieneDatos(data.mensual)) {
+        for (let intento = 0, t = trimActivo, anioT = parsed.anio; intento < 4; intento++) {
+          const ant = fdTrimestreAnterior(t, anioT);
+          t = ant.trimestre; anioT = ant.anio;
+          if (anioT < parsed.anio - 1) break;
+          const previo = await fdCargarDatosTrimestre(t, anioT);
+          if (fdTieneDatos(previo.mensual)) {
+            fdTrimestreSeleccionado = t;
+            if (trimSelect) trimSelect.value = String(t);
+            /* El comparativo se calcula sobre el trimestre REALMENTE pintado;
+               si no, T2 se compararia contra si mismo. */
+            trimActivo = t;
+            anioTrim = anioT;
+            data = previo;
+            break;
+          }
+        }
+      }
+      /* El selector de mes no se mueve al cambiar de trimestre: es el usuario
+         quien manda ahi, y el trimestre tiene su propio selector. */
+      data.mensual.mes_activo = mesSolicitado;
+    } else if (esAcumulado) {
+      data = await fdCargarDatosAcumulados(mesSolicitado);
+    } else {
+      data = await fdCargarDatosDashboard(mesSolicitado);
+    }
     if (token !== cargaToken) return;
 
     /* Salto al ultimo mes con datos. La bandera solo se marca cuando la
@@ -2837,7 +2976,21 @@ async function initDashboardFinanciero() {
     let prev = null;
     let prevLabel = '';
     let prevDentistas = null;
-    if (!esAcumulado) {
+    if (esTrimestre) {
+      /* Trimestre contra trimestre: la comparacion que el acumulado anual no
+         puede dar, porque al promediar todo el anio aplana los movimientos. */
+      try {
+        const ant = fdTrimestreAnterior(trimActivo, anioTrim);
+        const dataPrev = await fdCargarDatosTrimestre(ant.trimestre, ant.anio);
+        if (fdTieneDatos(dataPrev.mensual)) {
+          prev = dataPrev.mensual;
+          prevDentistas = dataPrev.dentistas;
+        }
+        prevLabel = `T${ant.trimestre} ${ant.anio}`;
+      } catch (err) {
+        console.error('No se pudo cargar el trimestre anterior:', err);
+      }
+    } else if (!esAcumulado) {
       try {
         const mesPrev = fdMesAnteriorTexto(mesSolicitado);
         const dataPrev = await fdCargarDatosDashboard(mesPrev);
@@ -2874,7 +3027,10 @@ async function initDashboardFinanciero() {
       let erPeriodo = null;
       if (esAcumulado) {
         const serie = (await fdCargarSerieER(parsed.anio))
-          .filter(r => fdMesIndice(r.mes) <= fdMesIndice(mesSolicitado));
+          .filter(r => {
+            const idx = fdMesIndice(r.mes);
+            return idx >= periodoDesde && idx <= periodoHasta;
+          });
         if (serie.length) {
           erPeriodo = fdCalcularER(serie.reduce((acc, r) => {
             FD_ER_LINEAS.forEach(k => { acc[k] = (acc[k] || 0) + parseFloat(r[k] || 0); });
@@ -2901,6 +3057,21 @@ async function initDashboardFinanciero() {
   monthSelect?.addEventListener('change', () => { fdMesElegidoPorUsuario = true; cargarVista(); });
   yearSelect?.addEventListener('change', () => { fdMesElegidoPorUsuario = true; cargarVista(); });
   btnMensual?.addEventListener('click', () => { fdVistaDashboard = 'mensual'; cargarVista(); });
+  btnTrimestre?.addEventListener('click', () => {
+    /* Al entrar por primera vez se posiciona en el trimestre del mes activo. */
+    if (!fdTrimestreSeleccionado) {
+      fdTrimestreSeleccionado = fdTrimestreDeMes(fdMesIndice(fdReadMesControls('fd-dashboard')));
+      if (trimSelect) trimSelect.value = String(fdTrimestreSeleccionado);
+    }
+    fdVistaDashboard = 'trimestre';
+    cargarVista();
+  });
+  trimSelect?.addEventListener('change', () => {
+    fdTrimestreElegidoPorUsuario = true;
+    fdTrimestreSeleccionado = parseInt(trimSelect.value, 10) || 1;
+    fdVistaDashboard = 'trimestre';
+    cargarVista();
+  });
   btnAcumulado?.addEventListener('click', () => { fdVistaDashboard = 'acumulado'; cargarVista(); });
 
   await cargarVista();
